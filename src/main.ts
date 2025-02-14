@@ -53,7 +53,6 @@ export default class AITaggerPlugin extends Plugin {
         this.addCommand({
             id: 'clear-all-tags',
             name: 'Clear All Tags (Keep Tags Field)',
-            hotkeys: [{ modifiers: ['Mod', 'Shift'], key: 'T' }],
             callback: () => this.clearNoteTags()
         });
 
@@ -221,7 +220,6 @@ export default class AITaggerPlugin extends Plugin {
                 this.app.workspace.trigger('file-open', activeFile);
             }, 150);
         } catch (error) {
-            console.error('Error clearing tags:', error);
             const message = error instanceof Error ? error.message : 'Unknown error';
             new Notice(`Error clearing tags: ${message}`);
         }
@@ -244,11 +242,6 @@ export default class AITaggerPlugin extends Plugin {
             const existingTags = TagUtils.getAllTags(this.app);
             new Notice('Analyzing note content...');
             
-            console.log('Starting tag analysis with:', {
-                serviceType: this.settings.serviceType,
-                contentLength: content.length,
-                existingTagsCount: existingTags.length
-            });
 
             const analysis = await this.llmService.analyzeTags(content, existingTags);
             const result = await TagUtils.updateNoteTags(
@@ -268,7 +261,6 @@ export default class AITaggerPlugin extends Plugin {
                 new Notice('Failed to update tags');
             }
         } catch (error) {
-            console.error('Error in analyzeCurrentNote:', error);
             const message = error instanceof Error ? error.message : 'Unknown error';
             new Notice(`Error analyzing note: ${message}`);
         }
@@ -364,7 +356,6 @@ class AITaggerSettingTab extends PluginSettingTab {
                         this.setTestStatus('error', result.error?.message || 'Connection failed');
                     }
                 } catch (error) {
-                    console.error('Test connection error:', error);
                     this.setTestStatus('error', 'Error during test');
                 } finally {
                     button.setButtonText('Test Connection').setDisabled(false);

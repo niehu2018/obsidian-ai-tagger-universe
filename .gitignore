@@ -4,6 +4,7 @@ node_modules/
 
 # Build output
 dist/
+main.js
 
 # Environment and local config
 .env
