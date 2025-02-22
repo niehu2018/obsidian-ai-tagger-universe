@@ -62,7 +62,7 @@ export abstract class BaseLLMService {
         const markdownJsonRegex = /```(?:json)?\s*(\{[\s\S]*?\})\s*```/;
         const markdownMatch = response.match(markdownJsonRegex);
         if (markdownMatch) {
-            console.log('Found JSON in markdown block:', markdownMatch[1]);
+            //console.log('Found JSON in markdown block:', markdownMatch[1]);
             return markdownMatch[1];
         }
 
@@ -70,7 +70,7 @@ export abstract class BaseLLMService {
         const jsonRegex = /\{[\s\S]*\}/;
         const jsonMatch = response.match(jsonRegex);
         if (jsonMatch) {
-            console.log('Found standalone JSON:', jsonMatch[0]);
+            // console.log('Found standalone JSON:', jsonMatch[0]);
             return jsonMatch[0];
         }
 
@@ -103,15 +103,15 @@ Return only a JSON object in this exact format:
 
     protected parseResponse(response: string): LLMResponse {
         try {
-            console.log('Attempting to parse response...');
+            // console.log('Attempting to parse response...');
             
             // Extract JSON from response
             const jsonContent = this.extractJSONFromResponse(response);
-            console.log('Extracted JSON content:', jsonContent);
+            //console.log('Extracted JSON content:', jsonContent);
 
             // Parse the JSON
             const parsed = JSON.parse(jsonContent);
-            console.log('Parsed JSON:', parsed);
+            //console.log('Parsed JSON:', parsed);
 
             if (!parsed.matchedTags || !Array.isArray(parsed.matchedTags) || 
                 !parsed.newTags || !Array.isArray(parsed.newTags)) {
