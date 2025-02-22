@@ -500,6 +500,8 @@ class AITaggerSettingTab extends PluginSettingTab {
                 .onChange(async (value) => {
                     this.plugin.settings.maxMatchedTags = value;
                     await this.plugin.saveSettings();
+                }));
+
         // Add support section
         containerEl.createEl('h2', {text: '支持开发者'});
         const supportEl = containerEl.createDiv('support-container');
@@ -510,8 +512,6 @@ class AITaggerSettingTab extends PluginSettingTab {
             .setClass('support-button')
             .onClick(() => {
                 window.open('https://buymeacoffee.com/niehu2015o', '_blank');
-            });
-
-                }));
+            });        
     }
 }

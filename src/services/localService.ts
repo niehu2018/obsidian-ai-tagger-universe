@@ -56,8 +56,6 @@ export class LocalLLMService extends BaseLLMService {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-            //console.log('Testing local LLM connection with endpoint:', this.endpoint);
-
             const response = await fetch(this.endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -74,8 +72,13 @@ export class LocalLLMService extends BaseLLMService {
 
             clearTimeout(timeoutId);
 
-            const responseText = await response.text();
-            //console.log('Local LLM test response:', responseText);
+            let responseText: string;
+            try {
+                responseText = await response.text();
+            } catch (error) {
+                throw new Error('Failed to read response body');
+            }
+            
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -87,13 +90,11 @@ export class LocalLLMService extends BaseLLMService {
                     throw new Error('Invalid response format');
                 }
             } catch (parseError) {
-                .error('Parse error:', parseError);
                 throw new Error('Invalid response format');
             }
 
             return { result: ConnectionTestResult.Success };
         } catch (error) {
-            console.error('Local LLM connection test error:', error);
 
             let testError: ConnectionTestError = {
                 type: "unknown",
@@ -164,8 +165,13 @@ export class LocalLLMService extends BaseLLMService {
 
             clearTimeout(timeoutId);
 
-            const responseText = await response.text();
-            //console.log('Local LLM response:', responseText);
+            let responseText: string;
+            try {
+                responseText = await response.text();
+            } catch (error) {
+                throw new Error('Failed to read response body');
+            }
+            
 
             if (!response.ok) {
                 throw new Error(`API error: ${response.status} ${response.statusText}`);
@@ -179,7 +185,6 @@ export class LocalLLMService extends BaseLLMService {
                 }
                 return this.parseResponse(textToAnalyze);
             } catch (parseError) {
-                console.error('Parse error:', parseError, 'Response:', responseText);
                 throw new Error('Invalid response format from local service');
             }
         } catch (error) {

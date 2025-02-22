@@ -56,13 +56,10 @@ export abstract class BaseLLMService {
     }
 
     protected extractJSONFromResponse(response: string): string {
-        console.log('Raw response:', response);
-        
         // Try to find JSON content within markdown code blocks
         const markdownJsonRegex = /```(?:json)?\s*(\{[\s\S]*?\})\s*```/;
         const markdownMatch = response.match(markdownJsonRegex);
         if (markdownMatch) {
-            //console.log('Found JSON in markdown block:', markdownMatch[1]);
             return markdownMatch[1];
         }
 
@@ -70,10 +67,8 @@ export abstract class BaseLLMService {
         const jsonRegex = /\{[\s\S]*\}/;
         const jsonMatch = response.match(jsonRegex);
         if (jsonMatch) {
-            // console.log('Found standalone JSON:', jsonMatch[0]);
             return jsonMatch[0];
         }
-
         throw new Error('No valid JSON found in response');
     }
 
@@ -103,19 +98,13 @@ Return only a JSON object in this exact format:
 
     protected parseResponse(response: string): LLMResponse {
         try {
-            // console.log('Attempting to parse response...');
-            
             // Extract JSON from response
             const jsonContent = this.extractJSONFromResponse(response);
-            //console.log('Extracted JSON content:', jsonContent);
 
             // Parse the JSON
             const parsed = JSON.parse(jsonContent);
-            //console.log('Parsed JSON:', parsed);
 
-            if (!parsed.matchedTags || !Array.isArray(parsed.matchedTags) || 
-                !parsed.newTags || !Array.isArray(parsed.newTags)) {
-                console.error('Invalid response structure:', parsed);
+            if (!Array.isArray(parsed?.matchedTags) || !Array.isArray(parsed?.newTags)) {
                 throw new Error('Response missing required fields');
             }
 
@@ -131,8 +120,6 @@ Return only a JSON object in this exact format:
                 suggestedTags: Array.from(new Set(validatedNewTags))
             };
         } catch (error) {
-            console.error('Error parsing response:', error);
-            console.error('Raw response:', response);
             if (error instanceof Error) {
                 throw new Error(`Invalid response format: ${error.message}`);
             }
@@ -141,7 +128,6 @@ Return only a JSON object in this exact format:
     }
 
     protected handleError(error: unknown, operation: string): never {
-        console.error(`Error in ${operation}:`, error);
         if (error instanceof Error) {
             if (error.name === 'AbortError') {
                 throw new Error(`Operation timed out: ${operation}`);

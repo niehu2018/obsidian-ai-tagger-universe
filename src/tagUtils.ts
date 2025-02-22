@@ -1,4 +1,4 @@
-import { TFile, FrontMatterCache, Notice } from 'obsidian';
+import { TFile, FrontMatterCache, Notice, App } from 'obsidian';
 
 export interface TagOperationResult {
     success: boolean;
@@ -53,7 +53,6 @@ export class TagUtils {
         // Validate and filter tags
         const { valid, invalid } = this.validateTags(tags);
         if (invalid.length > 0) {
-            console.warn('Found invalid tags in frontmatter:', invalid);
         }
 
         return valid;
@@ -88,7 +87,7 @@ export class TagUtils {
      * Clear all tags while keeping the tags field
      */
     static async clearTags(
-        app: any,
+        app: App,
         file: TFile
     ): Promise<TagOperationResult> {
         try {
@@ -166,7 +165,6 @@ export class TagUtils {
                 tags: []
             };
         } catch (error: unknown) {
-            console.error('Error clearing tags:', error);
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             new Notice('Error clearing tags');
             return {
@@ -180,7 +178,7 @@ export class TagUtils {
      * Update note's frontmatter
      */
     static async updateNoteTags(
-        app: any,
+        app: App,
         file: TFile,
         newTags: string[],
         matchedTags: string[]
@@ -198,9 +196,10 @@ export class TagUtils {
             // Read note content
             const content = await app.vault.read(file);
             const frontmatter = app.metadataCache.getFileCache(file)?.frontmatter;
-            
+            const frontmatterToUse = frontmatter || null;
+
             // Get existing tags
-            const existingTags = this.getExistingTags(frontmatter);
+            const existingTags = this.getExistingTags(frontmatterToUse);
             
             // Merge all tags and remove # prefix for YAML
             const allTags = this.mergeTags(existingTags, [...validNewTags, ...validMatchedTags])
@@ -253,7 +252,6 @@ export class TagUtils {
                 tags: allTags.map(tag => `#${tag}`) // Add # back for return value
             };
         } catch (error: unknown) {
-            console.error('Error updating note tags:', error);
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             new Notice('Error updating tags');
             return {
@@ -266,10 +264,10 @@ export class TagUtils {
     /**
      * Get all existing tags
      */
-    static getAllTags(app: any): string[] {
+    static getAllTags(app: App): string[] {
         const tags = new Set<string>();
-        app.metadataCache.getCachedFiles().forEach((filePath: string) => {
-            const cache = app.metadataCache.getCache(filePath);
+        app.vault.getMarkdownFiles().forEach((file) => {
+            const cache = app.metadataCache.getFileCache(file);
             if (cache?.frontmatter?.tags) {
                 const fileTags = this.getExistingTags(cache.frontmatter);
                 fileTags.forEach(tag => tags.add(tag));
