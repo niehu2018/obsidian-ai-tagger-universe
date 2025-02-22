@@ -56,7 +56,7 @@ export class LocalLLMService extends BaseLLMService {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-            console.log('Testing local LLM connection with endpoint:', this.endpoint);
+            //console.log('Testing local LLM connection with endpoint:', this.endpoint);
 
             const response = await fetch(this.endpoint, {
                 method: 'POST',
@@ -75,7 +75,7 @@ export class LocalLLMService extends BaseLLMService {
             clearTimeout(timeoutId);
 
             const responseText = await response.text();
-            console.log('Local LLM test response:', responseText);
+            //console.log('Local LLM test response:', responseText);
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -87,7 +87,7 @@ export class LocalLLMService extends BaseLLMService {
                     throw new Error('Invalid response format');
                 }
             } catch (parseError) {
-                console.error('Parse error:', parseError);
+                .error('Parse error:', parseError);
                 throw new Error('Invalid response format');
             }
 
@@ -165,7 +165,7 @@ export class LocalLLMService extends BaseLLMService {
             clearTimeout(timeoutId);
 
             const responseText = await response.text();
-            console.log('Local LLM response:', responseText);
+            //console.log('Local LLM response:', responseText);
 
             if (!response.ok) {
                 throw new Error(`API error: ${response.status} ${response.statusText}`);
