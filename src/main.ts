@@ -1,4 +1,4 @@
-import { Plugin, Notice, PluginSettingTab, Setting, TFile, App, ButtonComponent, MarkdownView, Editor } from 'obsidian';
+import { Plugin, Notice, PluginSettingTab, Setting, TFile, App, ButtonComponent, MarkdownView } from 'obsidian';
 import { LLMService, LocalLLMService, CloudLLMService, ConnectionTestResult, LLMServiceConfig } from './services';
 import { TagUtils, TagOperationResult } from './tagUtils';
 
@@ -39,6 +39,15 @@ export default class AITaggerPlugin extends Plugin {
     async onload() {
         await this.loadSettings();
         this.initializeLLMService();
+
+        // Register file delete handler
+        this.registerEvent(
+            this.app.vault.on('delete', (file) => {
+                if (file instanceof TFile && file.extension === 'md') {
+                    TagUtils.resetCache();
+                }
+            })
+        );
 
         // Add settings tab
         this.addSettingTab(new AITaggerSettingTab(this.app, this));
@@ -125,13 +134,6 @@ export default class AITaggerPlugin extends Plugin {
             to {
                 transform: rotate(360deg);
             }
-        }
-
-        .endpoint-description code {
-            background-color: var(--background-modifier-form-control);
-            padding: 2px 4px;
-            border-radius: 4px;
-            font-family: var(--font-monospace);
         }
 
         .support-container {
@@ -242,7 +244,6 @@ export default class AITaggerPlugin extends Plugin {
             const existingTags = TagUtils.getAllTags(this.app);
             new Notice('Analyzing note content...');
             
-
             const analysis = await this.llmService.analyzeTags(content, existingTags);
             const result = await TagUtils.updateNoteTags(
                 this.app,
@@ -270,13 +271,13 @@ export default class AITaggerPlugin extends Plugin {
         const style = document.getElementById('ai-tagger-styles');
         if (style) {
             style.remove();
+            TagUtils.resetCache();
         }
     }
 }
 
 class AITaggerSettingTab extends PluginSettingTab {
     plugin: AITaggerPlugin;
-    private testButton: ButtonComponent | null = null;
     private statusEl: HTMLElement | null = null;
     private statusContainer: HTMLElement | null = null;
 
@@ -364,7 +365,6 @@ class AITaggerSettingTab extends PluginSettingTab {
 
         this.statusContainer = testContainer.createDiv('connection-test-status');
         this.statusEl = this.statusContainer.createSpan();
-        this.testButton = button;
     }
 
     private displayLocalSettings(containerEl: HTMLElement): void {
@@ -430,20 +430,9 @@ class AITaggerSettingTab extends PluginSettingTab {
     }
 
     private displayCloudSettings(containerEl: HTMLElement): void {
-        const description = createFragment(descEl => {
-            descEl.appendText('Complete chat completions API endpoint URL.');
-            descEl.createEl('br');
-            descEl.appendText('For example, OpenAI\'s endpoint:');
-            descEl.createEl('br');
-            descEl.createEl('code', {
-                text: 'https://api.openai.com/v1/chat/completions',
-                cls: 'endpoint-description'
-            });
-        });
-
         new Setting(containerEl)
             .setName('API Endpoint')
-            .setDesc(description)
+            .setDesc('Enter the complete chat completions API endpoint URL')
             .addText(text => text
                 .setPlaceholder('https://api.openai.com/v1/chat/completions')
                 .setValue(this.plugin.settings.cloudEndpoint)
@@ -501,17 +490,16 @@ class AITaggerSettingTab extends PluginSettingTab {
                     this.plugin.settings.maxMatchedTags = value;
                     await this.plugin.saveSettings();
                 }));
-
-        // Add support section
-        containerEl.createEl('h2', {text: '支持开发者'});
+        containerEl.createEl('h2', {text: 'Support Developer'});
         const supportEl = containerEl.createDiv('support-container');
-        supportEl.createSpan({text: '如果你觉得这个插件对你有帮助，可以考虑给我买杯咖啡 ☕️'});
+        supportEl.createSpan({text: 'If you find this plugin helpful, consider buying me a coffee ☕️'});
         
         const button = new ButtonComponent(supportEl)
             .setButtonText('Buy Me a Coffee')
             .setClass('support-button')
             .onClick(() => {
                 window.open('https://buymeacoffee.com/niehu2015o', '_blank');
-            });        
+            });
     }
+
 }

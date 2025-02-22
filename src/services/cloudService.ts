@@ -3,6 +3,9 @@ import { BaseLLMService } from './baseService';
 
 export class CloudLLMService extends BaseLLMService {
     private apiKey: string;
+    private readonly MAX_CONTENT_LENGTH = 4000; // Reasonable limit for most APIs
+    private readonly MAX_RETRIES = 3;
+    private readonly RETRY_DELAY = 1000; // 1 second
 
     constructor(config: LLMServiceConfig) {
         super(config);
@@ -24,23 +27,61 @@ export class CloudLLMService extends BaseLLMService {
         return null;
     }
 
-    async testConnection(): Promise<{ result: ConnectionTestResult; error?: ConnectionTestError }> {
+    private async makeRequest(options: RequestInit, timeoutMs: number): Promise<Response> {
         try {
             const validationError = this.validateCloudConfig();
             if (validationError) {
-                return {
-                    result: ConnectionTestResult.Failed,
-                    error: {
-                        type: "network",
-                        message: validationError
-                    }
-                };
+                throw new Error(validationError);
             }
 
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-            const response = await fetch(this.endpoint, {
+            try {
+                const response = await fetch(this.endpoint, {
+                    ...options,
+                    signal: controller.signal
+                });
+                return response;
+            } finally {
+                clearTimeout(timeoutId);
+            }
+        } catch (error) {
+            if (error instanceof Error && error.name === 'AbortError') {
+                throw new Error('Request timed out');
+            }
+            throw error;
+        }
+    }
+
+    private async makeRequestWithRetry(options: RequestInit, timeoutMs: number): Promise<Response> {
+        let lastError: Error | null = null;
+        
+        for (let i = 0; i < this.MAX_RETRIES; i++) {
+            try {
+                const response = await this.makeRequest(options, timeoutMs);
+                if (response.ok || response.status === 401) { // Don't retry auth errors
+                    return response;
+                }
+                lastError = new Error(`HTTP error ${response.status}`);
+            } catch (error) {
+                lastError = error instanceof Error ? error : new Error('Unknown error');
+                if (error instanceof Error && error.message.includes('Invalid API key')) {
+                    throw error; // Don't retry auth errors
+                }
+            }
+            
+            if (i < this.MAX_RETRIES - 1) {
+                await new Promise(resolve => setTimeout(resolve, this.RETRY_DELAY * (i + 1)));
+            }
+        }
+        
+        throw lastError || new Error('Max retries exceeded');
+    }
+
+    async testConnection(): Promise<{ result: ConnectionTestResult; error?: ConnectionTestError }> {
+        try {
+            const response = await this.makeRequestWithRetry({
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -55,12 +96,9 @@ export class CloudLLMService extends BaseLLMService {
                         }
                     ],
                     max_tokens: 5
-                }),
-                signal: controller.signal
-            });
-
-            clearTimeout(timeoutId);
-
+                })
+            }, 10000);
+            
             const responseText = await response.text();
 
             if (!response.ok) {
@@ -129,15 +167,23 @@ export class CloudLLMService extends BaseLLMService {
 
     async analyzeTags(content: string, existingTags: string[]): Promise<LLMResponse> {
         try {
-            const validationError = this.validateCloudConfig();
-            if (validationError) {
-                throw new Error(validationError);
+            // Truncate content if too long
+            if (content.length > this.MAX_CONTENT_LENGTH) {
+                content = content.slice(0, this.MAX_CONTENT_LENGTH) + '...';
             }
 
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 30000);
+            const prompt = this.buildPrompt(content, existingTags);
 
-            const response = await fetch(this.endpoint, {
+            // Validate that we have content to analyze
+            if (!content.trim()) {
+                throw new Error('Empty content provided for analysis');
+            }
+
+            // Validate that the prompt was built successfully
+            if (!prompt.trim()) {
+                throw new Error('Failed to build analysis prompt');
+            }
+            const response = await this.makeRequestWithRetry({
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -152,15 +198,11 @@ export class CloudLLMService extends BaseLLMService {
                         },
                         {
                             role: 'user',
-                            content: this.buildPrompt(content, existingTags)
+                            content: prompt
                         }
                     ]
-                }),
-                signal: controller.signal
-            });
-
-            clearTimeout(timeoutId);
-
+                })
+            }, 30000);
             const responseText = await response.text();
 
             if (!response.ok) {

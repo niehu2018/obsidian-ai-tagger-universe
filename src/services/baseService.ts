@@ -3,6 +3,7 @@ import { LLMServiceConfig, LLMResponse, ConnectionTestResult, ConnectionTestErro
 export abstract class BaseLLMService {
     protected endpoint: string;
     protected modelName: string;
+    protected readonly TIMEOUT = 30000; // 30 seconds timeout
 
     constructor(config: LLMServiceConfig) {
         this.endpoint = config.endpoint.trim();
@@ -28,7 +29,7 @@ export abstract class BaseLLMService {
 
     protected validateTag(tag: string): boolean {
         // Must start with # and contain only letters, numbers, and hyphens
-        const tagRegex = /^#[a-zA-Z0-9-]+$/;
+        const tagRegex = /^#[\p{L}\p{N}-]+$/u;
         return tagRegex.test(tag);
     }
 
@@ -55,7 +56,7 @@ export abstract class BaseLLMService {
         return validatedTags;
     }
 
-    protected extractJSONFromResponse(response: string): string {
+    protected extractJSONFromResponse(response: string, retryCount = 0): string {
         // Try to find JSON content within markdown code blocks
         const markdownJsonRegex = /```(?:json)?\s*(\{[\s\S]*?\})\s*```/;
         const markdownMatch = response.match(markdownJsonRegex);
@@ -69,6 +70,11 @@ export abstract class BaseLLMService {
         if (jsonMatch) {
             return jsonMatch[0];
         }
+        
+        // Retry with more flexible regex if initial attempt fails
+        if (retryCount === 0) {
+            return this.extractJSONFromResponse(response.replace(/\n/g, ' '), 1);
+        }
         throw new Error('No valid JSON found in response');
     }
 
@@ -79,9 +85,10 @@ export abstract class BaseLLMService {
 
 Requirements for tags:
 - Must start with # symbol
-- Can only contain letters, numbers, and hyphens
+- Can contain letters, numbers, and hyphens from any language
 - No spaces allowed
 - Example format: #technology, #artificial-intelligence, #coding
+- Supports international characters: #技术, #인공지능, #프로그래밍
 
 Existing tags:
 ${existingTags.join(', ')}

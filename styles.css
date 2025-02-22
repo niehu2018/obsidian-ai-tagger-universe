@@ -1,3 +1,43 @@
+/* Provider Styles */
+.provider-item {
+    margin: 10px 0;
+    padding: 8px;
+    border-radius: 5px;
+    background-color: var(--background-modifier-form-field);
+}
+
+.provider-name {
+    font-weight: bold;
+    color: var(--text-normal);
+    margin-bottom: 4px;
+}
+
+.provider-url {
+    margin: 4px 0;
+}
+
+.provider-url code {
+    background-color: var(--background-secondary);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: var(--font-monospace);
+    font-size: 0.9em;
+}
+
+.provider-details {
+    color: var(--text-muted);
+    font-size: 0.9em;
+    margin: 4px 0;
+}
+
+.provider-notes {
+    color: var(--text-faint);
+    font-size: 0.85em;
+    font-style: italic;
+    margin-top: 4px;
+}
+
+/* Connection Test Styles */
 .connection-test-status {
     margin-left: 10px;
     display: inline-flex;

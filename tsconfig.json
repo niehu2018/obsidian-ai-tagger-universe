@@ -6,22 +6,20 @@
     "module": "ESNext",
     "target": "ES2022",
     "allowJs": true,
-    "noImplicitAny": true,
     "moduleResolution": "node",
     "importHelpers": true,
     "isolatedModules": true,
     "strict": true,
     "strictNullChecks": true,
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
+    "noImplicitThis": true,
+    "noImplicitAny": true,
     "lib": [
       "DOM",
       "ES5",
       "ES6",
-      "ES2022",
-      "ES2021"
-    ]
+      "ES2022"
+    ],
+    "types": ["node", "obsidian"]
   },
   "include": [
     "src/**/*.ts"

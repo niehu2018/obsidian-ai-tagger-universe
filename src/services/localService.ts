@@ -2,10 +2,15 @@ import { LLMResponse, LLMServiceConfig, ConnectionTestResult, ConnectionTestErro
 import { BaseLLMService } from './baseService';
 
 export class LocalLLMService extends BaseLLMService {
+    private readonly MAX_CONTENT_LENGTH = 8000; // Local models can handle more content
+    private readonly MAX_RETRIES = 2; // Fewer retries for local service
+    private readonly RETRY_DELAY = 500; // 0.5 second
+
     constructor(config: LLMServiceConfig) {
         super(config);
         // Ensure endpoint ends with standard chat completions path
         this.endpoint = this.normalizeEndpoint(config.endpoint);
+        this.validateLocalConfig(); // Validate on construction
     }
 
     private normalizeEndpoint(endpoint: string): string {
@@ -39,6 +44,63 @@ export class LocalLLMService extends BaseLLMService {
         return null;
     }
 
+    private async makeRequest(options: RequestInit, timeoutMs: number): Promise<Response> {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+            try {
+                const response = await fetch(this.endpoint, {
+                    ...options,
+                    signal: controller.signal
+                });
+                return response;
+            } finally {
+                clearTimeout(timeoutId);
+            }
+        } catch (error) {
+            if (error instanceof Error) {
+                if (error.name === 'AbortError') {
+                    throw new Error('Request timed out. Please check if your local LLM service is running and responsive.');
+                }
+                if (error.message.includes('Failed to fetch')) {
+                    throw new Error('Unable to connect to local LLM service. Please check if it is running.');
+                }
+            }
+            throw error;
+        }
+    }
+
+    private async makeRequestWithRetry(options: RequestInit, timeoutMs: number): Promise<Response> {
+        let lastError: Error | null = null;
+
+        for (let i = 0; i < this.MAX_RETRIES; i++) {
+            try {
+                const response = await this.makeRequest(options, timeoutMs);
+                
+                // For local service, we might want to retry on any error
+                // as it could be starting up or processing another request
+                if (response.ok) {
+                    return response;
+                }
+
+                // Read the error response
+                const errorText = await response.text();
+                lastError = new Error(
+                    `HTTP error ${response.status}: ${
+                        errorText || response.statusText
+                    }`
+                );
+            } catch (error) {
+                lastError = error instanceof Error ? error : new Error('Unknown error');
+            }
+
+            await new Promise(resolve => setTimeout(resolve, this.RETRY_DELAY * (i + 1)));
+        }
+
+        throw lastError || new Error('Max retries exceeded');
+    }
+
     async testConnection(): Promise<{ result: ConnectionTestResult; error?: ConnectionTestError }> {
         try {
             // Validate configuration first
@@ -53,44 +115,31 @@ export class LocalLLMService extends BaseLLMService {
                 };
             }
 
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-
-            const response = await fetch(this.endpoint, {
+            const response = await this.makeRequestWithRetry({
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     model: this.modelName,
                     messages: [{
+                        role: 'system',
+                        content: 'Simple connection test'
+                    }, {
                         role: 'user',
-                        content: 'Test connection'
+                        content: 'Hello'
                     }],
                     max_tokens: 5
-                }),
-                signal: controller.signal
-            });
+                })
+            }, 10000);
 
-            clearTimeout(timeoutId);
-
-            let responseText: string;
-            try {
-                responseText = await response.text();
-            } catch (error) {
-                throw new Error('Failed to read response body');
-            }
-            
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
+            const responseText = await response.text();
             try {
                 const data = JSON.parse(responseText);
+
                 if (!data.choices || !Array.isArray(data.choices)) {
                     throw new Error('Invalid response format');
                 }
             } catch (parseError) {
-                throw new Error('Invalid response format');
+                throw new Error('Failed to parse response from local service');
             }
 
             return { result: ConnectionTestResult.Success };
@@ -134,16 +183,22 @@ export class LocalLLMService extends BaseLLMService {
 
     async analyzeTags(content: string, existingTags: string[]): Promise<LLMResponse> {
         try {
-            // Validate configuration first
-            const validationError = this.validateLocalConfig();
-            if (validationError) {
-                throw new Error(validationError);
+            // Validate content
+            if (!content.trim()) {
+                throw new Error('Empty content provided for analysis');
             }
 
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+            // Truncate if too long
+            if (content.length > this.MAX_CONTENT_LENGTH) {
+                content = content.slice(0, this.MAX_CONTENT_LENGTH) + '...';
+            }
 
-            const response = await fetch(this.endpoint, {
+            const prompt = this.buildPrompt(content, existingTags);
+            if (!prompt.trim()) {
+                throw new Error('Failed to build analysis prompt');
+            }
+
+            const response = await this.makeRequestWithRetry({
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -151,40 +206,28 @@ export class LocalLLMService extends BaseLLMService {
                     messages: [
                         {
                             role: 'system',
-                            content: 'You are a professional document tag analysis assistant. You need to analyze content and suggest relevant tags.'
+                            content: 'You are a professional document tag analyst. Analyze content and suggest relevant tags.'
                         },
                         {
                             role: 'user',
-                            content: this.buildPrompt(content, existingTags)
+                            content: prompt
                         }
                     ],
                     temperature: 0.3  // Lower temperature for more focused responses
-                }),
-                signal: controller.signal
-            });
+                })
+            }, 30000);
 
-            clearTimeout(timeoutId);
-
-            let responseText: string;
-            try {
-                responseText = await response.text();
-            } catch (error) {
-                throw new Error('Failed to read response body');
-            }
-            
-
-            if (!response.ok) {
-                throw new Error(`API error: ${response.status} ${response.statusText}`);
-            }
-
+            const responseText = await response.text();
             try {
                 const data = JSON.parse(responseText);
                 const textToAnalyze = data.choices?.[0]?.message?.content;
-                if (!textToAnalyze) {
+                
+                if (textToAnalyze) {
+                    return this.parseResponse(textToAnalyze);
+                } else {
                     throw new Error('Missing response content');
                 }
-                return this.parseResponse(textToAnalyze);
-            } catch (parseError) {
+            } catch {
                 throw new Error('Invalid response format from local service');
             }
         } catch (error) {

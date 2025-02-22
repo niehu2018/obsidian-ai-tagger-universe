@@ -16,7 +16,7 @@ An Obsidian plugin that automatically analyzes note content and adds relevant ta
 - Comprehensive settings interface
 - Tag Management:
   - AI-powered tag generation
-  - Quick tag clearing with keyboard shortcut
+  - Quick tag clearing
 
 ## Installation
 
@@ -41,8 +41,9 @@ An Obsidian plugin that automatically analyzes note content and adds relevant ta
    - Tags will be automatically added to the note's frontmatter
 
    ### Keyboard Shortcuts:
-   - `Cmd + Shift + T` (macOS) / `Ctrl + Shift + T` (Windows/Linux): Clear all tags while keeping the tags field
-   - Use command palette for other operations like analyzing note content
+   You can set up custom keyboard shortcuts for the following commands in Obsidian's Hotkeys settings:
+   - "Analyze Current Note and Add Tags" - Analyze current note and add AI-generated tags
+   - "Clear All Tags" - Clear all tags while keeping the tags field
 
 ## Local LLM Setup (Ollama)
 
@@ -100,7 +101,7 @@ Settings allow you to adjust:
 
 ## Tag Management
 
-- **AI Tag Generation**: Use command palette or configured hotkeys to analyze current note and add relevant tags
+- **AI Tag Generation**: Access via command palette to analyze current note and add relevant tags
 - **Clear All Tags**: Use command palette to quickly clear all tags while preserving the tags field in frontmatter
   - This operation only removes tag values, keeping the structure intact
   - Useful for starting fresh with tag organization
@@ -139,12 +140,12 @@ npm run build
 - Provides error notifications
 - Logs detailed errors to console
 
-## Support
+## 支持开发者
 
-如果你觉得这个插件对你有帮助，可以考虑给我买杯咖啡 ☕️
+如果您觉得这个插件对您的工作有帮助，欢迎请我喝杯咖啡 ☕️
 
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/niehu2015o)
 
-## License
+## 许可协议
 
 MIT

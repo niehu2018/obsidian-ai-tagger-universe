@@ -12,7 +12,11 @@ export class TagUtils {
      * Must start with # and contain only letters, numbers, and hyphens
      */
     static validateTag(tag: string): boolean {
-        const tagRegex = /^#[a-zA-Z0-9-]+$/;
+        if (!tag) {
+            return false;
+        }
+        tag = tag.trim();
+        const tagRegex = /^#[\p{L}\p{N}-]+$/u;
         return tagRegex.test(tag);
     }
 
@@ -53,6 +57,7 @@ export class TagUtils {
         // Validate and filter tags
         const { valid, invalid } = this.validateTags(tags);
         if (invalid.length > 0) {
+            new Notice(`Invalid tags found: ${invalid.join(', ')}`);
         }
 
         return valid;
@@ -150,14 +155,26 @@ export class TagUtils {
             const newContent = `---\n${newLines.join('\n')}${afterFrontMatter}`;
 
             // Save updated content and wait for it to complete
-            await app.vault.modify(file, newContent);
-
-            // Force metadata cache update and wait for it
-            await app.metadataCache.trigger('changed', file);
-            await new Promise(resolve => setTimeout(resolve, 100));
-
-            // Trigger file reload
-            app.workspace.trigger('file-open', file);
+            try {
+                await app.vault.modify(file, newContent);
+                
+                // Wait for metadata cache to update
+                await new Promise<void>((resolve) => {
+                    const handler = (...args: any[]) => {
+                        const changedFile = args[0] as TFile;
+                        if (changedFile?.path === file.path) {
+                            app.metadataCache.off('changed', handler);
+                            resolve();
+                        }
+                    };
+                    app.metadataCache.on('changed', handler);
+                    app.metadataCache.trigger('changed', file);
+                });
+                
+                app.workspace.trigger('file-open', file);
+            } catch (err) {
+                throw new Error(`File update failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+            }
 
             return {
                 success: true,
@@ -184,13 +201,21 @@ export class TagUtils {
         matchedTags: string[]
     ): Promise<TagOperationResult> {
         try {
+            // Check input arrays
+            if (!Array.isArray(newTags) || !Array.isArray(matchedTags)) {
+                throw new Error('Tag parameters must be arrays');
+            }
+
+            // Remove empty strings and duplicates
+            newTags = [...new Set(newTags.filter(tag => tag.trim()))];
+            matchedTags = [...new Set(matchedTags.filter(tag => tag.trim()))];
+
             // Validate all tags first
             const { valid: validNewTags, invalid: invalidNewTags } = this.validateTags(newTags);
             const { valid: validMatchedTags, invalid: invalidMatchedTags } = this.validateTags(matchedTags);
 
-            if (invalidNewTags.length > 0 || invalidMatchedTags.length > 0) {
-                const invalidTags = [...invalidNewTags, ...invalidMatchedTags];
-                throw new Error(`Invalid tag format found: ${invalidTags.join(', ')}\nTags can only contain letters, numbers, and hyphens`);
+            if (validNewTags.length === 0 && validMatchedTags.length === 0) {
+                return { success: true, message: 'No valid tags to add', tags: [] };
             }
 
             // Read note content
@@ -237,11 +262,24 @@ export class TagUtils {
             }
 
             // Save updated content
-            await app.vault.modify(file, newContent);
-
-            // Force cache update and wait for it
-            await app.metadataCache.trigger('changed', file);
-            await new Promise(resolve => setTimeout(resolve, 100));
+            try {
+                await app.vault.modify(file, newContent);
+                
+                // Wait for metadata cache to update
+                await new Promise<void>((resolve) => {
+                    const handler = (...args: any[]) => {
+                        const changedFile = args[0] as TFile;
+                        if (changedFile?.path === file.path) {
+                            app.metadataCache.off('changed', handler);
+                            resolve();
+                        }
+                    };
+                    app.metadataCache.on('changed', handler);
+                    app.metadataCache.trigger('changed', file);
+                });
+            } catch (err) {
+                throw new Error(`File update failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+            }
 
             // Reload the file to update the view
             app.workspace.trigger('file-open', file);
@@ -265,14 +303,55 @@ export class TagUtils {
      * Get all existing tags
      */
     static getAllTags(app: App): string[] {
+        // Use cache to improve performance
+        if (!this._tagCache) {
+            this._tagCache = new Map<string, string[]>();
+            this._lastCacheUpdate = 0;
+        }
+
+        const now = Date.now();
+        if (!this._lastCacheUpdate || now - this._lastCacheUpdate > 300000) { // If cache is older than 5 minutes
+            const tags = new Set<string>();
+            app.vault.getMarkdownFiles().forEach((file) => {
+                const cache = app.metadataCache.getFileCache(file);
+                if (cache?.frontmatter?.tags) {
+                    const fileTags = this.getExistingTags(cache.frontmatter);
+                    fileTags.forEach(tag => tags.add(tag));
+                    this._tagCache?.set(file.path, fileTags);
+                }
+            });
+            this._lastCacheUpdate = now;
+            return Array.from(tags).sort();
+        }
+
+        // Use cache for recently modified files
         const tags = new Set<string>();
-        app.vault.getMarkdownFiles().forEach((file) => {
+        const recentlyModifiedFiles = app.vault.getMarkdownFiles().filter(file => 
+            file.stat.mtime > this._lastCacheUpdate
+        );
+
+        // Update tags for recently modified files
+        recentlyModifiedFiles.forEach((file) => {
             const cache = app.metadataCache.getFileCache(file);
             if (cache?.frontmatter?.tags) {
                 const fileTags = this.getExistingTags(cache.frontmatter);
                 fileTags.forEach(tag => tags.add(tag));
+                this._tagCache?.set(file.path, fileTags);
             }
         });
+
         return Array.from(tags).sort();
     }
+
+    /**
+     * Reset the tag cache
+     * Should be called when the plugin is unloaded or when files are deleted
+     */
+    static resetCache(): void {
+        this._tagCache = null;
+        this._lastCacheUpdate = 0;
+    }
+
+    private static _tagCache: Map<string, string[]> | null = null;
+    private static _lastCacheUpdate = 0;
 }
