@@ -4,3 +4,8 @@ data.json
 .DS_Store
 node_modules
 .vscode/
+dist/
+build/
+*.js
+*.js.map
+*.d.ts
