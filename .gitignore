@@ -1,24 +1,3 @@
-# npm
-node_modules/
-*.log
-
-# Build output
-dist/
 main.js
-
-# Environment and local config
-.env
-.env.*
-data.json
-
-# macOS
 .DS_Store
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Obsidian
-.obsidian/
+node_modules

@@ -1,0 +1,10 @@
+{
+  "serviceType": "cloud",
+  "localEndpoint": "http://localhost:11434",
+  "localModel": "deepseek-r1:1.5b",
+  "cloudEndpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+  "cloudApiKey": "sk-46331a6894c74bd283d5f91ea7cd961e",
+  "cloudModel": "qwen-max",
+  "maxNewTags": 5,
+  "maxMatchedTags": 2
+}

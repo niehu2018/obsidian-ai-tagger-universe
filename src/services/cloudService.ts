@@ -40,8 +40,6 @@ export class CloudLLMService extends BaseLLMService {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-            console.log('Testing connection with endpoint:', this.endpoint);
-
             const response = await fetch(this.endpoint, {
                 method: 'POST',
                 headers: {
@@ -64,7 +62,6 @@ export class CloudLLMService extends BaseLLMService {
             clearTimeout(timeoutId);
 
             const responseText = await response.text();
-            console.log('Cloud API test response:', responseText);
 
             if (!response.ok) {
                 if (response.status === 401) {
@@ -123,7 +120,6 @@ export class CloudLLMService extends BaseLLMService {
                 }
             }
 
-            console.error('Cloud API test error:', error);
             return {
                 result: ConnectionTestResult.Failed,
                 error: testError
@@ -166,7 +162,6 @@ export class CloudLLMService extends BaseLLMService {
             clearTimeout(timeoutId);
 
             const responseText = await response.text();
-            console.log('Cloud API response:', responseText);
 
             if (!response.ok) {
                 try {
