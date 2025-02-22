@@ -101,7 +101,7 @@ Settings allow you to adjust:
 ## Tag Management
 
 - **AI Tag Generation**: Use command palette or configured hotkeys to analyze current note and add relevant tags
-- **Clear All Tags**: Use `Cmd/Ctrl + Shift + T` to quickly clear all tags while preserving the tags field in frontmatter
+- **Clear All Tags**: Use command palette to quickly clear all tags while preserving the tags field in frontmatter
   - This operation only removes tag values, keeping the structure intact
   - Useful for starting fresh with tag organization
   - Can be undone with Obsidian's undo function
