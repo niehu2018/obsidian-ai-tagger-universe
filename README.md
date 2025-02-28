@@ -1,4 +1,4 @@
-# Obsidian AI Tagger
+# An easy to use tool for tag your notes using ai-tagger-universe
 
 An Obsidian plugin that automatically analyzes note content and adds relevant tags to the note's frontmatter using AI.
 
