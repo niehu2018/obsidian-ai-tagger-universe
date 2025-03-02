@@ -22,4 +22,5 @@ export interface ConnectionTestError {
 export interface LLMService {
     analyzeTags(content: string, existingTags: string[]): Promise<LLMResponse>;
     testConnection(): Promise<{ result: ConnectionTestResult; error?: ConnectionTestError }>;
+    dispose(): Promise<void>;
 }

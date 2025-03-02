@@ -27,8 +27,9 @@ const DEFAULT_SETTINGS: AITaggerSettings = {
 export default class AITaggerPlugin extends Plugin {
     settings: AITaggerSettings = DEFAULT_SETTINGS;
     private llmService: LLMService;
+    private fileChangeTimeoutId: NodeJS.Timeout | null = null;
 
-    constructor(app: App, manifest: any) {
+    constructor(app: App, manifest: Plugin["manifest"]) {
         super(app, manifest);
         this.llmService = new LocalLLMService({
             endpoint: DEFAULT_SETTINGS.localEndpoint,
@@ -55,105 +56,25 @@ export default class AITaggerPlugin extends Plugin {
         // Add commands
         this.addCommand({
             id: 'analyze-note-and-add-tags',
-            name: 'Analyze Current Note and Add Tags',
+            name: 'Analyze current note and add tags',
             callback: () => this.analyzeCurrentNote()
         });
 
         this.addCommand({
             id: 'clear-all-tags',
-            name: 'Clear All Tags (Keep Tags Field)',
+            name: 'Clear all tags (keep tags field)',
             callback: () => this.clearNoteTags()
         });
 
-        // Load CSS
-        this.loadStyles();
     }
 
-    private loadStyles() {
-        const css = document.createElement('style');
-        css.id = 'ai-tagger-styles';
-        css.textContent = `
-        .connection-test-container {
-            display: flex;
-            align-items: center;
-            gap: 8px;
+    async onunload() {
+        await this.llmService?.dispose();
+        TagUtils.resetCache();
+        if (this.fileChangeTimeoutId) {
+            clearTimeout(this.fileChangeTimeoutId);
+            this.fileChangeTimeoutId = null;
         }
-
-        .connection-test-status {
-            margin-left: 10px;
-            display: inline-flex;
-            align-items: center;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.9em;
-        }
-
-        .connection-test-status.success {
-            color: var(--color-green);
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .connection-test-status.error {
-            color: var(--color-red);
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .connection-test-status.testing {
-            color: var(--text-muted);
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .connection-test-status.success::before {
-            content: "✓";
-            font-weight: bold;
-        }
-
-        .connection-test-status.error::before {
-            content: "✗";
-            font-weight: bold;
-        }
-
-        .connection-test-status.testing::after {
-            content: "";
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border: 2px solid var(--text-muted);
-            border-top-color: transparent;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        .support-container {
-            margin-top: 1rem;
-            padding: 1rem;
-            border-radius: 8px;
-            background: var(--background-primary-alt);
-            text-align: center;
-        }
-
-        .support-button {
-            margin-top: 1rem;
-            background-color: #FF813F !important;
-            color: white !important;
-        }
-
-        .support-button:hover {
-            background-color: #FF9B66 !important;
-        }`;
-        document.head.appendChild(css);
     }
 
     private initializeLLMService() {
@@ -166,6 +87,8 @@ export default class AITaggerPlugin extends Plugin {
                 ? this.settings.localModel
                 : this.settings.cloudModel
         };
+        
+        this.llmService?.dispose();
 
         this.llmService = this.settings.serviceType === 'local'
             ? new LocalLLMService(config)
@@ -211,15 +134,15 @@ export default class AITaggerPlugin extends Plugin {
                     view.editor.refresh();
                 }
                 
-                this.app.vault.trigger('modify', activeFile);
                 new Notice('Successfully cleared all tags');
+                this.app.vault.trigger('modify', activeFile);
             } else {
                 new Notice(result.message);
             }
             
-            // Ensure view is updated
-            setTimeout(() => {
+            this.fileChangeTimeoutId = setTimeout(() => {
                 this.app.workspace.trigger('file-open', activeFile);
+                this.fileChangeTimeoutId = null;
             }, 150);
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Unknown error';
@@ -261,17 +184,9 @@ export default class AITaggerPlugin extends Plugin {
             } else {
                 new Notice('Failed to update tags');
             }
-        } catch (error) {
+        } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'Unknown error';
             new Notice(`Error analyzing note: ${message}`);
-        }
-    }
-
-    onunload() {
-        const style = document.getElementById('ai-tagger-styles');
-        if (style) {
-            style.remove();
-            TagUtils.resetCache();
         }
     }
 }
@@ -291,12 +206,12 @@ class AITaggerSettingTab extends PluginSettingTab {
         containerEl.empty();
 
         new Setting(containerEl)
-            .setName('AI Service Type')
+            .setName('AI service type')
             .setDesc('Choose the AI service provider to use')
             .addDropdown(dropdown => 
                 dropdown
                     .addOptions({
-                        'local': 'Local LLM Service',
+                        'local': 'Local LLM service',
                         'cloud': 'Cloud Service'
                     })
                     .setValue(this.plugin.settings.serviceType)
@@ -339,12 +254,12 @@ class AITaggerSettingTab extends PluginSettingTab {
         const testContainer = containerEl.createDiv('connection-test-container');
 
         const testSetting = new Setting(testContainer)
-            .setName('Connection Test')
+            .setName('Connection test')
             .setDesc('Test connection to AI service');
 
         const buttonContainer = testSetting.settingEl.createDiv('setting-item-control');
         const button = new ButtonComponent(buttonContainer)
-            .setButtonText('Test Connection')
+            .setButtonText('Test connection')
             .onClick(async () => {
                 button.setButtonText('Testing...').setDisabled(true);
                 this.setTestStatus('testing');
@@ -359,7 +274,7 @@ class AITaggerSettingTab extends PluginSettingTab {
                 } catch (error) {
                     this.setTestStatus('error', 'Error during test');
                 } finally {
-                    button.setButtonText('Test Connection').setDisabled(false);
+                    button.setButtonText('Test connection').setDisabled(false);
                 }
             });
 
@@ -405,7 +320,7 @@ class AITaggerSettingTab extends PluginSettingTab {
         localAIItem.createEl('code', { text: 'http://localhost:8080/v1/chat/completions' });
 
         new Setting(containerEl)
-            .setName('Local LLM Endpoint')
+            .setName('Local LLM endpoint')
             .setDesc('Enter the base URL for your local service')
             .addText(text => text
                 .setPlaceholder('http://localhost:11434')
@@ -416,7 +331,7 @@ class AITaggerSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Model Name')
+            .setName('Model name')
             .setDesc('Name of the model to use with your local service')
             .addText(text => text
                 .setPlaceholder('llama2')
@@ -431,7 +346,7 @@ class AITaggerSettingTab extends PluginSettingTab {
 
     private displayCloudSettings(containerEl: HTMLElement): void {
         new Setting(containerEl)
-            .setName('API Endpoint')
+            .setName('API endpoint')
             .setDesc('Enter the complete chat completions API endpoint URL')
             .addText(text => text
                 .setPlaceholder('https://api.openai.com/v1/chat/completions')
@@ -442,7 +357,7 @@ class AITaggerSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('API Key')
+            .setName('API key')
             .setDesc('Cloud service API key')
             .addText(text => text
                 .setPlaceholder('sk-...')
@@ -453,7 +368,7 @@ class AITaggerSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Model Name')
+            .setName('Model name')
             .setDesc('Name of model to use')
             .addText(text => text
                 .setPlaceholder('gpt-3.5-turbo')
@@ -468,7 +383,7 @@ class AITaggerSettingTab extends PluginSettingTab {
 
     private displayGeneralSettings(containerEl: HTMLElement): void {
         new Setting(containerEl)
-            .setName('Maximum New Tags')
+            .setName('Maximum new tags')
             .setDesc('Maximum number of new tags to generate (3-10)')
             .addSlider(slider => slider
                 .setLimits(3, 10, 1)
@@ -480,7 +395,7 @@ class AITaggerSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Maximum Matched Tags')
+            .setName('Maximum matched tags')
             .setDesc('Maximum number of tags to match from existing ones (1-3)')
             .addSlider(slider => slider
                 .setLimits(1, 3, 1)
@@ -490,7 +405,11 @@ class AITaggerSettingTab extends PluginSettingTab {
                     this.plugin.settings.maxMatchedTags = value;
                     await this.plugin.saveSettings();
                 }));
-        containerEl.createEl('h2', {text: 'Support Developer'});
+
+        new Setting(containerEl)
+            .setName('Support developer')
+            .setHeading();
+
         const supportEl = containerEl.createDiv('support-container');
         supportEl.createSpan({text: 'If you find this plugin helpful, consider buying me a coffee ☕️'});
         

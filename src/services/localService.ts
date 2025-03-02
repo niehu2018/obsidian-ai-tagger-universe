@@ -46,25 +46,18 @@ export class LocalLLMService extends BaseLLMService {
 
     private async makeRequest(options: RequestInit, timeoutMs: number): Promise<Response> {
         try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
+            const { controller, cleanup } = this.createRequestController(timeoutMs);
             try {
                 const response = await fetch(this.endpoint, {
                     ...options,
                     signal: controller.signal
                 });
                 return response;
-            } finally {
-                clearTimeout(timeoutId);
-            }
+            } finally { cleanup(); }
         } catch (error) {
             if (error instanceof Error) {
                 if (error.name === 'AbortError') {
                     throw new Error('Request timed out. Please check if your local LLM service is running and responsive.');
-                }
-                if (error.message.includes('Failed to fetch')) {
-                    throw new Error('Unable to connect to local LLM service. Please check if it is running.');
                 }
             }
             throw error;

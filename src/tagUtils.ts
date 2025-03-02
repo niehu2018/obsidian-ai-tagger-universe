@@ -16,7 +16,7 @@ export class TagUtils {
             return false;
         }
         tag = tag.trim();
-        const tagRegex = /^#[\p{L}\p{N}-]+$/u;
+        const tagRegex = /^#?[\p{L}\p{N}/\u4e00-\u9fff-]+$/u;
         return tagRegex.test(tag);
     }
 
@@ -57,7 +57,7 @@ export class TagUtils {
         // Validate and filter tags
         const { valid, invalid } = this.validateTags(tags);
         if (invalid.length > 0) {
-            new Notice(`Invalid tags found: ${invalid.join(', ')}`);
+            console.debug(`Invalid tags found: ${invalid.join(', ')}`);
         }
 
         return valid;
@@ -99,62 +99,27 @@ export class TagUtils {
             // Read note content
             const content = await app.vault.read(file);
             
-            // Check if there's a frontmatter section
-            if (!content.startsWith('---\n')) {
-                return {
-                    success: false,
-                    message: 'No frontmatter found in the note'
-                };
-            }
+            // Process frontmatter
+            let newContent = content;
+            const frontmatterRegex = /^---\n([\s\S]*?)\n---/;
 
-            const endOfFrontMatter = content.indexOf('---\n', 4);
-            if (endOfFrontMatter === -1) {
-                return {
-                    success: false,
-                    message: 'Invalid frontmatter format'
-                };
-            }
-
-            // Parse the frontmatter section
-            const frontMatter = content.slice(4, endOfFrontMatter);
-            const afterFrontMatter = content.slice(endOfFrontMatter);
-            
-            // Get the lines before and after tags field
-            const lines = frontMatter.split('\n');
-            const newLines = [];
-            let inTagsBlock = false;
-            let tagsFound = false;
-
-            for (const line of lines) {
-                if (line.trim().startsWith('tags:')) {
-                    tagsFound = true;
-                    newLines.push('tags:');
-                    inTagsBlock = true;
-                    continue;
+            const processFrontMatter = (frontmatter: string) => {
+                const yaml = frontmatter.split('\n');
+                const processed = yaml.filter(line => !line.trim().startsWith('- '));
+                if (!processed.some(line => line.trim().startsWith('tags:'))) {
+                    processed.push('tags:');
                 }
+                return processed.join('\n');
+            };
 
-                if (inTagsBlock) {
-                    if (line.trim().startsWith('-') || line.trim().startsWith('  -')) {
-                        continue; // Skip tag entries
-                    } else {
-                        inTagsBlock = false;
-                    }
-                }
-
-                if (!inTagsBlock) {
-                    newLines.push(line);
-                }
+            if (frontmatterRegex.test(content)) {
+                newContent = content.replace(frontmatterRegex, (_, frontmatter) => {
+                    return `---\n${processFrontMatter(frontmatter)}\n---`;
+                });
+            } else {
+                newContent = `---\ntags:\n---\n\n${content}`;
             }
 
-            // If no tags field was found, add it
-            if (!tagsFound) {
-                newLines.push('tags:');
-            }
-
-            // Construct new content
-            const newContent = `---\n${newLines.join('\n')}${afterFrontMatter}`;
-
-            // Save updated content and wait for it to complete
             try {
                 await app.vault.modify(file, newContent);
                 
@@ -212,7 +177,15 @@ export class TagUtils {
 
             // Validate all tags first
             const { valid: validNewTags, invalid: invalidNewTags } = this.validateTags(newTags);
-            const { valid: validMatchedTags, invalid: invalidMatchedTags } = this.validateTags(matchedTags);
+            const { valid: validMatchedTags } = this.validateTags(matchedTags);
+
+            // Show invalid tags notice only once
+            if (invalidNewTags.length > 0) {
+                new Notice(
+                    `Some generated tags were invalid and will be skipped: ${invalidNewTags.join(', ')}`, 
+                    3000
+                );
+            }
 
             if (validNewTags.length === 0 && validMatchedTags.length === 0) {
                 return { success: true, message: 'No valid tags to add', tags: [] };
@@ -220,48 +193,39 @@ export class TagUtils {
 
             // Read note content
             const content = await app.vault.read(file);
-            const frontmatter = app.metadataCache.getFileCache(file)?.frontmatter;
-            const frontmatterToUse = frontmatter || null;
-
-            // Get existing tags
-            const existingTags = this.getExistingTags(frontmatterToUse);
             
-            // Merge all tags and remove # prefix for YAML
+            // Get existing tags and prepare all tags
+            const cache = app.metadataCache.getFileCache(file);
+            const existingTags = this.getExistingTags(cache?.frontmatter || null);
             const allTags = this.mergeTags(existingTags, [...validNewTags, ...validMatchedTags])
-                .map(tag => tag.startsWith('#') ? tag.substring(1) : tag); // Remove # for YAML
-            
-            // Build new frontmatter
+                .map(tag => tag.startsWith('#') ? tag.substring(1) : tag);
+
+            // Process frontmatter
             let newContent = content;
+            const frontmatterRegex = /^---\n([\s\S]*?)\n---/;
             const yamlTags = allTags.map(tag => `  - ${tag}`).join('\n');
 
-            if (content.startsWith('---\n')) {
-                // Update existing frontmatter
-                const endOfFrontMatter = content.indexOf('---\n', 4);
-                if (endOfFrontMatter !== -1) {
-                    const beforeFrontMatter = content.slice(0, endOfFrontMatter);
-                    const afterFrontMatter = content.slice(endOfFrontMatter);
-                    
-                    // Check if frontmatter already has tags field
-                    if (beforeFrontMatter.includes('\ntags:')) {
-                        // Replace existing tags section
-                        const tagsRegex = /\ntags:.*?(?=\n[^\s]|\n---)/s;
-                        newContent = beforeFrontMatter.replace(
-                            tagsRegex,
-                            `\ntags:\n${yamlTags}`
-                        ) + afterFrontMatter;
-                    } else {
-                        // Add new tags section
-                        newContent = beforeFrontMatter +
-                            `\ntags:\n${yamlTags}` +
-                            afterFrontMatter;
-                    }
+            const processFrontMatter = (frontmatter: string) => {
+                const yaml = frontmatter.split('\n');
+                const processed = yaml.filter(line => !(
+                    line.trim().startsWith('tags:') ||
+                    line.trim().startsWith('- ')
+                ));
+                processed.push('tags:');
+                if (allTags.length > 0) {
+                    processed.push(...allTags.map(tag => `  - ${tag}`));
                 }
+                return processed.join('\n');
+            };
+
+            if (frontmatterRegex.test(content)) {
+                newContent = content.replace(frontmatterRegex, (_, frontmatter) => {
+                    return `---\n${processFrontMatter(frontmatter)}\n---`;
+                });
             } else {
-                // Create new frontmatter
                 newContent = `---\ntags:\n${yamlTags}\n---\n\n${content}`;
             }
 
-            // Save updated content
             try {
                 await app.vault.modify(file, newContent);
                 
@@ -303,43 +267,16 @@ export class TagUtils {
      * Get all existing tags
      */
     static getAllTags(app: App): string[] {
-        // Use cache to improve performance
-        if (!this._tagCache) {
-            this._tagCache = new Map<string, string[]>();
-            this._lastCacheUpdate = 0;
-        }
-
-        const now = Date.now();
-        if (!this._lastCacheUpdate || now - this._lastCacheUpdate > 300000) { // If cache is older than 5 minutes
-            const tags = new Set<string>();
-            app.vault.getMarkdownFiles().forEach((file) => {
-                const cache = app.metadataCache.getFileCache(file);
-                if (cache?.frontmatter?.tags) {
-                    const fileTags = this.getExistingTags(cache.frontmatter);
-                    fileTags.forEach(tag => tags.add(tag));
-                    this._tagCache?.set(file.path, fileTags);
-                }
-            });
-            this._lastCacheUpdate = now;
-            return Array.from(tags).sort();
-        }
-
-        // Use cache for recently modified files
         const tags = new Set<string>();
-        const recentlyModifiedFiles = app.vault.getMarkdownFiles().filter(file => 
-            file.stat.mtime > this._lastCacheUpdate
-        );
-
-        // Update tags for recently modified files
-        recentlyModifiedFiles.forEach((file) => {
+        
+        app.vault.getMarkdownFiles().forEach((file) => {
             const cache = app.metadataCache.getFileCache(file);
             if (cache?.frontmatter?.tags) {
                 const fileTags = this.getExistingTags(cache.frontmatter);
                 fileTags.forEach(tag => tags.add(tag));
-                this._tagCache?.set(file.path, fileTags);
             }
         });
-
+        
         return Array.from(tags).sort();
     }
 
@@ -348,10 +285,6 @@ export class TagUtils {
      * Should be called when the plugin is unloaded or when files are deleted
      */
     static resetCache(): void {
-        this._tagCache = null;
-        this._lastCacheUpdate = 0;
+        // No longer needed as we don't use cache
     }
-
-    private static _tagCache: Map<string, string[]> | null = null;
-    private static _lastCacheUpdate = 0;
 }

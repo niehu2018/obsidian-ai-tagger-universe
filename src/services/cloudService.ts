@@ -34,18 +34,14 @@ export class CloudLLMService extends BaseLLMService {
                 throw new Error(validationError);
             }
 
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
+            const { controller, cleanup } = this.createRequestController(timeoutMs);
             try {
                 const response = await fetch(this.endpoint, {
                     ...options,
                     signal: controller.signal
                 });
                 return response;
-            } finally {
-                clearTimeout(timeoutId);
-            }
+            } finally { cleanup(); }
         } catch (error) {
             if (error instanceof Error && error.name === 'AbortError') {
                 throw new Error('Request timed out');

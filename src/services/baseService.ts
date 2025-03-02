@@ -4,10 +4,40 @@ export abstract class BaseLLMService {
     protected endpoint: string;
     protected modelName: string;
     protected readonly TIMEOUT = 30000; // 30 seconds timeout
+    private activeRequests = new Set<{ controller: AbortController; timeoutId?: NodeJS.Timeout }>();
 
     constructor(config: LLMServiceConfig) {
         this.endpoint = config.endpoint.trim();
         this.modelName = config.modelName.trim();
+    }
+
+    protected registerRequest(controller: AbortController, timeoutId?: NodeJS.Timeout) {
+        const request = { controller, timeoutId };
+        this.activeRequests.add(request);
+        return () => {
+            if (request.timeoutId) {
+                clearTimeout(request.timeoutId);
+            }
+            this.activeRequests.delete(request);
+        };
+    }
+
+    protected createRequestController(timeoutMs: number): { controller: AbortController; cleanup: () => void } {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        const cleanup = this.registerRequest(controller, timeoutId);
+        return { controller, cleanup };
+    }
+
+    public async dispose(): Promise<void> {
+        // 取消所有活跃的请求
+        this.activeRequests.forEach(request => {
+            if (request.timeoutId) {
+                clearTimeout(request.timeoutId);
+            }
+            request.controller.abort();
+        });
+        this.activeRequests.clear();
     }
 
     protected validateConfig(): string | null {
@@ -34,26 +64,16 @@ export abstract class BaseLLMService {
     }
 
     protected validateTags(tags: string[]): string[] {
-        const validatedTags: string[] = [];
-        const errors: string[] = [];
-
-        for (const tag of tags) {
-            if (!this.validateTag(tag)) {
-                errors.push(`Invalid tag format: ${tag}`);
-                continue;
-            }
-            validatedTags.push(tag);
+        if (!Array.isArray(tags) || tags.length === 0) {
+            throw new Error('No tags provided for validation');
         }
 
-        if (errors.length > 0) {
-            throw new Error(`Tag validation errors:\n${errors.join('\n')}`);
+        const invalidTag = tags.find(tag => !this.validateTag(tag));
+        if (invalidTag) {
+            throw new Error(`Invalid tag format: ${invalidTag}`);
         }
 
-        if (validatedTags.length === 0) {
-            throw new Error('No valid tags found in response');
-        }
-
-        return validatedTags;
+        return [...tags];
     }
 
     protected extractJSONFromResponse(response: string, retryCount = 0): string {

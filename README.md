@@ -5,7 +5,11 @@ An Obsidian plugin that automatically analyzes note content and adds relevant ta
 ## Features
 
 - Multiple AI Service Support:
-  - Local LLM via Ollama
+  - Local LLM Support:
+    - Ollama
+    - LM Studio
+    - LocalAI
+    - Any OpenAI-compatible API endpoint
   - Custom Cloud LLM Services
   - Configurable API endpoints
   - Custom model selection
@@ -25,13 +29,16 @@ An Obsidian plugin that automatically analyzes note content and adds relevant ta
    
    Choose between Local LLM or Cloud Service:
 
-   ### Local LLM (Ollama):
-   - Endpoint URL (default: http://localhost:11434)
+   ### Local LLM Service:
+   - Endpoint URL (varies by service):
+     - Ollama: `http://localhost:11434`
+     - LM Studio: `http://localhost:1234/v1/chat/completions`
+     - LocalAI: `http://localhost:8080/v1/chat/completions`
    - Model name (default: llama2)
 
    ### Cloud LLM Service:
    - API Key
-   - Base URL (e.g., https://api.openai.com/v1)
+   - API Endpoint (e.g., https://api.openai.com/v1/chat/completions)
    - Model name (e.g., gpt-3.5-turbo)
 
 3. Usage:
@@ -45,9 +52,9 @@ An Obsidian plugin that automatically analyzes note content and adds relevant ta
    - "Analyze Current Note and Add Tags" - Analyze current note and add AI-generated tags
    - "Clear All Tags" - Clear all tags while keeping the tags field
 
-## Local LLM Setup (Ollama)
+## Local LLM Setup
 
-To use Ollama as your local LLM provider:
+### Ollama Setup
 
 1. Install Ollama:
    - Visit [Ollama website](https://ollama.ai) to download and install
@@ -66,6 +73,17 @@ To use Ollama as your local LLM provider:
    ollama pull codellama
    ```
 
+### LM Studio Setup
+
+1. Download and install LM Studio from [LM Studio website](https://lmstudio.ai)
+2. Load your preferred model
+3. Start the local server
+4. Use the default endpoint: `http://localhost:1234/v1/chat/completions`
+
+### LocalAI Setup
+
+Follow the installation instructions from [LocalAI GitHub](https://github.com/go-skynet/LocalAI)
+
 ## Cloud LLM Setup
 
 To use a cloud LLM service:
@@ -73,18 +91,18 @@ To use a cloud LLM service:
 1. Obtain API credentials from your chosen provider
 2. Configure in plugin settings:
    - Enter your API key
-   - Set the base URL for your service
+   - Set the API endpoint for your service
    - Specify the model name
-   
+    
 Examples:
 - OpenAI:
-  - Base URL: https://api.openai.com/v1
+  - Endpoint: https://api.openai.com/v1/chat/completions
   - Model: gpt-3.5-turbo
 - Azure OpenAI:
-  - Base URL: https://your-resource.openai.azure.com
+  - Endpoint: https://your-resource.openai.azure.com/openai/deployments/your-deployment-name/chat/completions?api-version=2023-05-15
   - Model: your-deployed-model
 - Custom Service:
-  - Use any compatible service that follows similar API format
+  - Use any compatible service that follows the OpenAI chat completions API format
 
 ## Tag Generation Process
 
@@ -124,7 +142,15 @@ npm run build
 
 ### Project Structure
 
-- `main.ts`: Core plugin logic
+- `src/`: Source code directory
+  - `main.ts`: Core plugin logic and UI
+  - `tagUtils.ts`: Tag manipulation utilities
+  - `services/`: AI service implementations
+    - `types.ts`: Service interfaces and types
+    - `baseService.ts`: Abstract base service class
+    - `localService.ts`: Local LLM service implementation
+    - `cloudService.ts`: Cloud LLM service implementation
+    - `index.ts`: Service exports
 - `manifest.json`: Plugin manifest
 - `styles.css`: UI styles
 - `package.json`: Project configuration
@@ -135,17 +161,23 @@ npm run build
 
 ### Error Handling
 
-- Validates API configuration
-- Handles API failures gracefully
-- Provides error notifications
-- Logs detailed errors to console
+- Robust error handling with:
+  - API configuration validation
+  - Type-safe error processing
+  - Graceful failure handling
+  - Clear error notifications
+  - Resource cleanup on unload
+  - Detailed error messages
+  - Automatic retry for transient failures
 
-## 支持开发者
+## Support Developer
+
+If you find this plugin helpful, consider buying me a coffee ☕️
 
 如果您觉得这个插件对您的工作有帮助，欢迎请我喝杯咖啡 ☕️
 
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/niehu2015o)
 
-## 许可协议
+## License
 
 MIT
