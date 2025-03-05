@@ -1,6 +1,6 @@
 {
   "name": "obsidian-ai-tagger-universe",
-  "version": "1.0.2",
+  "version": "1.0.4",
   "description": "Automatically analyze note content and add relevant tags using AI",
   "main": "main.js",
   "scripts": {
