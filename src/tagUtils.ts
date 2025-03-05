@@ -279,4 +279,11 @@ export class TagUtils {
         
         return Array.from(tags).sort();
     }
+
+    /**
+     * Reset any internal caches (currently a no-op as no caching is implemented)
+     */
+    static resetCache(): void {
+        // No-op for now as we don't have any caching implemented
+    }
 }
