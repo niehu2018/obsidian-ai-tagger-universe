@@ -279,12 +279,4 @@ export class TagUtils {
         
         return Array.from(tags).sort();
     }
-
-    /**
-     * Reset the tag cache
-     * Should be called when the plugin is unloaded or when files are deleted
-     */
-    static resetCache(): void {
-        // No longer needed as we don't use cache
-    }
 }
