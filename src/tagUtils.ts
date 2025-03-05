@@ -56,9 +56,9 @@ export class TagUtils {
 
         // Validate and filter tags
         const { valid, invalid } = this.validateTags(tags);
-        if (invalid.length > 0) {
-            console.debug(`Invalid tags found: ${invalid.join(', ')}`);
-        }
+        //if (invalid.length > 0) {
+        //    console.debug(`Invalid tags found: ${invalid.join(', ')}`);
+        //}
 
         return valid;
     }
