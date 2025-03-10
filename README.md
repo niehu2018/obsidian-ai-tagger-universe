@@ -10,9 +10,21 @@ An Obsidian plugin that automatically analyzes note content and adds relevant ta
     - LM Studio
     - LocalAI
     - Any OpenAI-compatible API endpoint
-  - Custom Cloud LLM Services
-  - Configurable API endpoints
-  - Custom model selection
+  - Cloud LLM Services:
+    - OpenAI
+    - Google Gemini
+    - DeepSeek
+    - Aliyun Qwen
+    - Anthropic Claude
+    - Groq LLM
+    - Google Vertex AI
+    - OpenRouter
+    - AWS Bedrock
+    - Requesty
+    - Cohere
+    - Grok
+    - Mistral AI
+    - OpenAI-compatible services
 - Smart Tag Analysis:
   - Matches 1-3 tags from existing tag library
   - Generates 3-10 new relevant tags
@@ -21,6 +33,7 @@ An Obsidian plugin that automatically analyzes note content and adds relevant ta
 - Tag Management:
   - AI-powered tag generation
   - Quick tag clearing
+- Keyboard shortcut support (Mod+Shift+T)
 
 ## Installation
 
@@ -31,26 +44,81 @@ An Obsidian plugin that automatically analyzes note content and adds relevant ta
 
    ### Local LLM Service:
    - Endpoint URL (varies by service):
-     - Ollama: `http://localhost:11434`
+     - Ollama: `http://localhost:11434/v1/chat/completions`
      - LM Studio: `http://localhost:1234/v1/chat/completions`
      - LocalAI: `http://localhost:8080/v1/chat/completions`
    - Model name (default: llama2)
 
-   ### Cloud LLM Service:
-   - API Key
-   - API Endpoint (e.g., https://api.openai.com/v1/chat/completions)
-   - Model name (e.g., gpt-3.5-turbo)
+   ### Cloud LLM Services:
+   Choose from multiple providers with their respective endpoints and models:
+
+   - OpenAI
+     - Endpoint: https://api.openai.com/v1/chat/completions
+     - Models: gpt-3.5-turbo, gpt-4, etc.
+
+   - Google Gemini
+     - Endpoint: https://generativelanguage.googleapis.com/v1beta/openai/chat/completions
+     - Model: gemini-pro
+
+   - DeepSeek
+     - Endpoint: https://api.deepseek.com/v1/chat/completions
+     - Model: deepseek-chat
+
+   - Aliyun Qwen
+     - Endpoint: https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
+     - Model: qwen-max
+
+   - Anthropic Claude
+     - Endpoint: https://api.anthropic.com/v1/complete
+     - Model: claude-3-opus-20240229
+
+   - Groq LLM
+     - Endpoint: https://api.groq.com/openai/v1/chat/completions
+     - Model: mixtral-8x7b-32768
+
+   - Google Vertex AI
+     - Endpoint: https://us-central1-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}/endpoints/{endpoint}:predict
+     - Model: gemini-pro
+
+   - OpenRouter
+     - Endpoint: https://openrouter.ai/api/v1/chat/completions
+     - Various models available
+
+   - AWS Bedrock
+     - Endpoint: https://bedrock-runtime.amazonaws.com
+     - Model: anthropic.claude-v2
+
+   - Requesty
+     - Endpoint: https://api.requesty.ai/v1/chat/completions
+     - Model: gpt-4
+
+   - Cohere
+     - Endpoint: https://api.cohere.ai/v1/generate
+     - Model: command
+
+   - Grok
+     - Endpoint: https://api.grok.x.ai/v1/chat/completions
+     - Model: grok-1
+
+   - Mistral AI
+     - Endpoint: https://api.mistral.ai/v1/generate
+     - Model: mistral-medium
+
+   - OpenAI-compatible
+     - Custom endpoint supporting OpenAI API format
+     - Compatible model names
 
 3. Usage:
    - Open a note
-   - Open command palette (Ctrl/Cmd + P)
+   - Use keyboard shortcut Mod+Shift+T (Cmd+Shift+T on Mac)
+   - Or open command palette (Ctrl/Cmd + P)
    - Search for "Analyze Current Note and Add Tags"
    - Tags will be automatically added to the note's frontmatter
 
    ### Keyboard Shortcuts:
-   You can set up custom keyboard shortcuts for the following commands in Obsidian's Hotkeys settings:
-   - "Analyze Current Note and Add Tags" - Analyze current note and add AI-generated tags
-   - "Clear All Tags" - Clear all tags while keeping the tags field
+   Default shortcuts and customizable commands:
+   - "Analyze Current Note and Add Tags" - Default: Mod+Shift+T
+   - "Clear All Tags" - Customizable in Obsidian's Hotkeys settings
 
 ## Local LLM Setup
 
@@ -90,19 +158,12 @@ To use a cloud LLM service:
 
 1. Obtain API credentials from your chosen provider
 2. Configure in plugin settings:
+   - Select your cloud provider from the dropdown
    - Enter your API key
-   - Set the API endpoint for your service
-   - Specify the model name
-    
-Examples:
-- OpenAI:
-  - Endpoint: https://api.openai.com/v1/chat/completions
-  - Model: gpt-3.5-turbo
-- Azure OpenAI:
-  - Endpoint: https://your-resource.openai.azure.com/openai/deployments/your-deployment-name/chat/completions?api-version=2023-05-15
-  - Model: your-deployed-model
-- Custom Service:
-  - Use any compatible service that follows the OpenAI chat completions API format
+   - Verify the pre-filled API endpoint for your service
+   - Confirm the default model or select a different one
+
+The plugin will automatically set the appropriate endpoint and default model when you switch providers.
 
 ## Tag Generation Process
 
@@ -119,7 +180,7 @@ Settings allow you to adjust:
 
 ## Tag Management
 
-- **AI Tag Generation**: Access via command palette to analyze current note and add relevant tags
+- **AI Tag Generation**: Use keyboard shortcut or command palette to analyze current note
 - **Clear All Tags**: Use command palette to quickly clear all tags while preserving the tags field in frontmatter
   - This operation only removes tag values, keeping the structure intact
   - Useful for starting fresh with tag organization
@@ -150,12 +211,14 @@ npm run build
     - `baseService.ts`: Abstract base service class
     - `localService.ts`: Local LLM service implementation
     - `cloudService.ts`: Cloud LLM service implementation
+    - `adapters/`: LLM service adapters
+      - Individual adapters for each supported service
+      - Shared adapter utilities and types
     - `index.ts`: Service exports
 - `manifest.json`: Plugin manifest
 - `styles.css`: UI styles
 - `package.json`: Project configuration
 - `README.md`: Documentation
-- `.gitignore`: Git ignore rules
 - `tsconfig.json`: TypeScript configuration
 - `esbuild.config.mjs`: Build configuration
 
