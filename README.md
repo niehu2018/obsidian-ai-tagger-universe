@@ -170,7 +170,7 @@ npm run build
   - Detailed error messages
   - Automatic retry for transient failures
 
-## Support Developer
+# Support Developer
 
 If you find this plugin helpful, consider buying me a coffee ☕️
 

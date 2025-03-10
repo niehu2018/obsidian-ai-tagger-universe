@@ -1,33 +1,33 @@
 import { LLMResponse, LLMServiceConfig, ConnectionTestResult, ConnectionTestError } from './types';
 import { BaseLLMService } from './baseService';
+import { AdapterType, createAdapter, BaseAdapter } from './adapters';
 
 export class CloudLLMService extends BaseLLMService {
-    private apiKey: string;
+    private adapter: BaseAdapter;
     private readonly MAX_CONTENT_LENGTH = 4000; // Reasonable limit for most APIs
     private readonly MAX_RETRIES = 3;
     private readonly RETRY_DELAY = 1000; // 1 second
 
-    constructor(config: LLMServiceConfig) {
+    constructor(config: Omit<LLMServiceConfig, 'type'> & { type: AdapterType }) {
         super(config);
-        this.apiKey = config.apiKey?.trim() || '';
+        this.adapter = createAdapter(config.type, {
+            endpoint: config.endpoint,
+            apiKey: config.apiKey,
+            modelName: config.modelName
+        });
     }
 
     private validateCloudConfig(): string | null {
         const baseError = this.validateConfig();
         if (baseError) return baseError;
 
-        if (!this.apiKey) {
-            return "API key is not configured";
-        }
-
-        if (!this.endpoint.toLowerCase().includes('/chat/completions')) {
-            return "Cloud API endpoint should include '/chat/completions'";
-        }
+        const adapterError = this.adapter.validateConfig();
+        if (adapterError) return adapterError;
 
         return null;
     }
 
-    private async makeRequest(options: RequestInit, timeoutMs: number): Promise<Response> {
+    private async makeRequest(prompt: string, timeoutMs: number): Promise<Response> {
         try {
             const validationError = this.validateCloudConfig();
             if (validationError) {
@@ -36,9 +36,11 @@ export class CloudLLMService extends BaseLLMService {
 
             const { controller, cleanup } = this.createRequestController(timeoutMs);
             try {
-                const response = await fetch(this.endpoint, {
-                    ...options,
-                    signal: controller.signal
+            const response = await fetch(this.adapter.getEndpoint(), {
+                method: 'POST',
+                headers: this.adapter.getHeaders(),
+                body: JSON.stringify(this.adapter.formatRequest(prompt)),
+                signal: controller.signal
                 });
                 return response;
             } finally { cleanup(); }
@@ -50,12 +52,12 @@ export class CloudLLMService extends BaseLLMService {
         }
     }
 
-    private async makeRequestWithRetry(options: RequestInit, timeoutMs: number): Promise<Response> {
+    private async makeRequestWithRetry(prompt: string, timeoutMs: number): Promise<Response> {
         let lastError: Error | null = null;
         
         for (let i = 0; i < this.MAX_RETRIES; i++) {
             try {
-                const response = await this.makeRequest(options, timeoutMs);
+                const response = await this.makeRequest(prompt, timeoutMs);
                 if (response.ok || response.status === 401) { // Don't retry auth errors
                     return response;
                 }
@@ -77,23 +79,7 @@ export class CloudLLMService extends BaseLLMService {
 
     async testConnection(): Promise<{ result: ConnectionTestResult; error?: ConnectionTestError }> {
         try {
-            const response = await this.makeRequestWithRetry({
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.apiKey}`
-                },
-                body: JSON.stringify({
-                    model: this.modelName,
-                    messages: [
-                        {
-                            role: 'system',
-                            content: 'Connection test'
-                        }
-                    ],
-                    max_tokens: 5
-                })
-            }, 10000);
+            const response = await this.makeRequestWithRetry('Connection test', 10000);
             
             const responseText = await response.text();
 
@@ -168,6 +154,7 @@ export class CloudLLMService extends BaseLLMService {
                 content = content.slice(0, this.MAX_CONTENT_LENGTH) + '...';
             }
 
+            const systemPrompt = 'You are a professional document tag analysis assistant. You need to analyze document content, match relevant tags from existing ones, and generate new relevant tags.';
             const prompt = this.buildPrompt(content, existingTags);
 
             // Validate that we have content to analyze
@@ -179,26 +166,7 @@ export class CloudLLMService extends BaseLLMService {
             if (!prompt.trim()) {
                 throw new Error('Failed to build analysis prompt');
             }
-            const response = await this.makeRequestWithRetry({
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.apiKey}`
-                },
-                body: JSON.stringify({
-                    model: this.modelName,
-                    messages: [
-                        {
-                            role: 'system',
-                            content: 'You are a professional document tag analysis assistant. You need to analyze document content, match relevant tags from existing ones, and generate new relevant tags.'
-                        },
-                        {
-                            role: 'user',
-                            content: prompt
-                        }
-                    ]
-                })
-            }, 30000);
+            const response = await this.makeRequestWithRetry(`${systemPrompt}\n\n${prompt}`, 30000);
             const responseText = await response.text();
 
             if (!response.ok) {
@@ -210,12 +178,7 @@ export class CloudLLMService extends BaseLLMService {
                 }
             }
 
-            const data = JSON.parse(responseText);
-            if (!data.choices || !data.choices[0]?.message?.content) {
-                throw new Error('Invalid API response format: missing message content');
-            }
-
-            return this.parseResponse(data.choices[0].message.content);
+            return this.adapter.parseResponse(JSON.parse(responseText));
         } catch (error) {
             return this.handleError(error, 'Tag analysis');
         }
