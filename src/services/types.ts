@@ -24,6 +24,7 @@ export interface LLMServiceConfig {
     apiKey?: string;
     modelName: string;
     type?: 'openai' | 'gemini' | 'deepseek' | 'aliyun' | 'claude' | 'groq' | 'vertex' | 'openrouter' | 'bedrock' | 'requesty' | 'cohere' | 'grok' | 'mistral' | 'openai-compatible';
+    language?: 'en' | 'zh' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'pt' | 'ru';
 }
 
 export enum ConnectionTestResult {

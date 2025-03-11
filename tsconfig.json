@@ -1,28 +1,16 @@
 {
   "compilerOptions": {
-    "baseUrl": "src",
-    "inlineSourceMap": true,
-    "inlineSources": true,
-    "module": "ESNext",
-    "target": "ES2022",
-    "allowJs": true,
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "importHelpers": true,
-    "isolatedModules": true,
+    "module": "commonjs",
+    "target": "ES2020",
+    "outDir": "out",
+    "lib": ["ES2020", "DOM"],
+    "sourceMap": true,
+    "rootDir": "src",
     "strict": true,
-    "strictNullChecks": true,
-    "noImplicitThis": true,
-    "noImplicitAny": true,
-    "lib": [
-      "DOM",
-      "ES5",
-      "ES6",
-      "ES2022"
-    ],
-    "types": ["node", "obsidian"]
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true
   },
-  "include": [
-    "src/**/*.ts"
-  ]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
 }

@@ -184,7 +184,4 @@ export class TagUtils {
         return Array.from(tags).sort();
     }
 
-    static resetCache(): void {
-        // Empty implementation for future cache management
-    }
 }

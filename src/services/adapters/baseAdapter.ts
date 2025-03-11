@@ -5,14 +5,19 @@ export abstract class BaseAdapter extends BaseLLMService {
   protected config: AdapterConfig;
   protected provider: any;
 
-  public formatRequest(prompt: string): any {
+  public formatRequest(prompt: string, language?: string): any {
     if (!this.provider?.requestFormat?.body) {
       throw new Error('Provider request format not configured');
     }
+
+    const systemPrompt = language
+      ? `You are a professional document tag analysis assistant. Please analyze and generate tags in ${language} language.`
+      : 'You are a professional document tag analysis assistant.';
+
     return {
       ...this.provider.requestFormat.body,
       messages: [
-        { role: 'system', content: 'You are a professional document tag analysis assistant.' },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: prompt }
       ]
     };
@@ -60,7 +65,7 @@ export abstract class BaseAdapter extends BaseLLMService {
   }
 
   async analyzeTags(content: string, existingTags: string[]): Promise<any> {
-    const prompt = this.buildPrompt(content, existingTags);
+    const prompt = this.buildPrompt(content, existingTags, this.config.language);
     const response = await this.makeRequest(prompt);
     return this.parseResponse(response);
   }
@@ -76,7 +81,7 @@ export abstract class BaseAdapter extends BaseLLMService {
 
   protected async makeRequest(prompt: string): Promise<any> {
     const headers = this.getHeaders();
-    const body = this.formatRequest(prompt);
+    const body = this.formatRequest(prompt, this.config.language);
     
     const response = await fetch(this.getEndpoint(), {
       method: 'POST',

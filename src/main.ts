@@ -1,6 +1,7 @@
-import { Plugin, Notice, PluginSettingTab, Setting, TFile, App, ButtonComponent, MarkdownView } from 'obsidian';
+import { Plugin, Notice, PluginSettingTab, Setting, TFile, App, ButtonComponent, MarkdownView, Menu, TFolder, MenuItem } from 'obsidian';
 import { LLMService, LocalLLMService, CloudLLMService, ConnectionTestResult, LLMServiceConfig } from './services';
 import { TagUtils, TagOperationResult } from './tagUtils';
+import { saveAllTags } from './saveTags';
 
 interface AITaggerSettings {
     serviceType: 'local' | 'cloud';
@@ -12,6 +13,10 @@ interface AITaggerSettings {
     maxNewTags: number;
     maxMatchedTags: number;
     cloudServiceType: 'openai' | 'gemini' | 'deepseek' | 'aliyun' | 'claude' | 'groq' | 'vertex' | 'openrouter' | 'bedrock' | 'requesty' | 'cohere' | 'grok' | 'mistral' | 'openai-compatible';
+    predefinedTagsPath: string;
+    maxPredefinedTags: number;
+    language: 'en' | 'zh' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'pt' | 'ru';
+    tagDir: string;
 }
 
 const DEFAULT_SETTINGS: AITaggerSettings = {
@@ -23,7 +28,11 @@ const DEFAULT_SETTINGS: AITaggerSettings = {
     cloudModel: 'gpt-3.5-turbo',
     maxNewTags: 5,
     maxMatchedTags: 2,
-    cloudServiceType: 'openai'
+    cloudServiceType: 'openai',
+    predefinedTagsPath: '',
+    maxPredefinedTags: 3,
+    language: 'en',
+    tagDir: 'tags'
 };
 
 export default class AITaggerPlugin extends Plugin {
@@ -35,7 +44,8 @@ export default class AITaggerPlugin extends Plugin {
         super(app, manifest);
         this.llmService = new LocalLLMService({
             endpoint: DEFAULT_SETTINGS.localEndpoint,
-            modelName: DEFAULT_SETTINGS.localModel
+            modelName: DEFAULT_SETTINGS.localModel,
+            language: DEFAULT_SETTINGS.language
         });
     }
 
@@ -64,7 +74,8 @@ export default class AITaggerPlugin extends Plugin {
         if (this.settings.serviceType === 'local') {
             const localConfig: LLMServiceConfig = {
                 endpoint: this.settings.localEndpoint,
-                modelName: this.settings.localModel
+                modelName: this.settings.localModel,
+                language: this.settings.language
             };
             this.llmService = new LocalLLMService(localConfig);
         } else {
@@ -72,7 +83,8 @@ export default class AITaggerPlugin extends Plugin {
                 endpoint: this.settings.cloudEndpoint,
                 apiKey: this.settings.cloudApiKey,
                 modelName: this.settings.cloudModel,
-                type: this.settings.cloudServiceType
+                type: this.settings.cloudServiceType,
+                language: this.settings.language
             };
             this.llmService = new CloudLLMService(cloudConfig);
         }
@@ -84,6 +96,11 @@ export default class AITaggerPlugin extends Plugin {
         this.registerEventHandlers();
         this.addSettingTab(new AITaggerSettingTab(this.app, this));
         this.registerCommands();
+
+        // Add ribbon icon for quick tagging
+        this.addRibbonIcon('tags', 'Ai tag current note', () => {
+            this.analyzeCurrentNote();
+        });
     }
 
     private registerEventHandlers() {
@@ -91,7 +108,7 @@ export default class AITaggerPlugin extends Plugin {
         this.registerEvent(
             this.app.vault.on('delete', (file) => {
                 if (file instanceof TFile && file.extension === 'md') {
-                    TagUtils.resetCache();
+                    this.app.workspace.trigger('file-open', file);
                 }
             })
         );
@@ -100,12 +117,12 @@ export default class AITaggerPlugin extends Plugin {
         this.registerEvent(
             this.app.vault.on('modify', (file) => {
                 if (file instanceof TFile && file.extension === 'md') {
-                    // Debounce tag cache reset on file changes
+                    // Debounce file refresh on changes
                     if (this.fileChangeTimeoutId) {
                         clearTimeout(this.fileChangeTimeoutId);
                     }
                     this.fileChangeTimeoutId = setTimeout(() => {
-                        TagUtils.resetCache();
+                        this.app.workspace.trigger('file-open', file);
                         this.fileChangeTimeoutId = null;
                     }, 2000);
                 }
@@ -125,36 +142,272 @@ export default class AITaggerPlugin extends Plugin {
     }
 
     private registerCommands() {
-        // Command to analyze note and add tags
+        // Register file menu items for batch tagging
+        this.registerEvent(
+            // @ts-ignore - File menu event is not properly typed in Obsidian API
+            this.app.workspace.on('file-menu', (menu: Menu, file: TFile, source: string, files?: TFile[]) => {
+                if (files && files.length > 0) {
+                    // Multiple files selected
+                    const markdownFiles = files.filter(f => f.extension === 'md');
+                    if (markdownFiles.length > 0) {
+                        menu.addItem((item) => {
+                            item
+                                .setTitle(`Ai tag ${markdownFiles.length} selected notes`)
+                                .setIcon('tag')
+                                .onClick(() => this.analyzeAndTagFiles(markdownFiles));
+                        });
+                    }
+                } else if (file.extension === 'md') {
+                    // Single file selected
+                    menu.addItem((item) => {
+                        item
+                            .setTitle('Ai tag this note')
+                            .setIcon('tag')
+                            .onClick(() => this.analyzeAndTagFiles([file]));
+                    });
+                }
+            })
+        );
+
+        // Command to generate tags for current note (alternate name)
         this.addCommand({
-            id: 'analyze-note-and-add-tags',
-            name: 'Analyze current note and add tags',
+            id: 'generate-tags-for-current-note',
+            name: 'Generate tags for current note',
             icon: 'tag',
-            editorCallback: (editor, view) => {
-                if (view.file) {
+            callback: () => {
+                const file = this.app.workspace.getActiveFile();
+                if (file) {
                     this.analyzeCurrentNote();
                 } else {
                     new Notice('Please open a note first');
                 }
-            },
-            hotkeys: [
-                {
-                    modifiers: ['Mod', 'Shift'],
-                    key: 'T'
-                }
-            ]
+            }
         });
 
         // Command to clear tags
         this.addCommand({
             id: 'clear-all-tags',
-            name: 'Clear all tags (keep tags field)',
+            name: 'Clear all tags in current note',
             icon: 'eraser',
             editorCallback: (editor, view) => {
                 if (view.file) {
                     this.clearNoteTags();
                 } else {
                     new Notice('Please open a note first');
+                }
+            }
+        });
+
+        // Command to clear tags in all notes
+        this.addCommand({
+            id: 'clear-all-notes-tags',
+            name: 'Clear all tags in all vault',
+            icon: 'eraser',
+            callback: async () => {
+                await this.clearAllNotesTags();
+            }
+        });
+
+        // Command to tag all notes in vault
+        this.addCommand({
+            id: 'tag-all-notes',
+            name: 'Generate tags for all notes in vault',
+            icon: 'tag',
+            callback: async () => {
+                const files = this.app.vault.getMarkdownFiles();
+                if (files.length > 0) {
+                    await this.analyzeAndTagFiles(files);
+                } else {
+                    new Notice('No markdown files found in vault');
+                }
+            }
+        });
+
+        // Command to generate tags for all notes in current folder
+        this.addCommand({
+            id: 'tag-current-folder-notes',
+            name: 'Generate tags for all notes in current folder',
+            icon: 'tag',
+            callback: async () => {
+                const activeFile = this.app.workspace.getActiveFile();
+                if (!activeFile) {
+                    new Notice('Please open a note first');
+                    return;
+                }
+
+                const parentFolder = activeFile.parent;
+                if (!parentFolder) {
+                    new Notice('Could not determine parent folder');
+                    return;
+                }
+
+                // Get all markdown files in the current folder
+                const filesInFolder = parentFolder.children
+                    .filter((file): file is TFile => file instanceof TFile && file.extension === 'md');
+
+                if (filesInFolder.length === 0) {
+                    new Notice('No markdown files found in current folder');
+                    return;
+                }
+
+                await this.analyzeAndTagFiles(filesInFolder);
+            }
+        });
+
+        // Command to collect all tags from vault
+        this.addCommand({
+            id: 'collect-all-tags',
+            name: 'Collect all tags from all notes in vault',
+            icon: 'tags',
+            callback: async () => {
+                await saveAllTags(this.app, this.settings.tagDir);
+            }
+        });
+
+        // Command to assign predefined tags to all notes
+        this.addCommand({
+            id: 'assign-predefined-tags-all-notes',
+            name: 'Assign pre-defined tags for all notes in vault',
+            icon: 'tag',
+            callback: async () => {
+                if (!this.settings.predefinedTagsPath) {
+                    new Notice('Please set the predefined tags file path in settings');
+                    return;
+                }
+
+                const files = this.app.vault.getMarkdownFiles();
+                if (files.length === 0) {
+                    new Notice('No markdown files found in vault');
+                    return;
+                }
+
+                try {
+                    const tagsContent = await this.app.vault.adapter.read(this.settings.predefinedTagsPath);
+                    const predefinedTags = tagsContent.split('\n')
+                        .map(line => line.trim())
+                        .filter(line => line.length > 0);
+
+                    if (predefinedTags.length === 0) {
+                        new Notice('No predefined tags found in the file');
+                        return;
+                    }
+
+                    new Notice(`Starting to assign predefined tags to ${files.length} files...`);
+                    let processedCount = 0;
+                    let successCount = 0;
+
+                    for (const file of files) {
+                        try {
+                            const content = await this.app.vault.read(file);
+                            if (!content.trim()) continue;
+
+                            const analysis = await this.llmService.analyzeTags(content, predefinedTags);
+                            const matchedTags = analysis.matchedExistingTags.slice(0, this.settings.maxPredefinedTags);
+                            
+                            const result = await TagUtils.updateNoteTags(this.app, file, [], matchedTags);
+                            if (result.success) {
+                                successCount++;
+                            }
+                            
+                            processedCount++;
+                            if (processedCount % 5 === 0 || processedCount === files.length) {
+                                new Notice(`Progress: ${processedCount}/${files.length} files processed`);
+                            }
+                        } catch (error) {
+                            console.error(`Error processing ${file.path}:`, error);
+                        }
+                    }
+
+                    new Notice(`Completed! Successfully tagged ${successCount} out of ${files.length} files`);
+                } catch (error) {
+                    console.error('Error assigning predefined tags:', error);
+                    new Notice('Failed to assign predefined tags to notes');
+                }
+            }
+        });
+
+        // Command to assign predefined tags
+        this.addCommand({
+            id: 'assign-predefined-tags',
+            name: 'Assign pre-defined tags for current note',
+            icon: 'tag',
+            editorCallback: async (editor, view) => {
+                if (!view.file) {
+                    new Notice('Please open a note first');
+                    return;
+                }
+
+                if (!this.settings.predefinedTagsPath) {
+                    new Notice('Please set the predefined tags file path in settings');
+                    return;
+                }
+
+                try {
+                    const tagsContent = await this.app.vault.adapter.read(this.settings.predefinedTagsPath);
+                    const predefinedTags = tagsContent.split('\n')
+                        .map(line => line.trim())
+                        .filter(line => line.length > 0);
+
+                    if (predefinedTags.length === 0) {
+                        new Notice('No predefined tags found in the file');
+                        return;
+                    }
+
+                    const content = await this.app.vault.read(view.file);
+                    const analysis = await this.llmService.analyzeTags(content, predefinedTags);
+                    const matchedTags = analysis.matchedExistingTags.slice(0, this.settings.maxPredefinedTags);
+                    
+                    if (matchedTags.length === 0) {
+                        new Notice('No matching predefined tags found');
+                        return;
+                    }
+
+                    const result = await TagUtils.updateNoteTags(this.app, view.file, [], matchedTags);
+                    this.handleTagUpdateResult(result);
+                } catch (error) {
+                    console.error('Error assigning predefined tags:', error);
+                    new Notice('Failed to assign predefined tags');
+                }
+            }
+        });
+
+        // Command to generate tags for selected text
+        this.addCommand({
+            id: 'generate-tags-for-selection',
+            name: 'Generate tags on selected text',
+            icon: 'tag',
+            editorCallback: async (editor, view) => {
+                const selectedText = editor.getSelection();
+                if (!selectedText) {
+                    new Notice('Please select some text first');
+                    return;
+                }
+
+                if (!view.file) {
+                    new Notice('Cannot update tags: No file is open');
+                    return;
+                }
+
+                const existingTags = TagUtils.getAllTags(this.app);
+                new Notice('Analyzing selected text...');
+                
+                try {
+                    const analysis = await this.llmService.analyzeTags(selectedText, existingTags);
+                    const suggestedTags = analysis.suggestedTags.slice(0, this.settings.maxNewTags);
+                    const matchedTags = analysis.matchedExistingTags.slice(0, this.settings.maxMatchedTags);
+                    
+                    // Update frontmatter tags
+                    const result = await TagUtils.updateNoteTags(this.app, view.file, suggestedTags, matchedTags);
+                    
+                    if (result.success) {
+                        editor.replaceSelection(selectedText);
+                        new Notice(`Added ${suggestedTags.length + matchedTags.length} tags to frontmatter`);
+                    } else {
+                        new Notice('Failed to update tags');
+                    }
+                } catch (error) {
+                    console.error('Error generating tags:', error);
+                    new Notice('Failed to generate tags');
                 }
             }
         });
@@ -176,6 +429,28 @@ export default class AITaggerPlugin extends Plugin {
 
     async testConnection(): Promise<{ result: ConnectionTestResult; error?: any }> {
         return this.llmService.testConnection();
+    }
+
+    async clearAllNotesTags() {
+        new Notice('Starting to clear tags from all notes...');
+        let count = 0;
+        
+        // Get all markdown files from the vault
+        const markdownFiles = this.app.vault.getMarkdownFiles();
+        
+        for (const file of markdownFiles) {
+            try {
+                const result = await TagUtils.clearTags(this.app, file);
+                if (result.success) {
+                    count++;
+                    this.app.vault.trigger('modify', file);
+                }
+            } catch (error) {
+                console.error(`Error clearing tags from ${file.path}:`, error);
+            }
+        }
+
+        new Notice(`Successfully cleared tags from ${count} notes`);
     }
 
     async clearNoteTags() {
@@ -209,12 +484,56 @@ export default class AITaggerPlugin extends Plugin {
         }
     }
 
-    private handleTagUpdateResult(result: TagOperationResult): void {
+    private handleTagUpdateResult(result: TagOperationResult, silent: boolean = false): void {
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (result.success && view?.getMode() === 'source') {
             view.editor.refresh();
         }
-        new Notice(result.success ? result.message : 'Failed to update tags');
+        if (!silent) {
+            new Notice(result.success ? result.message : 'Failed to update tags');
+        }
+    }
+
+    async analyzeAndTagFiles(files: TFile[]): Promise<void> {
+        if (files.length === 0) return;
+
+        const totalFiles = files.length;
+        new Notice(`Starting to analyze ${totalFiles} file${totalFiles > 1 ? 's' : ''}...`);
+        let processedCount = 0;
+        let successCount = 0;
+
+        const existingTags = TagUtils.getAllTags(this.app);
+
+        for (const file of files) {
+            try {
+                const content = await this.app.vault.read(file);
+                if (!content.trim()) continue;
+
+                const analysis = await this.llmService.analyzeTags(content, existingTags);
+                const result = await TagUtils.updateNoteTags(
+                    this.app,
+                    file,
+                    analysis.suggestedTags.slice(0, this.settings.maxNewTags),
+                    analysis.matchedExistingTags.slice(0, this.settings.maxMatchedTags)
+                );
+
+                if (result.success) {
+                    successCount++;
+                }
+                
+                this.handleTagUpdateResult(result, true);
+                processedCount++;
+                
+                if (processedCount % 5 === 0 || processedCount === totalFiles) {
+                    new Notice(`Progress: ${processedCount}/${totalFiles} files processed`);
+                }
+            } catch (error) {
+                console.error(`Error processing ${file.path}:`, error);
+                new Notice(`Error processing ${file.path}`);
+            }
+        }
+
+        new Notice(`Completed! Successfully tagged ${successCount} out of ${totalFiles} files`);
     }
 
     async analyzeCurrentNote() {
@@ -589,6 +908,53 @@ class AITaggerSettingTab extends PluginSettingTab {
                 .setDynamicTooltip()
                 .onChange(async (value) => {
                     this.plugin.settings.maxMatchedTags = value;
+                    await this.plugin.saveSettings();
+                }));
+
+        new Setting(containerEl)
+            .setName('Output Language')
+            .setDesc('Language for generating tags')
+            .addDropdown(dropdown => 
+                dropdown
+                    .addOptions({
+                        'en': 'English',
+                        'zh': '中文',
+                        'ja': '日本語',
+                        'ko': '한국어',
+                        'fr': 'Français',
+                        'de': 'Deutsch',
+                        'es': 'Español',
+                        'pt': 'Português',
+                        'ru': 'Русский'
+                    })
+                    .setValue(this.plugin.settings.language)
+                    .onChange(async (value) => {
+                        this.plugin.settings.language = value as 'en' | 'zh' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'pt' | 'ru';
+                        await this.plugin.saveSettings();
+                    }));
+
+        containerEl.createEl('h1', { text: 'Predefined Tags' });
+
+        new Setting(containerEl)
+            .setName('Predefined tags file')
+            .setDesc('Path to a file containing predefined tags (one tag per line)')
+            .addText(text => text
+                .setPlaceholder('path/to/your/tags.txt')
+                .setValue(this.plugin.settings.predefinedTagsPath)
+                .onChange(async (value) => {
+                    this.plugin.settings.predefinedTagsPath = value;
+                    await this.plugin.saveSettings();
+                }));
+
+        new Setting(containerEl)
+            .setName('Maximum predefined tags')
+            .setDesc('Maximum number of predefined tags to assign (1-5)')
+            .addSlider(slider => slider
+                .setLimits(1, 5, 1)
+                .setValue(this.plugin.settings.maxPredefinedTags)
+                .setDynamicTooltip()
+                .onChange(async (value) => {
+                    this.plugin.settings.maxPredefinedTags = value;
                     await this.plugin.saveSettings();
                 }));
 

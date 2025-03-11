@@ -98,14 +98,16 @@ export abstract class BaseLLMService {
         throw new Error('No valid JSON found in response');
     }
 
-    protected buildPrompt(content: string, existingTags: string[]): string {
+    protected buildPrompt(content: string, existingTags: string[], language?: 'en' | 'zh' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'pt' | 'ru'): string {
+        const langInstructions = language ? `Please generate tags in ${language} language.` : '';
         return `Analyze the following content and:
 1. Match 1-3 most relevant tags from existing tags
 2. Generate 3-10 new relevant tags
+${langInstructions}
 
 Requirements for tags:
 - Must start with # symbol
-- Can contain letters, numbers, and hyphens from any language
+- Can contain letters, numbers, and hyphens
 - No spaces allowed
 - Example format: #technology, #artificial-intelligence, #coding
 - Supports international characters: #技术, #인공지능, #프로그래밍
