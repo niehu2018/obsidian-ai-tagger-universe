@@ -18,16 +18,16 @@ export interface AITaggerSettings {
 }
 
 export const DEFAULT_SETTINGS: AITaggerSettings = {
-    serviceType: 'local',
+    serviceType: 'cloud',
     localEndpoint: 'http://localhost:11434/v1/chat/completions',
     localModel: 'llama2',
     cloudEndpoint: 'https://api.openai.com/v1/chat/completions',
     cloudApiKey: '',
     cloudModel: 'gpt-3.5-turbo',
-    taggingMode: TaggingMode.Hybrid,
-    cloudServiceType: 'openai',
+    taggingMode: TaggingMode.GenerateNew,
+    cloudServiceType: 'openai-compatible',
     predefinedTagsPath: '',
-    language: 'en',
+    language: 'default',
     tagDir: 'tags',
     tagRangeMatchMax: 5,
     tagRangeGenerateMax: 5,
