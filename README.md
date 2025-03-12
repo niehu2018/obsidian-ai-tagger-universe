@@ -1,6 +1,8 @@
-# AI Tagger Universe for Obsidian (v1.0.6)
+# AI Tagger Universe for Obsidian (v1.0.7)
 
 An Obsidian plugin that intelligently analyzes your note content and automatically adds relevant tags to your note's frontmatter using advanced AI services. Choose from multiple local and cloud AI providers to power your tag generation.
+
+![AI Tagger Universe](https://img.shields.io/badge/Obsidian-AI%20Tagger%20Universe-blue)
 
 ## Features
 
@@ -38,12 +40,20 @@ An Obsidian plugin that intelligently analyzes your note content and automatical
   - Collect all tags from your vault
   - Assign predefined tags (from a user-specified file) to one or all notes
   - Clear tags from a note or all notes while preserving frontmatter structure
+  - Visualize tag relationships with interactive tag network graph
+
+- **Tag Network Visualization**
+  - Interactive network graph showing relationships between tags
+  - Node size represents tag frequency in notes
+  - Connections show tags that appear together
+  - Search functionality to find specific tags
+  - Hover tooltips with detailed tag information
 
 - **User Friendly Interface**
   - Dedicated settings page for configuring AI providers and tag generation limits
-  - Ribbon icon for quick access to common operations:
+  - Ribbon icons for quick access to common operations:
     - Generate tags for current note
-    - Clear all tags in current note
+    - Show tag network visualization
     - Access batch operations via file context menu
 
 ## Installation
@@ -88,6 +98,9 @@ An Obsidian plugin that intelligently analyzes your note content and automatical
    - `Clear all tags in current note`: Remove tags from current note
    - `Clear all tags in all vault`: Remove tags from all notes in vault
 
+4. **Tag Visualization Commands**
+   - `Show tag network visualization`: Display interactive tag network graph
+
 ### Basic Usage
 
 - **Generate Tags:**
@@ -104,6 +117,9 @@ An Obsidian plugin that intelligently analyzes your note content and automatical
 - **Clean Tags:**
   - **Clear All Tags in current Note:** Remove tags from the current note
   - **Clear All Tags in Vault:** Batch remove tags from every note in your vault
+
+- **Visualize Tags:**
+  - **Show Tag Network:** View an interactive visualization of tag relationships and frequencies
 
 - **Collect Existing Tags:**
   - **Collect All Tags in Vault:** Aggregate tags from all notes in your vault for review or tag library updates
@@ -135,13 +151,13 @@ npm run build
 - **src/**: Main source code folder
   - **main.ts**: Core plugin implementation and UI integration
   - **tagUtils.ts**: Utilities for tag manipulation and frontmatter updates
+  - **tagNetwork.ts**: Tag network visualization implementation
   - **services/**: AI service implementations
     - **baseService.ts**: Base class for service implementations
     - **localService.ts**: Implementation for local LLM services
     - **cloudService.ts**: Implementation for cloud LLM services
     - **adapters/**: Adapters for various AI providers
     - **types.ts**: Shared service interfaces and types
-  - **saveTags.ts**: Functions for aggregating tags across notes
 - **manifest.json**: Plugin manifest
 - **styles.css**: UI styling
 - **package.json**, **tsconfig.json**, **esbuild.config.mjs**: Configuration files
