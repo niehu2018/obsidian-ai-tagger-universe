@@ -1,4 +1,5 @@
 import { LLMServiceConfig, LLMResponse, ConnectionTestResult, ConnectionTestError } from './types';
+import { buildTagPrompt, TaggingMode } from './prompts/tagPrompts';
 
 export abstract class BaseLLMService {
     protected endpoint: string;
@@ -30,7 +31,7 @@ export abstract class BaseLLMService {
     }
 
     public async dispose(): Promise<void> {
-        // 取消所有活跃的请求
+        // Cancel all active requests
         this.activeRequests.forEach(request => {
             if (request.timeoutId) {
                 clearTimeout(request.timeoutId);
@@ -91,41 +92,57 @@ export abstract class BaseLLMService {
             return jsonMatch[0];
         }
         
-        // Retry with more flexible regex if initial attempt fails
+        // If we can't find JSON, try to manually construct it from the response
         if (retryCount === 0) {
             return this.extractJSONFromResponse(response.replace(/\n/g, ' '), 1);
+        } else if (retryCount === 1) {
+            // Try to extract tags directly if JSON parsing fails
+            
+            // Look for hashtags in the response
+            const hashtagRegex = /#[\p{L}\p{N}-]+/gu;
+            const hashtags = response.match(hashtagRegex);
+            
+            if (hashtags && hashtags.length > 0) {
+                // Construct a JSON object with the extracted tags
+                return JSON.stringify({
+                    matchedTags: [],
+                    newTags: hashtags
+                });
+            }
+            
+            // Look for any words that might be tags (without the # symbol)
+            const potentialTagsRegex = /["']([a-zA-Z0-9-]+)["']/g;
+            const potentialMatches = [];
+            let match;
+            
+            while ((match = potentialTagsRegex.exec(response)) !== null) {
+                potentialMatches.push(`#${match[1]}`);
+            }
+            
+            if (potentialMatches.length > 0) {
+                // Construct a JSON object with the extracted tags
+                return JSON.stringify({
+                    matchedTags: [],
+                    newTags: potentialMatches
+                });
+            }
         }
+        
+        console.error('Failed to extract JSON from response:', response);
         throw new Error('No valid JSON found in response');
     }
 
-    protected buildPrompt(content: string, existingTags: string[], language?: 'en' | 'zh' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'pt' | 'ru'): string {
-        const langInstructions = language ? `Please generate tags in ${language} language.` : '';
-        return `Analyze the following content and:
-1. Match 1-3 most relevant tags from existing tags
-2. Generate 3-10 new relevant tags
-${langInstructions}
-
-Requirements for tags:
-- Must start with # symbol
-- Can contain letters, numbers, and hyphens
-- No spaces allowed
-- Example format: #technology, #artificial-intelligence, #coding
-- Supports international characters: #技术, #인공지능, #프로그래밍
-
-Existing tags:
-${existingTags.join(', ')}
-
-Content:
-${content}
-
-Return only a JSON object in this exact format:
-{
-    "matchedTags": ["#tag1", "#tag2"],
-    "newTags": ["#tag1", "#tag2", "#tag3"]
-}`;
+    protected buildPrompt(
+        content: string, 
+        candidateTags: string[], 
+        mode: TaggingMode,
+        maxTags: number,
+        language?: 'en' | 'zh' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'pt' | 'ru'
+    ): string {
+        return buildTagPrompt(content, candidateTags, mode, maxTags, language);
     }
 
-    protected parseResponse(response: string): LLMResponse {
+    protected parseResponse(response: string, mode: TaggingMode, maxTags: number): LLMResponse {
         try {
             // Extract JSON from response
             const jsonContent = this.extractJSONFromResponse(response);
@@ -133,22 +150,75 @@ Return only a JSON object in this exact format:
             // Parse the JSON
             const parsed = JSON.parse(jsonContent);
 
-            if (!Array.isArray(parsed?.matchedTags) || !Array.isArray(parsed?.newTags)) {
-                throw new Error('Response missing required fields');
+            // Validate based on mode
+            switch (mode) {
+                case TaggingMode.PredefinedTags:
+                case TaggingMode.ExistingTags:
+                    if (!Array.isArray(parsed?.matchedTags)) {
+                        console.error('Response missing matchedTags field or not an array:', parsed);
+                        throw new Error('Response missing matchedTags field');
+                    }
+                    
+                    // Apply tag limit
+                    const limitedMatchedTags = parsed.matchedTags.length > maxTags 
+                        ? parsed.matchedTags.slice(0, maxTags) 
+                        : parsed.matchedTags;
+                    
+                    // Validate tags
+                    const validatedMatchedTags = this.validateTags(limitedMatchedTags);
+                    
+                    return {
+                        matchedExistingTags: validatedMatchedTags,
+                        suggestedTags: []
+                    };
+
+                case TaggingMode.GenerateNew:
+                    if (!Array.isArray(parsed?.newTags)) {
+                        console.error('Response missing newTags field or not an array:', parsed);
+                        throw new Error('Response missing newTags field');
+                    }
+                    
+                    // Apply tag limit
+                    const limitedNewTags = parsed.newTags.length > maxTags 
+                        ? parsed.newTags.slice(0, maxTags) 
+                        : parsed.newTags;
+                    
+                    // Validate tags
+                    const validatedNewTags = this.validateTags(limitedNewTags);
+                    
+                    return {
+                        matchedExistingTags: [],
+                        suggestedTags: validatedNewTags
+                    };
+
+                case TaggingMode.Hybrid:
+                    if (!Array.isArray(parsed?.matchedTags) || !Array.isArray(parsed?.newTags)) {
+                        console.error('Response missing required fields for hybrid mode:', parsed);
+                        throw new Error('Response missing required fields');
+                    }
+                    
+                    const halfMaxTags = Math.floor(maxTags / 2);
+                    const remainingTags = maxTags - halfMaxTags;
+
+                    // Validate and slice tags
+                    const hybridMatchedTags = this.validateTags(
+                        parsed.matchedTags.slice(0, halfMaxTags)
+                    );
+                    const hybridNewTags = this.validateTags(
+                        parsed.newTags.slice(0, remainingTags)
+                    );
+
+                    return {
+                        matchedExistingTags: hybridMatchedTags,
+                        suggestedTags: hybridNewTags
+                    };
+
+                default:
+                    throw new Error(`Unsupported mode: ${mode}`);
             }
-
-            // Validate all tags
-            const validatedMatchedTags = this.validateTags(parsed.matchedTags);
-            const validatedNewTags = this.validateTags(parsed.newTags);
-
-            // Ensure no duplicates
-            const uniqueTags = new Set([...validatedMatchedTags, ...validatedNewTags]);
-
-            return {
-                matchedExistingTags: validatedMatchedTags,
-                suggestedTags: Array.from(new Set(validatedNewTags))
-            };
         } catch (error) {
+            console.error('Error parsing LLM response:', error);
+            
             if (error instanceof Error) {
                 throw new Error(`Invalid response format: ${error.message}`);
             }
@@ -166,6 +236,12 @@ Return only a JSON object in this exact format:
         throw error;
     }
 
-    abstract analyzeTags(content: string, existingTags: string[]): Promise<LLMResponse>;
+    abstract analyzeTags(
+        content: string, 
+        candidateTags: string[], 
+        mode?: TaggingMode,
+        maxTags?: number
+    ): Promise<LLMResponse>;
+    
     abstract testConnection(): Promise<{ result: ConnectionTestResult; error?: ConnectionTestError }>;
 }

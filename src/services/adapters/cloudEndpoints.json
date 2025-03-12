@@ -5,11 +5,12 @@
   "aliyun": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
   "claude": "https://api.anthropic.com/v1/complete",
   "groq": "https://api.groq.com/openai/v1/chat/completions",
-  "vertex": "https://us-central1-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}/endpoints/{endpoint}:predict",
   "openrouter": "https://openrouter.ai/api/v1/chat/completions",
   "bedrock": "https://bedrock-runtime.amazonaws.com",
   "requesty": "https://api.requesty.ai/v1/chat/completions",
   "cohere": "https://api.cohere.ai/v1/generate",
   "grok": "https://api.grok.x.ai/v1/chat/completions",
-  "mistral": "https://api.mistral.ai/v1/generate"
+  "mistral": "https://api.mistral.ai/v1/generate",
+  "vertex": "https://us-central1-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}/endpoints/{endpoint}:predict",
+  "openai-compatible": "http://your-api-endpoint/v1/chat/completions"
 }

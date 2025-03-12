@@ -24,7 +24,7 @@ export interface LLMServiceConfig {
     apiKey?: string;
     modelName: string;
     type?: 'openai' | 'gemini' | 'deepseek' | 'aliyun' | 'claude' | 'groq' | 'vertex' | 'openrouter' | 'bedrock' | 'requesty' | 'cohere' | 'grok' | 'mistral' | 'openai-compatible';
-    language?: 'en' | 'zh' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'pt' | 'ru';
+    language?: 'default' | 'ar' | 'cs' | 'da' | 'de' | 'en' | 'es' | 'fr' | 'id' | 'it' | 'ja' | 'ko' | 'nl' | 'no' | 'pl' | 'pt' | 'pt-BR' | 'ro' | 'ru' | 'tr' | 'uk' | 'zh' | 'zh-TW';
 }
 
 export enum ConnectionTestResult {
@@ -38,7 +38,13 @@ export interface ConnectionTestError {
 }
 
 export interface LLMService {
-    analyzeTags(content: string, existingTags: string[]): Promise<LLMResponse>;
+    analyzeTags(
+        content: string, 
+        candidateTags: string[], 
+        mode?: 'predefined' | 'generate' | 'existing' | 'hybrid',
+        maxTags?: number,
+        language?: 'default' | 'ar' | 'cs' | 'da' | 'de' | 'en' | 'es' | 'fr' | 'id' | 'it' | 'ja' | 'ko' | 'nl' | 'no' | 'pl' | 'pt' | 'pt-BR' | 'ro' | 'ru' | 'tr' | 'uk' | 'zh' | 'zh-TW'
+    ): Promise<LLMResponse>;
     testConnection(): Promise<{ result: ConnectionTestResult; error?: ConnectionTestError }>;
     dispose(): Promise<void>;
 }

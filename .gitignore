@@ -10,3 +10,4 @@ build/
 *.js.map
 *.d.ts
 package-lock.json
+to_do_list.md

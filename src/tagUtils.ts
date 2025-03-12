@@ -1,4 +1,26 @@
-import { TFile, FrontMatterCache, Notice, App } from 'obsidian';
+import { TFile, FrontMatterCache, Notice, App, TFolder } from 'obsidian';
+import * as path from 'path';
+
+// Min and Max values for tag range settings
+export const TAG_RANGE = {
+    MIN: 0,
+    MAX: 10
+} as const;
+
+export const TAG_PREDEFINED_RANGE = {
+    MIN: TAG_RANGE.MIN,
+    MAX: 5
+} as const;
+
+export const TAG_MATCH_RANGE = {
+    MIN: TAG_RANGE.MIN,
+    MAX: 5
+} as const;
+
+export const TAG_GENERATE_RANGE = {
+    MIN: TAG_RANGE.MIN,
+    MAX: 5
+} as const;
 
 export interface TagOperationResult {
     success: boolean;
@@ -9,7 +31,15 @@ export interface TagOperationResult {
 export class TagUtils {
     static validateTag(tag: string): boolean {
         if (!tag) return false;
-        return /^#?[\p{L}\p{N}-]+$/u.test(tag.trim());
+        
+        // Normalize the tag - trim and ensure it starts with #
+        const normalizedTag = tag.trim();
+        const tagWithHash = normalizedTag.startsWith('#') ? normalizedTag : `#${normalizedTag}`;
+        
+        // Check if the tag follows the pattern: # followed by letters, numbers, and hyphens
+        const isValid = /^#[\p{L}\p{N}-]+$/u.test(tagWithHash);
+        
+        return isValid;
     }
 
     static validateTags(tags: string[]): { valid: string[], invalid: string[] } {
@@ -57,23 +87,33 @@ export class TagUtils {
 
             const processFrontMatter = (frontmatter: string) => {
                 const yaml = frontmatter.split('\n');
-                const processed = yaml.filter(line => !line.trim().startsWith('- '));
-                if (!processed.some(line => line.trim().startsWith('tags:'))) {
-                    processed.push('tags:');
-                }
+                // Completely remove tags field and all tag entries
+                const processed = yaml.filter(line => 
+                    !line.trim().startsWith('tags:') && 
+                    !line.trim().startsWith('- ')
+                );
                 return processed.join('\n');
             };
 
             if (frontmatterRegex.test(content)) {
                 newContent = content.replace(frontmatterRegex, (_, frontmatter) => {
-                    return `---\n${processFrontMatter(frontmatter)}\n---`;
+                    const processedFrontmatter = processFrontMatter(frontmatter);
+                    // If frontmatter becomes empty, add a placeholder comment
+                    const finalFrontmatter = processedFrontmatter.trim() ? 
+                        processedFrontmatter : 
+                        '# Frontmatter cleared by AI Tagger';
+                    return `---\n${finalFrontmatter}\n---`;
                 });
             } else {
-                newContent = `---\ntags:\n---\n\n${content}`;
+                // If no frontmatter exists, don't add one just for tags
+                newContent = content;
             }
 
             await app.vault.modify(file, newContent);
             await this.waitForMetadataUpdate(app, file);
+            
+            // Force a more thorough metadata update
+            app.metadataCache.trigger('changed', file);
             app.workspace.trigger('file-open', file);
             
             return {
@@ -83,6 +123,7 @@ export class TagUtils {
             };
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Unknown error';
+            console.error(`Error clearing tags from ${file.path}:`, error);
             new Notice('Error clearing tags');
             return {
                 success: false,
@@ -113,12 +154,14 @@ export class TagUtils {
             }
 
             if (validNewTags.length === 0 && validMatchedTags.length === 0) {
+                new Notice('No valid tags were generated or matched', 3000);
                 return { success: true, message: 'No valid tags to add', tags: [] };
             }
 
             const content = await app.vault.read(file);
             const cache = app.metadataCache.getFileCache(file);
             const existingTags = this.getExistingTags(cache?.frontmatter || null);
+            
             const allTags = this.mergeTags(existingTags, [...validNewTags, ...validMatchedTags])
                 .map(tag => tag.startsWith('#') ? tag.substring(1) : tag);
 
@@ -136,13 +179,17 @@ export class TagUtils {
                 return processed.join('\n');
             };
 
-            newContent = frontmatterRegex.test(content)
+            const hasFrontmatter = frontmatterRegex.test(content);
+
+            newContent = hasFrontmatter
                 ? content.replace(frontmatterRegex, (_, frontmatter) => `---\n${processFrontMatter(frontmatter)}\n---`)
                 : `---\ntags:\n${yamlTags}\n---\n\n${content}`;
 
             await app.vault.modify(file, newContent);
             await this.waitForMetadataUpdate(app, file);
             app.workspace.trigger('file-open', file);
+
+            new Notice(`Successfully added tags: ${allTags.map(tag => `#${tag}`).join(', ')}`, 5000);
 
             return {
                 success: true,
@@ -184,4 +231,32 @@ export class TagUtils {
         return Array.from(tags).sort();
     }
 
+    static async saveAllTags(app: App, tagDir: string = 'tags'): Promise<void> {
+        const tags = this.getAllTags(app);
+        const formattedTags = tags.map(tag => tag.startsWith('#') ? tag.substring(1) : tag).join('\n');
+
+        const vault = app.vault;
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const dateStr = `${year}${month}${day}`;
+
+        const folderPath = tagDir;
+        let folder = vault.getAbstractFileByPath(folderPath);
+        if (!folder) {
+            folder = await vault.createFolder(folderPath);
+        }
+        
+        const filePath = path.join(folderPath, `tags_${dateStr}.md`);
+        let file = vault.getAbstractFileByPath(filePath);
+        
+        if (!file) {
+            file = await vault.create(filePath, formattedTags);
+        } else {
+            await vault.modify(file as TFile, formattedTags);
+        }
+        
+        new Notice(`Tags saved to ${filePath}`);
+    }
 }

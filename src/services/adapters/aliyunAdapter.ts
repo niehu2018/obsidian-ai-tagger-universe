@@ -47,13 +47,78 @@ export class AliyunAdapter extends BaseAdapter {
             if (!content) {
                 throw new Error('Invalid response format: missing content');
             }
-            const jsonContent = this.extractJsonFromContent(content);
-            if (!Array.isArray(jsonContent?.matchedTags) || !Array.isArray(jsonContent?.newTags)) {
+            
+            // Log the raw content for debugging
+            console.log('Aliyun raw response content:', content);
+            
+            // Try to extract JSON from the content
+            let jsonContent;
+            try {
+                jsonContent = this.extractJsonFromContent(content);
+                console.log('Extracted JSON content:', jsonContent);
+            } catch (jsonError) {
+                console.error('JSON extraction error:', jsonError);
+                
+                // Fallback: Try to parse the content directly if it might be JSON already
+                try {
+                    if (typeof content === 'string' && (content.trim().startsWith('{') && content.trim().endsWith('}'))) {
+                        jsonContent = JSON.parse(content);
+                        console.log('Parsed content directly as JSON:', jsonContent);
+                    }
+                } catch (directParseError) {
+                    console.error('Direct JSON parse error:', directParseError);
+                }
+                
+                // If still no valid JSON, try to extract tags manually
+                if (!jsonContent) {
+                    // Extract hashtags from the content
+                    const hashtagRegex = /#[\p{L}\p{N}-]+/gu;
+                    const hashtags = content.match(hashtagRegex) || [];
+                    console.log('Manually extracted hashtags:', hashtags);
+                    
+                    return {
+                        matchedExistingTags: [],
+                        suggestedTags: hashtags
+                    };
+                }
+            }
+            
+            // Check if the expected arrays exist
+            if (!Array.isArray(jsonContent?.matchedTags) && !Array.isArray(jsonContent?.newTags)) {
+                // Try alternative field names that might be used
+                const matchedTags = Array.isArray(jsonContent?.matchedExistingTags) ? 
+                    jsonContent.matchedExistingTags : 
+                    Array.isArray(jsonContent?.existingTags) ? 
+                        jsonContent.existingTags : [];
+                
+                const newTags = Array.isArray(jsonContent?.suggestedTags) ? 
+                    jsonContent.suggestedTags : 
+                    Array.isArray(jsonContent?.generatedTags) ? 
+                        jsonContent.generatedTags : [];
+                
+                if (matchedTags.length > 0 || newTags.length > 0) {
+                    console.log('Using alternative field names:', { matchedTags, newTags });
+                    return {
+                        matchedExistingTags: matchedTags,
+                        suggestedTags: newTags
+                    };
+                }
+                
+                // If we have a tags array but not separated into matched/new
+                if (Array.isArray(jsonContent?.tags)) {
+                    console.log('Found single tags array:', jsonContent.tags);
+                    return {
+                        matchedExistingTags: [],
+                        suggestedTags: jsonContent.tags
+                    };
+                }
+                
                 throw new Error('Invalid response format: missing required arrays');
             }
+            
             return {
-                matchedExistingTags: jsonContent.matchedTags,
-                suggestedTags: jsonContent.newTags
+                matchedExistingTags: jsonContent.matchedTags || [],
+                suggestedTags: jsonContent.newTags || []
             };
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'Unknown error';

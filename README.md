@@ -29,8 +29,8 @@ An Obsidian plugin that intelligently analyzes your note content and automatical
     - OpenAI-compatible services
 
 - **Smart Tag Analysis**
-  - Matches 1–3 tags from your existing tag library
-  - Generates 3–10 new tags based on note content
+  - Matches 0–10 tags from your existing tag library
+  - Generates 0–10 new tags based on note content
   - Automatically integrates tags into note frontmatter
 
 - **Enhanced Tag Management**

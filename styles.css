@@ -83,3 +83,95 @@
 .support-button:hover {
     background-color: var(--interactive-accent-hover) !important;
 }
+
+/* Tag Network Visualization Styles */
+.tag-network-view {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+}
+
+.tag-network-container {
+    flex: 1;
+    min-height: 500px;
+    border-radius: var(--radius-m);
+    background-color: var(--background-secondary);
+    position: relative;
+    overflow: hidden;
+}
+
+.tag-network-container canvas {
+    width: 100%;
+    height: 100%;
+}
+
+.tag-network-controls {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--size-4-2) 0;
+}
+
+.tag-network-legend {
+    display: flex;
+    align-items: center;
+    gap: var(--size-4-2);
+    margin-top: var(--size-4-2);
+    font-size: var(--font-smaller);
+}
+
+.tag-network-legend-item {
+    display: flex;
+    align-items: center;
+    gap: var(--size-2-1);
+}
+
+.tag-network-legend-color {
+    width: var(--size-4-2);
+    height: var(--size-4-2);
+    border-radius: 50%;
+}
+
+/* Tooltip styles for tag network */
+.tag-tooltip {
+    position: absolute;
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-s);
+    padding: var(--size-4-2);
+    font-size: var(--font-smaller);
+    box-shadow: var(--shadow-s);
+    z-index: 1000;
+    pointer-events: none;
+}
+
+.tag-tooltip-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-2-1);
+}
+
+.tag-tooltip-title {
+    font-weight: var(--font-bold);
+}
+
+.tag-tooltip-info {
+    color: var(--text-muted);
+}
+
+.tag-network-status {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--background-primary);
+    padding: var(--size-4-3);
+    border-radius: var(--radius-s);
+    box-shadow: var(--shadow-s);
+    z-index: 10;
+    text-align: center;
+    font-weight: var(--font-medium);
+    color: var(--text-normal);
+    border: 1px solid var(--background-modifier-border);
+    min-width: 200px;
+}

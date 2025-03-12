@@ -1,6 +1,7 @@
 import { LLMResponse, LLMServiceConfig, ConnectionTestResult, ConnectionTestError } from './types';
 import { BaseLLMService } from './baseService';
 import { AdapterType, createAdapter, BaseAdapter } from './adapters';
+import { TaggingMode } from './prompts/tagPrompts';
 
 export class CloudLLMService extends BaseLLMService {
     private adapter: BaseAdapter;
@@ -36,11 +37,11 @@ export class CloudLLMService extends BaseLLMService {
 
             const { controller, cleanup } = this.createRequestController(timeoutMs);
             try {
-            const response = await fetch(this.adapter.getEndpoint(), {
-                method: 'POST',
-                headers: this.adapter.getHeaders(),
-                body: JSON.stringify(this.adapter.formatRequest(prompt)),
-                signal: controller.signal
+                const response = await fetch(this.adapter.getEndpoint(), {
+                    method: 'POST',
+                    headers: this.adapter.getHeaders(),
+                    body: JSON.stringify(this.adapter.formatRequest(prompt)),
+                    signal: controller.signal
                 });
                 return response;
             } finally { cleanup(); }
@@ -147,7 +148,7 @@ export class CloudLLMService extends BaseLLMService {
         }
     }
 
-    async analyzeTags(content: string, existingTags: string[]): Promise<LLMResponse> {
+    async analyzeTags(content: string, existingTags: string[], mode: TaggingMode, maxTags: number, language?: 'en' | 'zh' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'pt' | 'ru'): Promise<LLMResponse> {
         try {
             // Truncate content if too long
             if (content.length > this.MAX_CONTENT_LENGTH) {
@@ -155,7 +156,7 @@ export class CloudLLMService extends BaseLLMService {
             }
 
             const systemPrompt = 'You are a professional document tag analysis assistant. You need to analyze document content, match relevant tags from existing ones, and generate new relevant tags.';
-            const prompt = this.buildPrompt(content, existingTags);
+            const prompt = this.buildPrompt(content, existingTags, mode, maxTags, language);
 
             // Validate that we have content to analyze
             if (!content.trim()) {

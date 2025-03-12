@@ -1,5 +1,6 @@
 import { BaseLLMService } from "../baseService";
 import { AdapterConfig } from "./types";
+import { TaggingMode } from "../prompts/tagPrompts";
 
 export abstract class BaseAdapter extends BaseLLMService {
   protected config: AdapterConfig;
@@ -65,7 +66,7 @@ export abstract class BaseAdapter extends BaseLLMService {
   }
 
   async analyzeTags(content: string, existingTags: string[]): Promise<any> {
-    const prompt = this.buildPrompt(content, existingTags, this.config.language);
+    const prompt = this.buildPrompt(content, existingTags, TaggingMode.Hybrid, 10, this.config.language);
     const response = await this.makeRequest(prompt);
     return this.parseResponse(response);
   }

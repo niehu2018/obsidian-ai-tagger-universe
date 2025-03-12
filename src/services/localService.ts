@@ -1,5 +1,6 @@
 import { LLMResponse, LLMServiceConfig, ConnectionTestResult, ConnectionTestError } from './types';
 import { BaseLLMService } from './baseService';
+import { TaggingMode } from './prompts/tagPrompts';
 
 export class LocalLLMService extends BaseLLMService {
     private readonly MAX_CONTENT_LENGTH = 8000; // Local models can handle more content
@@ -174,7 +175,7 @@ export class LocalLLMService extends BaseLLMService {
         }
     }
 
-    async analyzeTags(content: string, existingTags: string[]): Promise<LLMResponse> {
+    async analyzeTags(content: string, existingTags: string[], mode: TaggingMode, maxTags: number, language?: 'en' | 'zh' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'pt' | 'ru'): Promise<LLMResponse> {
         try {
             // Validate content
             if (!content.trim()) {
@@ -186,7 +187,7 @@ export class LocalLLMService extends BaseLLMService {
                 content = content.slice(0, this.MAX_CONTENT_LENGTH) + '...';
             }
 
-            const prompt = this.buildPrompt(content, existingTags);
+            const prompt = this.buildPrompt(content, existingTags, mode, maxTags, language);
             if (!prompt.trim()) {
                 throw new Error('Failed to build analysis prompt');
             }
@@ -216,7 +217,7 @@ export class LocalLLMService extends BaseLLMService {
                 const textToAnalyze = data.choices?.[0]?.message?.content;
                 
                 if (textToAnalyze) {
-                    return this.parseResponse(textToAnalyze);
+                    return this.parseResponse(textToAnalyze, mode, maxTags);
                 } else {
                     throw new Error('Missing response content');
                 }
