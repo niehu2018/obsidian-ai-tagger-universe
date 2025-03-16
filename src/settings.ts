@@ -8,6 +8,7 @@ export interface AITaggerSettings {
     cloudApiKey: string;
     cloudModel: string;
     taggingMode: TaggingMode;
+    excludedFolders: string[];
     cloudServiceType: 'openai' | 'gemini' | 'deepseek' | 'aliyun' | 'claude' | 'groq' | 'vertex' | 'openrouter' | 'bedrock' | 'requesty' | 'cohere' | 'grok' | 'mistral' | 'openai-compatible';
     predefinedTagsPath: string;
     language: 'default' | 'ar' | 'cs' | 'da' | 'de' | 'en' | 'es' | 'fr' | 'id' | 'it' | 'ja' | 'ko' | 'nl' | 'no' | 'pl' | 'pt' | 'pt-BR' | 'ro' | 'ru' | 'tr' | 'uk' | 'zh' | 'zh-TW';
@@ -25,6 +26,7 @@ export const DEFAULT_SETTINGS: AITaggerSettings = {
     cloudApiKey: '',
     cloudModel: 'gpt-3.5-turbo',
     taggingMode: TaggingMode.GenerateNew,
+    excludedFolders: [],
     cloudServiceType: 'openai-compatible',
     predefinedTagsPath: '',
     language: 'default',

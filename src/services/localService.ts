@@ -187,45 +187,89 @@ export class LocalLLMService extends BaseLLMService {
                 content = content.slice(0, this.MAX_CONTENT_LENGTH) + '...';
             }
 
-            const prompt = this.buildPrompt(content, existingTags, mode, maxTags, language);
-            if (!prompt.trim()) {
-                throw new Error('Failed to build analysis prompt');
-            }
-
-            const response = await this.makeRequestWithRetry({
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    model: this.modelName,
-                    messages: [
-                        {
-                            role: 'system',
-                            content: 'You are a professional document tag analyst. Analyze content and suggest relevant tags.'
-                        },
-                        {
-                            role: 'user',
-                            content: prompt
-                        }
-                    ],
-                    temperature: 0.3  // Lower temperature for more focused responses
-                })
-            }, 30000);
-
-            const responseText = await response.text();
-            try {
-                const data = JSON.parse(responseText);
-                const textToAnalyze = data.choices?.[0]?.message?.content;
+            // Handle hybrid modes by making separate calls for each component mode
+            if (mode === TaggingMode.HybridGenerateExisting) {
+                // First generate new tags
+                const generateResult = await this.analyzeTagsInternal(content, existingTags, TaggingMode.GenerateNew, maxTags / 2, language);
                 
-                if (textToAnalyze) {
-                    return this.parseResponse(textToAnalyze, mode, maxTags);
-                } else {
-                    throw new Error('Missing response content');
-                }
-            } catch {
-                throw new Error('Invalid response format from local service');
+                // Then match existing tags
+                const matchResult = await this.analyzeTagsInternal(content, existingTags, TaggingMode.ExistingTags, maxTags / 2, language);
+                
+                // Combine results and remove duplicates
+                const suggestedTags = generateResult.suggestedTags;
+                const matchedExistingTags = matchResult.matchedExistingTags;
+                
+                // Remove any tags from suggestedTags that also appear in matchedExistingTags
+                const uniqueSuggestedTags = suggestedTags.filter(tag => !matchedExistingTags.includes(tag));
+                
+                return {
+                    suggestedTags: uniqueSuggestedTags,
+                    matchedExistingTags: matchedExistingTags
+                };
+            } else if (mode === TaggingMode.HybridGeneratePredefined) {
+                // First generate new tags
+                const generateResult = await this.analyzeTagsInternal(content, existingTags, TaggingMode.GenerateNew, maxTags / 2, language);
+                
+                // Then match predefined tags
+                const matchResult = await this.analyzeTagsInternal(content, existingTags, TaggingMode.PredefinedTags, maxTags / 2, language);
+                
+                // Combine results and remove duplicates
+                const suggestedTags = generateResult.suggestedTags;
+                const matchedExistingTags = matchResult.matchedExistingTags;
+                
+                // Remove any tags from suggestedTags that also appear in matchedExistingTags
+                const uniqueSuggestedTags = suggestedTags.filter(tag => !matchedExistingTags.includes(tag));
+                
+                return {
+                    suggestedTags: uniqueSuggestedTags,
+                    matchedExistingTags: matchedExistingTags
+                };
+            } else {
+                // Handle non-hybrid modes directly
+                return await this.analyzeTagsInternal(content, existingTags, mode, maxTags, language);
             }
         } catch (error) {
             return this.handleError(error, 'Tag analysis');
+        }
+    }
+
+    private async analyzeTagsInternal(content: string, existingTags: string[], mode: TaggingMode, maxTags: number, language?: 'en' | 'zh' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'pt' | 'ru'): Promise<LLMResponse> {
+        const prompt = this.buildPrompt(content, existingTags, mode, maxTags, language);
+        if (!prompt.trim()) {
+            throw new Error('Failed to build analysis prompt');
+        }
+
+        const response = await this.makeRequestWithRetry({
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: this.modelName,
+                messages: [
+                    {
+                        role: 'system',
+                        content: 'You are a professional document tag analyst. Analyze content and suggest relevant tags.'
+                    },
+                    {
+                        role: 'user',
+                        content: prompt
+                    }
+                ],
+                temperature: 0.3  // Lower temperature for more focused responses
+            })
+        }, 30000);
+
+        const responseText = await response.text();
+        try {
+            const data = JSON.parse(responseText);
+            const textToAnalyze = data.choices?.[0]?.message?.content;
+            
+            if (textToAnalyze) {
+                return this.parseResponse(textToAnalyze, mode, maxTags);
+            } else {
+                throw new Error('Missing response content');
+            }
+        } catch {
+            throw new Error('Invalid response format from local service');
         }
     }
 }

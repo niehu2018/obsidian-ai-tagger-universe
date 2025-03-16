@@ -1,4 +1,4 @@
-import { ButtonComponent, Editor, MarkdownFileInfo, MarkdownView, Menu, Notice, Setting, TFile, MenuItem } from 'obsidian';
+import { ButtonComponent, Editor, MarkdownFileInfo, MarkdownView, Menu, Notice, TFile } from 'obsidian';
 import AITaggerPlugin from './main';
 import { TagUtils } from './tagUtils';
 import { TaggingMode } from './services/prompts/tagPrompts';
@@ -14,7 +14,7 @@ export function registerCommands(plugin: AITaggerPlugin) {
             if (file) {
                 plugin.analyzeCurrentNote();
             } else {
-                new Notice('Please open a note first');
+                new Notice('Open a note');
             }
         }
     });
@@ -28,17 +28,17 @@ export function registerCommands(plugin: AITaggerPlugin) {
             const view = ctx instanceof MarkdownView ? ctx : null;
             const selectedText = editor.getSelection();
             if (!selectedText) {
-                new Notice('Please select some text first');
+                new Notice('Select text');
                 return;
             }
 
             if (!view?.file) {
-                new Notice('Cannot update tags: No file is open');
+                new Notice('No file open');
                 return;
             }
 
             const existingTags = TagUtils.getAllTags(plugin.app);
-            new Notice('Analyzing selected text...');
+            new Notice('Analyzing...');
             
             try {
                 let maxTags = plugin.settings.tagRangeGenerateMax;
@@ -46,10 +46,19 @@ export function registerCommands(plugin: AITaggerPlugin) {
                     maxTags = plugin.settings.tagRangePredefinedMax;
                 } else if (plugin.settings.taggingMode === TaggingMode.ExistingTags) {
                     maxTags = plugin.settings.tagRangeMatchMax;
-                } else if (plugin.settings.taggingMode === TaggingMode.Hybrid) {
+                } else if (plugin.settings.taggingMode === TaggingMode.HybridGenerateExisting ||
+                           plugin.settings.taggingMode === TaggingMode.HybridGeneratePredefined) {
                     maxTags = plugin.settings.tagRangeMatchMax + plugin.settings.tagRangeGenerateMax;
                 }
-                const analysis = await plugin.llmService.analyzeTags(selectedText, existingTags, plugin.settings.taggingMode, maxTags);
+                // Only pass language parameter for GenerateNew mode or hybrid modes that include generation
+                let analysis;
+                if (plugin.settings.taggingMode === TaggingMode.GenerateNew || 
+                    plugin.settings.taggingMode === TaggingMode.HybridGenerateExisting ||
+                    plugin.settings.taggingMode === TaggingMode.HybridGeneratePredefined) {
+                    analysis = await plugin.llmService.analyzeTags(selectedText, existingTags, plugin.settings.taggingMode, maxTags, plugin.settings.language);
+                } else {
+                    analysis = await plugin.llmService.analyzeTags(selectedText, existingTags, plugin.settings.taggingMode, maxTags);
+                }
                 const suggestedTags = analysis.suggestedTags;
                 const matchedTags = analysis.matchedExistingTags;
                 
@@ -58,7 +67,7 @@ export function registerCommands(plugin: AITaggerPlugin) {
                 
                 if (result.success) {
                     editor.replaceSelection(selectedText);
-                    new Notice(`Added ${suggestedTags.length + matchedTags.length} tags to frontmatter`);
+                    new Notice('Tags added');
                 } else {
                     new Notice('Failed to update tags');
                 }
@@ -81,7 +90,19 @@ export function registerCommands(plugin: AITaggerPlugin) {
                         item
                             .setTitle(`AI tag ${markdownFiles.length} selected notes`)
                             .setIcon('tag')
-                            .onClick(() => plugin.analyzeAndTagFiles(markdownFiles));
+                            .onClick(async () => {
+                                // Show confirmation dialog
+                                const confirmed = await plugin.showConfirmationDialog(
+                                    `This will generate tags for ${markdownFiles.length} selected notes. This may take some time.`
+                                );
+                                
+                                if (!confirmed) {
+                                    new Notice('Operation cancelled');
+                                    return;
+                                }
+                                
+                                await plugin.analyzeAndTagFiles(markdownFiles);
+                            });
                     });
                 }
             } else if (file.extension === 'md') {
@@ -103,11 +124,22 @@ export function registerCommands(plugin: AITaggerPlugin) {
         icon: 'tag',
         callback: async () => {
             const files = plugin.app.vault.getMarkdownFiles();
-            if (files.length > 0) {
-                await plugin.analyzeAndTagFiles(files);
-            } else {
-                new Notice('No markdown files found in vault');
+            if (files.length === 0) {
+                new Notice('No md files');
+                return;
             }
+            
+            // Show confirmation dialog
+            const confirmed = await plugin.showConfirmationDialog(
+                `This will generate tags for ${files.length} notes in your vault. This may take a long time.`
+            );
+            
+            if (!confirmed) {
+                new Notice('Operation cancelled');
+                return;
+            }
+            
+            await plugin.analyzeAndTagFiles(files);
         }
     });
 
@@ -119,13 +151,13 @@ export function registerCommands(plugin: AITaggerPlugin) {
         callback: async () => {
             const activeFile = plugin.app.workspace.getActiveFile();
             if (!activeFile) {
-                new Notice('Please open a note first');
+                new Notice('Open a note');
                 return;
             }
 
             const parentFolder = activeFile.parent;
             if (!parentFolder) {
-                new Notice('Could not determine parent folder');
+                new Notice('No parent folder');
                 return;
             }
 
@@ -134,7 +166,17 @@ export function registerCommands(plugin: AITaggerPlugin) {
                 .filter((file): file is TFile => file instanceof TFile && file.extension === 'md');
 
             if (filesInFolder.length === 0) {
-                new Notice('No markdown files found in current folder');
+                new Notice('No md files');
+                return;
+            }
+
+            // Show confirmation dialog
+            const confirmed = await plugin.showConfirmationDialog(
+                `This will generate tags for ${filesInFolder.length} notes in the current folder. This may take some time.`
+            );
+            
+            if (!confirmed) {
+                new Notice('Operation cancelled');
                 return;
             }
 
@@ -193,8 +235,22 @@ export function registerCommands(plugin: AITaggerPlugin) {
                 return;
             }
 
-            new Notice('Starting to clear tags from notes in current directory...');
+            // Show confirmation dialog
+            const confirmed = await plugin.showConfirmationDialog(
+                `This will remove all tags from ${filesInFolder.length} notes in the current folder. This action cannot be undone.`
+            );
+            
+            if (!confirmed) {
+                new Notice('Operation cancelled');
+                return;
+            }
+
+            new Notice(`Clearing tags from ${filesInFolder.length} notes in the current folder...`);
+            
             let count = 0;
+            let processedCount = 0;
+            const totalFiles = filesInFolder.length;
+            let lastNoticeTime = Date.now();
 
             for (const file of filesInFolder) {
                 try {
@@ -206,9 +262,15 @@ export function registerCommands(plugin: AITaggerPlugin) {
                 } catch (error) {
                     console.error(`Error clearing tags from ${file.path}:`, error);
                 }
+                
+                processedCount++;
+                const currentTime = Date.now();
+                if (currentTime - lastNoticeTime >= 15000 || processedCount === totalFiles) {
+                    new Notice(`Progress: ${processedCount}/${totalFiles} files processed`);
+                    lastNoticeTime = currentTime;
+                }
             }
-
-            new Notice(`Successfully cleared tags from ${count} notes in current directory`);
+            new Notice(`Cleared ${count} notes`);
         }
     });
 
@@ -220,12 +282,12 @@ export function registerCommands(plugin: AITaggerPlugin) {
         editorCallback: async (editor: Editor, ctx: MarkdownView | MarkdownFileInfo) => {
             const view = ctx instanceof MarkdownView ? ctx : null;
             if (!view?.file) {
-                new Notice('Please open a note first');
+                new Notice('Open a note');
                 return;
             }
 
             if (!plugin.settings.predefinedTagsPath) {
-                new Notice('Please set the predefined tags file path in settings');
+                new Notice('Set tags file');
                 return;
             }
 
@@ -236,7 +298,7 @@ export function registerCommands(plugin: AITaggerPlugin) {
                     .filter((line: string) => line.length > 0);
 
                 if (predefinedTags.length === 0) {
-                    new Notice('No predefined tags found in the file');
+                    new Notice('No tags in file');
                     return;
                 }
 
@@ -245,7 +307,7 @@ export function registerCommands(plugin: AITaggerPlugin) {
                 const matchedTags = analysis.matchedExistingTags;
                 
                 if (matchedTags.length === 0) {
-                    new Notice('No matching predefined tags found');
+                    new Notice('No matching tags');
                     return;
                 }
 
@@ -253,7 +315,7 @@ export function registerCommands(plugin: AITaggerPlugin) {
                 plugin.handleTagUpdateResult(result);
             } catch (error) {
                 console.error('Error assigning predefined tags:', error);
-                new Notice('Failed to assign predefined tags');
+                new Notice('Assign failed');
             }
         }
     });
@@ -265,13 +327,13 @@ export function registerCommands(plugin: AITaggerPlugin) {
         icon: 'tag',
         callback: async () => {
             if (!plugin.settings.predefinedTagsPath) {
-                new Notice('Please set the predefined tags file path in settings');
+                new Notice('Set tags file');
                 return;
             }
 
             const files = plugin.app.vault.getMarkdownFiles();
             if (files.length === 0) {
-                new Notice('No markdown files found in vault');
+                new Notice('No md files');
                 return;
             }
 
@@ -285,10 +347,22 @@ export function registerCommands(plugin: AITaggerPlugin) {
                     new Notice('No predefined tags found in the file');
                     return;
                 }
+                
+                // Show confirmation dialog
+                const confirmed = await plugin.showConfirmationDialog(
+                    `This will assign predefined tags to ${files.length} notes in your vault. This may take a long time.`
+                );
+                
+                if (!confirmed) {
+                    new Notice('Operation cancelled');
+                    return;
+                }
 
-                new Notice(`Starting to assign predefined tags to ${files.length} files...`);
+                new Notice(`Assigning predefined tags to ${files.length} notes in your vault...`);
+                
                 let processedCount = 0;
                 let successCount = 0;
+                let lastNoticeTime = Date.now();
 
                 for (const file of files) {
                     try {
@@ -304,17 +378,17 @@ export function registerCommands(plugin: AITaggerPlugin) {
                         }
                         
                         processedCount++;
-                        if (processedCount % 5 === 0 || processedCount === files.length) {
-                            new Notice(`Progress: ${processedCount}/${files.length} files processed`);
+                        const currentTime = Date.now();
+                        if (currentTime - lastNoticeTime >= 15000 || processedCount === files.length) {
+                            new Notice(`Progress: ${processedCount}/${files.length}`);
+                            lastNoticeTime = currentTime;
                         }
-                    } catch (error) {
-                        console.error(`Error processing ${file.path}:`, error);
-                    }
+                } catch (error) {
+                    // Silent fail for batch processing
                 }
-
-                new Notice(`Completed! Successfully tagged ${successCount} out of ${files.length} files`);
+                }
+                new Notice(`Completed: ${successCount}/${files.length}`);
             } catch (error) {
-                console.error('Error assigning predefined tags:', error);
                 new Notice('Failed to assign predefined tags to notes');
             }
         }
@@ -328,18 +402,18 @@ export function registerCommands(plugin: AITaggerPlugin) {
         callback: async () => {
             const activeFile = plugin.app.workspace.getActiveFile();
             if (!activeFile) {
-                new Notice('Please open a note first');
+                new Notice('Open a note');
                 return;
             }
 
             const parentFolder = activeFile.parent;
             if (!parentFolder) {
-                new Notice('Could not determine parent folder');
+                new Notice('No parent folder');
                 return;
             }
 
             if (!plugin.settings.predefinedTagsPath) {
-                new Notice('Please set the predefined tags file path in settings');
+                new Notice('Set tags file');
                 return;
             }
 
@@ -348,7 +422,7 @@ export function registerCommands(plugin: AITaggerPlugin) {
                 .filter((file): file is TFile => file instanceof TFile && file.extension === 'md');
 
             if (filesInFolder.length === 0) {
-                new Notice('No markdown files found in current folder');
+                new Notice('No md files');
                 return;
             }
 
@@ -362,10 +436,22 @@ export function registerCommands(plugin: AITaggerPlugin) {
                     new Notice('No predefined tags found in the file');
                     return;
                 }
+                
+                // Show confirmation dialog
+                const confirmed = await plugin.showConfirmationDialog(
+                    `This will assign predefined tags to ${filesInFolder.length} notes in the current folder. This may take some time.`
+                );
+                
+                if (!confirmed) {
+                    new Notice('Operation cancelled');
+                    return;
+                }
 
-                new Notice(`Starting to assign predefined tags to ${filesInFolder.length} files in current folder...`);
+                new Notice(`Assigning predefined tags to ${filesInFolder.length} notes in the current folder...`);
+                
                 let processedCount = 0;
                 let successCount = 0;
+                let lastNoticeTime = Date.now();
 
                 for (const file of filesInFolder) {
                     try {
@@ -381,17 +467,17 @@ export function registerCommands(plugin: AITaggerPlugin) {
                         }
                         
                         processedCount++;
-                        if (processedCount % 5 === 0 || processedCount === filesInFolder.length) {
-                            new Notice(`Progress: ${processedCount}/${filesInFolder.length} files processed`);
+                        const currentTime = Date.now();
+                        if (currentTime - lastNoticeTime >= 15000 || processedCount === filesInFolder.length) {
+                            new Notice(`Progress: ${processedCount}/${filesInFolder.length}`);
+                            lastNoticeTime = currentTime;
                         }
                     } catch (error) {
-                        console.error(`Error processing ${file.path}:`, error);
+                        // Silent fail for batch processing
                     }
                 }
-
-                new Notice(`Completed! Successfully tagged ${successCount} out of ${filesInFolder.length} files`);
+                new Notice(`Completed: ${successCount}/${filesInFolder.length}`);
             } catch (error) {
-                console.error('Error assigning predefined tags:', error);
                 new Notice('Failed to assign predefined tags to notes in current folder');
             }
         }

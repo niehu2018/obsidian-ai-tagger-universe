@@ -1,7 +1,7 @@
 
 {
   "name": "ai-tagger-universe",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Automatically analyze note content and add relevant tags using AI",
   "main": "main.js",
   "scripts": {

@@ -4,7 +4,8 @@ export enum TaggingMode {
     PredefinedTags = 'predefined',
     GenerateNew = 'generate',
     ExistingTags = 'existing',
-    Hybrid = 'hybrid'
+    HybridGenerateExisting = 'hybrid-generate-existing', // First GenerateNew, then ExistingTags
+    HybridGeneratePredefined = 'hybrid-generate-predefined' // First GenerateNew, then PredefinedTags
 }
 
 export function buildTagPrompt(
@@ -14,7 +15,31 @@ export function buildTagPrompt(
     maxTags: number = 5,
     language?: 'default' | 'ar' | 'cs' | 'da' | 'de' | 'en' | 'es' | 'fr' | 'id' | 'it' | 'ja' | 'ko' | 'nl' | 'no' | 'pl' | 'pt' | 'pt-BR' | 'ro' | 'ru' | 'tr' | 'uk' | 'zh' | 'zh-TW'
 ): string {
-    const langInstructions = language && language !== 'default' ? `Please translate all generated tags into ${language} language.` : '';
+    // Map language codes to their proper names
+    const languageNames: Record<string, string> = {
+        'ar': 'Arabic',
+        'cs': 'Czech',
+        'da': 'Danish',
+        'de': 'German',
+        'en': 'English',
+        'es': 'Spanish',
+        'fr': 'French',
+        'id': 'Indonesian',
+        'it': 'Italian',
+        'ja': 'Japanese',
+        'ko': 'Korean',
+        'nl': 'Dutch',
+        'no': 'Norwegian',
+        'pl': 'Polish',
+        'pt': 'Portuguese',
+        'pt-BR': 'Brazilian Portuguese',
+        'ro': 'Romanian',
+        'ru': 'Russian',
+        'tr': 'Turkish',
+        'uk': 'Ukrainian',
+        'zh': 'Chinese (Simplified)',
+        'zh-TW': 'Chinese (Traditional)'
+    };
     
     let prompt = '';
     
@@ -23,7 +48,6 @@ export function buildTagPrompt(
             const predefinedLimit = TAG_PREDEFINED_RANGE.MAX;
             prompt = `Analyze the following content and select up to ${predefinedLimit} most relevant tags from the provided tag list.
 Only use exact matches from the provided tags, do not modify or generate new tags.
-${langInstructions}
 
 Available tags:
 ${candidateTags.join(', ')}
@@ -39,15 +63,27 @@ Return only a JSON object in this exact format:
 
         case TaggingMode.GenerateNew:
             const generateOnlyLimit = TAG_GENERATE_RANGE.MAX;
-            prompt = `Analyze the following content and generate up to ${generateOnlyLimit} relevant tags.
-${langInstructions}
+            // Use a standard example format for all languages
+            const tagExamples = `- Example format: #topic, #concept, #subject`;
+            
+            // Only consider language parameter for GenerateNew mode
+            let genLangInstructions = '';
+            if (language && language !== 'default') {
+                const languageName = languageNames[language] || language;
+                genLangInstructions = `IMPORTANT: Generate all tags in ${languageName} language only.
+Regardless of what language the content is in, all tags must be in ${languageName} only.
+First understand the content, then if needed translate concepts to ${languageName}, then generate tags in ${languageName}.
+
+`;
+            }
+            
+            prompt = `${genLangInstructions}Analyze the following content and generate up to ${generateOnlyLimit} relevant tags.
 
 Requirements for tags:
 - Must start with # symbol
 - Can contain letters, numbers, and hyphens
 - No spaces allowed
-- Example format: #technology, #artificial-intelligence, #coding
-- Supports international characters: #技术, #인공지능, #프로그래밍
+${tagExamples}
 
 Content:
 ${content}
@@ -62,7 +98,6 @@ Return only a JSON object in this exact format:
             const existingLimit = TAG_MATCH_RANGE.MAX;
             prompt = `Analyze the following content and select up to ${existingLimit} most relevant tags from the existing tags in the vault.
 Only use exact matches from the provided tags, do not modify or generate new tags.
-${langInstructions}
 
 Existing tags in vault:
 ${candidateTags.join(', ')}
@@ -73,34 +108,6 @@ ${content}
 Return only a JSON object in this exact format:
 {
     "matchedTags": ["#tag1", "#tag2"]
-}`;
-            break;
-
-        case TaggingMode.Hybrid:
-            const matchLimit = TAG_MATCH_RANGE.MAX;
-            const generateLimit = TAG_GENERATE_RANGE.MAX;
-            prompt = `Analyze the following content and:
-1. Match up to ${matchLimit} most relevant tags from the existing tags (exact matches only)
-2. Generate up to ${generateLimit} new relevant tags
-${langInstructions}
-
-Requirements for new tags:
-- Must start with # symbol
-- Can contain letters, numbers, and hyphens
-- No spaces allowed
-- Example format: #technology, #artificial-intelligence, #coding
-- Supports international characters: #技术, #인공지능, #프로그래밍
-
-Existing tags:
-${candidateTags.join(', ')}
-
-Content:
-${content}
-
-Return only a JSON object in this exact format:
-{
-    "matchedTags": ["#tag1", "#tag2"],
-    "newTags": ["#tag1", "#tag2", "#tag3"]
 }`;
             break;
     }

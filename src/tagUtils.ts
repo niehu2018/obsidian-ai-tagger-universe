@@ -1,4 +1,4 @@
-import { TFile, FrontMatterCache, Notice, App, TFolder } from 'obsidian';
+import { TFile, Notice, App, TFolder } from 'obsidian';
 import * as path from 'path';
 
 // Min and Max values for tag range settings
@@ -22,38 +22,97 @@ export const TAG_GENERATE_RANGE = {
     MAX: 5
 } as const;
 
+/**
+ * Custom error type for tag-related operations
+ */
+export class TagError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'TagError';
+    }
+}
+
+/**
+ * Represents the result of a tag operation
+ */
 export interface TagOperationResult {
+    /** Whether the operation was successful */
     success: boolean;
+    /** Message describing the result */
     message: string;
+    /** Array of affected tags */
     tags?: string[];
 }
 
 export class TagUtils {
-    static validateTag(tag: string): boolean {
-        if (!tag) return false;
+    /**
+     * Validates a single tag according to Obsidian's tag requirements
+     * @param tag - The tag to validate
+     * @returns boolean indicating if the tag is valid
+     */
+    static validateTag(tag: unknown): boolean {
+        let tagStr: string;
+        if (typeof tag !== 'string') {
+            try {
+                tagStr = String(tag);
+            } catch (e) {
+                return false;
+            }
+        } else {
+            tagStr = tag;
+        }
+        if (!tagStr) return false;
         
-        // Normalize the tag - trim and ensure it starts with #
-        const normalizedTag = tag.trim();
+        const normalizedTag = tagStr.trim();
+        if (!normalizedTag.startsWith('#')) {
+            // First character must be a letter from any language
+            if (!/^[\p{Letter}]/u.test(normalizedTag)) {
+                return false;
+            }
+        }
+        
         const tagWithHash = normalizedTag.startsWith('#') ? normalizedTag : `#${normalizedTag}`;
-        
-        // Check if the tag follows the pattern: # followed by letters, numbers, and hyphens
-        const isValid = /^#[\p{L}\p{N}-]+$/u.test(tagWithHash);
-        
-        return isValid;
+        // Tag can contain letters from any language, numbers, and hyphens
+        const isValid = /^#[\p{Letter}\p{Number}-]+$/u.test(tagWithHash);
+        // Obsidian doesn't allow tags to end with a hyphen
+        return isValid && !tagWithHash.endsWith('-');
     }
 
-    static validateTags(tags: string[]): { valid: string[], invalid: string[] } {
+    /**
+     * Validates an array of tags
+     * @param tags - Array of tags to validate
+     * @returns Object containing arrays of valid and invalid tags
+     */
+    static validateTags(tags: unknown[]): { valid: string[], invalid: string[] } {
+        if (!Array.isArray(tags)) {
+            return { valid: [], invalid: [] };
+        }
+
         const valid: string[] = [];
         const invalid: string[] = [];
-
+        
         for (const tag of tags) {
-            this.validateTag(tag) ? valid.push(tag) : invalid.push(tag);
+            try {
+                const tagStr = typeof tag === 'string' ? tag : String(tag);
+                if (this.validateTag(tagStr)) {
+                    valid.push(tagStr);
+                } else {
+                    invalid.push(tagStr);
+                }
+            } catch (e) {
+                if (tag) invalid.push(String(tag));
+            }
         }
 
         return { valid, invalid };
     }
 
-    static getExistingTags(frontmatter: FrontMatterCache | null): string[] {
+    /**
+     * Gets existing tags from frontmatter
+     * @param frontmatter - The frontmatter object from Obsidian's metadata cache
+     * @returns Array of valid tags
+     */
+    static getExistingTags(frontmatter: { tags?: string | string[] | null } | null): string[] {
         if (!frontmatter?.tags) return [];
 
         const tags = Array.isArray(frontmatter.tags) ? 
@@ -65,20 +124,39 @@ export class TagUtils {
         return this.validateTags(tags).valid;
     }
 
+    /**
+     * Merges two arrays of tags, removing duplicates and sorting
+     * @param existingTags - Array of existing tags
+     * @param newTags - Array of new tags to merge
+     * @returns Array of unique, sorted tags
+     */
     static mergeTags(existingTags: string[], newTags: string[]): string[] {
         const { valid: validExisting } = this.validateTags(existingTags);
         const { valid: validNew } = this.validateTags(newTags);
         return [...new Set([...validExisting, ...validNew])].sort();
     }
 
-    static formatTag(tag: string): string {
-        const formattedTag = tag.trim().startsWith('#') ? tag.trim() : `#${tag.trim()}`;
+    /**
+     * Formats a tag to ensure it starts with # and is properly formatted
+     * @param tag - Tag to format
+     * @throws {TagError} If tag format is invalid
+     * @returns Formatted tag string
+     */
+    static formatTag(tag: unknown): string {
+        const tagStr = typeof tag === 'string' ? tag : String(tag);
+        const formattedTag = tagStr.trim().startsWith('#') ? tagStr.trim() : `#${tagStr.trim()}`;
         if (!this.validateTag(formattedTag)) {
-            throw new Error(`Invalid tag format: ${tag} (can only contain letters, numbers, and hyphens)`);
+            throw new TagError(`Invalid tag format: ${tagStr} (must start with # or a letter, and can only contain letters, numbers, and hyphens)`);
         }
         return formattedTag;
     }
 
+    /**
+     * Clears all tags from a file's frontmatter
+     * @param app - Obsidian App instance
+     * @param file - File to clear tags from
+     * @returns Promise resolving to operation result
+     */
     static async clearTags(app: App, file: TFile): Promise<TagOperationResult> {
         try {
             const content = await app.vault.read(file);
@@ -87,7 +165,6 @@ export class TagUtils {
 
             const processFrontMatter = (frontmatter: string) => {
                 const yaml = frontmatter.split('\n');
-                // Completely remove tags field and all tag entries
                 const processed = yaml.filter(line => 
                     !line.trim().startsWith('tags:') && 
                     !line.trim().startsWith('- ')
@@ -98,40 +175,43 @@ export class TagUtils {
             if (frontmatterRegex.test(content)) {
                 newContent = content.replace(frontmatterRegex, (_, frontmatter) => {
                     const processedFrontmatter = processFrontMatter(frontmatter);
-                    // If frontmatter becomes empty, add a placeholder comment
-                    const finalFrontmatter = processedFrontmatter.trim() ? 
-                        processedFrontmatter : 
-                        '# Frontmatter cleared by AI Tagger';
-                    return `---\n${finalFrontmatter}\n---`;
+                    if (!processedFrontmatter.trim()) {
+                        // If frontmatter is empty after removing tags, remove the frontmatter section entirely
+                        return '';
+                    }
+                    return `---\n${processedFrontmatter}\n---`;
                 });
-            } else {
-                // If no frontmatter exists, don't add one just for tags
-                newContent = content;
             }
 
             await app.vault.modify(file, newContent);
             await this.waitForMetadataUpdate(app, file);
             
-            // Force a more thorough metadata update
             app.metadataCache.trigger('changed', file);
             app.workspace.trigger('file-open', file);
             
             return {
                 success: true,
-                message: 'Successfully cleared all tags',
+                message: 'Cleared tags',
                 tags: []
             };
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Unknown error';
-            console.error(`Error clearing tags from ${file.path}:`, error);
-            new Notice('Error clearing tags');
+            new Notice(`Error clearing tags: ${message}`, 3000);
             return {
                 success: false,
-                message: `Failed to clear tags: ${message}`
+                message: `Clear failed: ${message}`
             };
         }
     }
 
+    /**
+     * Updates tags in a file's frontmatter
+     * @param app - Obsidian App instance
+     * @param file - File to update tags in
+     * @param newTags - Array of new tags to add
+     * @param matchedTags - Array of matched existing tags to add
+     * @returns Promise resolving to operation result
+     */
     static async updateNoteTags(
         app: App,
         file: TFile,
@@ -140,21 +220,24 @@ export class TagUtils {
     ): Promise<TagOperationResult> {
         try {
             if (!Array.isArray(newTags) || !Array.isArray(matchedTags)) {
-                throw new Error('Tag parameters must be arrays');
+                throw new TagError('Tag parameters must be arrays');
             }
 
-            const filteredNewTags = [...new Set(newTags.filter(tag => tag.trim()))];
-            const filteredMatchedTags = [...new Set(matchedTags.filter(tag => tag.trim()))];
+            const stringNewTags = newTags.map(tag => String(tag));
+            const stringMatchedTags = matchedTags.map(tag => String(tag));
+            
+            const filteredNewTags = [...new Set(stringNewTags.filter(tag => tag.trim()))];
+            const filteredMatchedTags = [...new Set(stringMatchedTags.filter(tag => tag.trim()))];
 
             const { valid: validNewTags, invalid: invalidNewTags } = this.validateTags(filteredNewTags);
             const { valid: validMatchedTags } = this.validateTags(filteredMatchedTags);
 
             if (invalidNewTags.length > 0) {
-                new Notice(`Some generated tags were invalid and will be skipped: ${invalidNewTags.join(', ')}`, 3000);
+                new Notice(`Skipped invalid tags: ${invalidNewTags.join(', ')}`, 3000);
             }
 
             if (validNewTags.length === 0 && validMatchedTags.length === 0) {
-                new Notice('No valid tags were generated or matched', 3000);
+                new Notice('No valid tags to add', 3000);
                 return { success: true, message: 'No valid tags to add', tags: [] };
             }
 
@@ -189,37 +272,60 @@ export class TagUtils {
             await this.waitForMetadataUpdate(app, file);
             app.workspace.trigger('file-open', file);
 
-            new Notice(`Successfully added tags: ${allTags.map(tag => `#${tag}`).join(', ')}`, 5000);
+            const successMessage = `Added ${allTags.length} tag${allTags.length === 1 ? '' : 's'}`;
+            new Notice(successMessage, 3000);
 
             return {
                 success: true,
-                message: `Successfully updated tags: ${validNewTags.length} new tags added, ${validMatchedTags.length} existing tags matched`,
+                message: successMessage,
                 tags: allTags.map(tag => `#${tag}`)
             };
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Unknown error';
-            new Notice('Error updating tags');
+            new Notice(`Error updating tags: ${message}`, 3000);
             return {
                 success: false,
-                message: `Failed to update tags: ${message}`
+                message: `Update failed: ${message}`
             };
         }
     }
-
+    
+    /**
+     * Waits for Obsidian's metadata cache to update for a file
+     * @param app - Obsidian App instance
+     * @param file - File to wait for
+     * @returns Promise that resolves when metadata is updated
+     * @throws {TagError} If metadata update times out
+     */
     private static async waitForMetadataUpdate(app: App, file: TFile): Promise<void> {
-        return new Promise<void>((resolve) => {
-            const handler = (...args: any[]) => {
+        return new Promise<void>((resolve, reject) => {
+            // Set a timeout to prevent hanging
+            const timeout = setTimeout(() => {
+                app.metadataCache.off('changed', eventHandler);
+                reject(new TagError('Metadata update timeout'));
+            }, 5000);
+
+            // Define event handler with proper type annotation
+            const eventHandler = (...args: unknown[]) => {
                 const changedFile = args[0] as TFile;
                 if (changedFile?.path === file.path) {
-                    app.metadataCache.off('changed', handler);
-                    resolve();
+                    clearTimeout(timeout);
+                    app.metadataCache.off('changed', eventHandler);
+                    // Add small delay to ensure cache is fully updated
+                    setTimeout(resolve, 50);
                 }
             };
-            app.metadataCache.on('changed', handler);
+            
+            app.metadataCache.on('changed', eventHandler);
             app.metadataCache.trigger('changed', file);
         });
     }
-
+    
+    /**
+     * Gets all unique tags from all markdown files in the vault
+     * @param app - Obsidian App instance
+     * @returns Array of unique tags, sorted alphabetically
+     */
     static getAllTags(app: App): string[] {
         const tags = new Set<string>();
         app.vault.getMarkdownFiles().forEach((file) => {
@@ -230,33 +336,45 @@ export class TagUtils {
         });
         return Array.from(tags).sort();
     }
-
+    
+    /**
+     * Saves all unique tags to a markdown file in the specified directory
+     * @param app - Obsidian App instance
+     * @param tagDir - Directory to save tags file in (default: 'tags')
+     * @throws {TagError} If file operations fail
+     */
     static async saveAllTags(app: App, tagDir: string = 'tags'): Promise<void> {
-        const tags = this.getAllTags(app);
-        const formattedTags = tags.map(tag => tag.startsWith('#') ? tag.substring(1) : tag).join('\n');
-
-        const vault = app.vault;
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const dateStr = `${year}${month}${day}`;
-
-        const folderPath = tagDir;
-        let folder = vault.getAbstractFileByPath(folderPath);
-        if (!folder) {
-            folder = await vault.createFolder(folderPath);
+        try {
+            const tags = this.getAllTags(app);
+            const formattedTags = tags.map(tag => tag.startsWith('#') ? tag.substring(1) : tag).join('\n');
+        
+            const vault = app.vault;
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const dateStr = `${year}${month}${day}`;
+        
+            const folderPath = tagDir;
+            let folder = vault.getAbstractFileByPath(folderPath);
+            if (!folder) {
+                folder = await vault.createFolder(folderPath);
+            }
+            
+            const filePath = path.join(folderPath, `tags_${dateStr}.md`);
+            let file = vault.getAbstractFileByPath(filePath);
+            
+            if (!file) {
+                file = await vault.create(filePath, formattedTags);
+            } else {
+                await vault.modify(file as TFile, formattedTags);
+            }
+            
+            new Notice(`Tags saved to ${filePath}`, 3000);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            new Notice(`Error saving tags: ${message}`, 3000);
+            throw new TagError(`Failed to save tags: ${message}`);
         }
-        
-        const filePath = path.join(folderPath, `tags_${dateStr}.md`);
-        let file = vault.getAbstractFileByPath(filePath);
-        
-        if (!file) {
-            file = await vault.create(filePath, formattedTags);
-        } else {
-            await vault.modify(file as TFile, formattedTags);
-        }
-        
-        new Notice(`Tags saved to ${filePath}`);
     }
 }

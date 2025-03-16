@@ -150,38 +150,99 @@ export class CloudLLMService extends BaseLLMService {
 
     async analyzeTags(content: string, existingTags: string[], mode: TaggingMode, maxTags: number, language?: 'en' | 'zh' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'pt' | 'ru'): Promise<LLMResponse> {
         try {
-            // Truncate content if too long
-            if (content.length > this.MAX_CONTENT_LENGTH) {
-                content = content.slice(0, this.MAX_CONTENT_LENGTH) + '...';
-            }
-
-            const systemPrompt = 'You are a professional document tag analysis assistant. You need to analyze document content, match relevant tags from existing ones, and generate new relevant tags.';
-            const prompt = this.buildPrompt(content, existingTags, mode, maxTags, language);
-
             // Validate that we have content to analyze
             if (!content.trim()) {
                 throw new Error('Empty content provided for analysis');
             }
 
-            // Validate that the prompt was built successfully
-            if (!prompt.trim()) {
-                throw new Error('Failed to build analysis prompt');
-            }
-            const response = await this.makeRequestWithRetry(`${systemPrompt}\n\n${prompt}`, 30000);
-            const responseText = await response.text();
-
-            if (!response.ok) {
-                try {
-                    const errorJson = JSON.parse(responseText);
-                    throw new Error(errorJson.error?.message || errorJson.message || `API error: ${response.status}`);
-                } catch {
-                    throw new Error(`API error: ${response.status} ${response.statusText}`);
-                }
+            // Truncate content if too long
+            if (content.length > this.MAX_CONTENT_LENGTH) {
+                content = content.slice(0, this.MAX_CONTENT_LENGTH) + '...';
             }
 
-            return this.adapter.parseResponse(JSON.parse(responseText));
+            // Handle hybrid modes by making separate calls for each component mode
+            if (mode === TaggingMode.HybridGenerateExisting) {
+                // First generate new tags
+                const generateResult = await this.analyzeTagsInternal(content, existingTags, TaggingMode.GenerateNew, maxTags / 2, language);
+                
+                // Then match existing tags
+                const matchResult = await this.analyzeTagsInternal(content, existingTags, TaggingMode.ExistingTags, maxTags / 2, language);
+                
+                // Combine results and remove duplicates
+                const suggestedTags = generateResult.suggestedTags;
+                const matchedExistingTags = matchResult.matchedExistingTags;
+                
+                // Remove any tags from suggestedTags that also appear in matchedExistingTags
+                const uniqueSuggestedTags = suggestedTags.filter(tag => !matchedExistingTags.includes(tag));
+                
+                return {
+                    suggestedTags: uniqueSuggestedTags,
+                    matchedExistingTags: matchedExistingTags
+                };
+            } else if (mode === TaggingMode.HybridGeneratePredefined) {
+                // First generate new tags
+                const generateResult = await this.analyzeTagsInternal(content, existingTags, TaggingMode.GenerateNew, maxTags / 2, language);
+                
+                // Then match predefined tags
+                const matchResult = await this.analyzeTagsInternal(content, existingTags, TaggingMode.PredefinedTags, maxTags / 2, language);
+                
+                // Combine results and remove duplicates
+                const suggestedTags = generateResult.suggestedTags;
+                const matchedExistingTags = matchResult.matchedExistingTags;
+                
+                // Remove any tags from suggestedTags that also appear in matchedExistingTags
+                const uniqueSuggestedTags = suggestedTags.filter(tag => !matchedExistingTags.includes(tag));
+                
+                return {
+                    suggestedTags: uniqueSuggestedTags,
+                    matchedExistingTags: matchedExistingTags
+                };
+            } else {
+                // Handle non-hybrid modes directly
+                return await this.analyzeTagsInternal(content, existingTags, mode, maxTags, language);
+            }
         } catch (error) {
             return this.handleError(error, 'Tag analysis');
         }
+    }
+
+    private async analyzeTagsInternal(content: string, existingTags: string[], mode: TaggingMode, maxTags: number, language?: 'en' | 'zh' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'pt' | 'ru'): Promise<LLMResponse> {
+        const systemPrompt = 'You are a professional document tag analysis assistant. You need to analyze document content, match relevant tags from existing ones, and generate new relevant tags.';
+        const prompt = this.buildPrompt(content, existingTags, mode, maxTags, language);
+
+        // Validate that the prompt was built successfully
+        if (!prompt.trim()) {
+            throw new Error('Failed to build analysis prompt');
+        }
+
+        const response = await this.makeRequestWithRetry(`${systemPrompt}\n\n${prompt}`, 30000);
+        const responseText = await response.text();
+
+        if (!response.ok) {
+            try {
+                const errorJson = JSON.parse(responseText);
+                throw new Error(errorJson.error?.message || errorJson.message || `API error: ${response.status}`);
+            } catch {
+                throw new Error(`API error: ${response.status} ${response.statusText}`);
+            }
+        }
+
+        // Parse and validate response
+        let parsedResponse = this.adapter.parseResponse(JSON.parse(responseText));
+        
+        // Ensure we always have arrays for tags
+        const matchedTags = Array.isArray(parsedResponse.matchedExistingTags) ? parsedResponse.matchedExistingTags : [];
+        const suggestedTags = Array.isArray(parsedResponse.suggestedTags) ? parsedResponse.suggestedTags : [];
+
+        // Ensure all tags are properly formatted strings
+        parsedResponse.matchedExistingTags = matchedTags
+            .map((tag: unknown) => String(tag).trim())
+            .filter((tag: string) => tag.length > 0);
+            
+        parsedResponse.suggestedTags = suggestedTags
+            .map((tag: unknown) => String(tag).trim())
+            .filter((tag: string) => tag.length > 0);
+
+        return parsedResponse;
     }
 }

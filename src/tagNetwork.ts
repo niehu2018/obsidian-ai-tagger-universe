@@ -1,10 +1,35 @@
 import { App, Modal, TFile } from 'obsidian';
 import { TagUtils } from './tagUtils';
 
+declare global {
+    interface Window {
+        d3: any;
+    }
+}
+
 interface TagData {
     tag: string;
     frequency: number;
     connections: Map<string, number>;
+}
+
+interface NetworkNode {
+    id: string;
+    label: string;
+    size: number;
+    frequency: number;
+}
+
+interface NetworkEdge {
+    id: string;
+    source: string;
+    target: string;
+    weight: number;
+}
+
+interface NetworkData {
+    nodes: NetworkNode[];
+    edges: NetworkEdge[];
 }
 
 export class TagNetworkManager {
@@ -15,20 +40,15 @@ export class TagNetworkManager {
         this.app = app;
     }
 
-    /**
-     * Analyze all notes in the vault to build tag network data
-     */
     async buildTagNetwork(): Promise<Map<string, TagData>> {
         this.tagData.clear();
         const allFiles = this.app.vault.getMarkdownFiles();
         
-        // First pass: count tag frequencies
         for (const file of allFiles) {
             const cache = this.app.metadataCache.getFileCache(file);
             if (cache?.frontmatter?.tags) {
                 const tags = TagUtils.getExistingTags(cache.frontmatter);
                 
-                // Update tag frequency
                 for (const tag of tags) {
                     if (!this.tagData.has(tag)) {
                         this.tagData.set(tag, {
@@ -42,20 +62,17 @@ export class TagNetworkManager {
                     tagInfo.frequency += 1;
                 }
                 
-                // Update tag connections (tags that appear together)
                 for (let i = 0; i < tags.length; i++) {
                     for (let j = i + 1; j < tags.length; j++) {
                         const tag1 = tags[i];
                         const tag2 = tags[j];
                         
-                        // Update connection for tag1
                         const tagInfo1 = this.tagData.get(tag1)!;
                         if (!tagInfo1.connections.has(tag2)) {
                             tagInfo1.connections.set(tag2, 0);
                         }
                         tagInfo1.connections.set(tag2, tagInfo1.connections.get(tag2)! + 1);
                         
-                        // Update connection for tag2
                         const tagInfo2 = this.tagData.get(tag2)!;
                         if (!tagInfo2.connections.has(tag1)) {
                             tagInfo2.connections.set(tag1, 0);
@@ -69,26 +86,20 @@ export class TagNetworkManager {
         return this.tagData;
     }
     
-    /**
-     * Get network data in a format suitable for visualization
-     */
-    getNetworkData(): { nodes: any[], edges: any[] } {
-        const nodes: any[] = [];
-        const edges: any[] = [];
-        const edgeSet = new Set<string>(); // To avoid duplicate edges
+    getNetworkData(): NetworkData {
+        const nodes: NetworkNode[] = [];
+        const edges: NetworkEdge[] = [];
+        const edgeSet = new Set<string>();
         
-        // Create nodes
         this.tagData.forEach((data) => {
             nodes.push({
                 id: data.tag,
                 label: data.tag.startsWith('#') ? data.tag.substring(1) : data.tag,
-                size: Math.max(5, Math.min(30, 5 + data.frequency * 3)), // Scale node size between 5 and 30
+                size: Math.max(5, Math.min(30, 5 + data.frequency * 3)),
                 frequency: data.frequency
             });
             
-            // Create edges
             data.connections.forEach((weight, connectedTag) => {
-                // Create a unique ID for the edge to avoid duplicates
                 const edgeId = [data.tag, connectedTag].sort().join('-');
                 
                 if (!edgeSet.has(edgeId)) {
@@ -108,9 +119,11 @@ export class TagNetworkManager {
 }
 
 export class TagNetworkView extends Modal {
-    private networkData: { nodes: any[], edges: any[] };
+    private networkData: NetworkData;
+    private cleanup: (() => void)[] = [];
+    private d3LoadPromise: Promise<void> | null = null;
     
-    constructor(app: App, networkData: { nodes: any[], edges: any[] }) {
+    constructor(app: App, networkData: NetworkData) {
         super(app);
         this.networkData = networkData;
     }
@@ -120,103 +133,113 @@ export class TagNetworkView extends Modal {
         contentEl.empty();
         contentEl.addClass('tag-network-view');
         
-        // Add title
         contentEl.createEl('h2', { text: 'Tag Network Visualization' });
-        
-        // Add description
-        const description = contentEl.createEl('p', { 
+        contentEl.createEl('p', { 
             text: 'Node size represents tag frequency. Connections represent tags that appear together in notes.' 
         });
-        description.style.marginBottom = '20px';
         
-        // Add controls
         const controlsContainer = contentEl.createDiv({ cls: 'tag-network-controls' });
         
-        // Add search input
-        const searchContainer = controlsContainer.createDiv();
+        const searchContainer = controlsContainer.createDiv({ cls: 'tag-network-search' });
         searchContainer.createEl('span', { text: 'Search tags: ' });
         const searchInput = searchContainer.createEl('input', { 
             type: 'text',
-            placeholder: 'Type to search...'
+            placeholder: 'Type to search...',
+            cls: 'tag-network-search-input'
         });
         
-        // Add legend
         const legendContainer = contentEl.createDiv({ cls: 'tag-network-legend' });
         legendContainer.createEl('span', { text: 'Frequency: ' });
         
-        // Create legend items
         const lowFreqItem = legendContainer.createDiv({ cls: 'tag-network-legend-item' });
-        const lowFreqColor = lowFreqItem.createDiv({ cls: 'tag-network-legend-color' });
-        lowFreqColor.style.backgroundColor = 'rgb(100, 149, 237)';
+        lowFreqItem.createDiv({ cls: 'tag-network-legend-color low' });
         lowFreqItem.createEl('span', { text: 'Low' });
         
         const mediumFreqItem = legendContainer.createDiv({ cls: 'tag-network-legend-item' });
-        const mediumFreqColor = mediumFreqItem.createDiv({ cls: 'tag-network-legend-color' });
-        mediumFreqColor.style.backgroundColor = 'rgb(50, 99, 212)';
+        mediumFreqItem.createDiv({ cls: 'tag-network-legend-color medium' });
         mediumFreqItem.createEl('span', { text: 'Medium' });
         
         const highFreqItem = legendContainer.createDiv({ cls: 'tag-network-legend-item' });
-        const highFreqColor = highFreqItem.createDiv({ cls: 'tag-network-legend-color' });
-        highFreqColor.style.backgroundColor = 'rgb(0, 49, 187)';
+        highFreqItem.createDiv({ cls: 'tag-network-legend-color high' });
         highFreqItem.createEl('span', { text: 'High' });
         
-        // Create container for the network visualization
         const container = contentEl.createDiv({ cls: 'tag-network-container' });
         
-        // Set explicit dimensions for the container
-        container.style.width = '100%';
-        container.style.height = '500px';
-        container.style.position = 'relative';
-        container.style.backgroundColor = 'var(--background-secondary)';
-        container.style.borderRadius = 'var(--radius-m)';
-        container.style.marginBottom = '20px';
-        
-        // Create tooltip element
         const tooltip = contentEl.createDiv({ cls: 'tag-tooltip' });
-        tooltip.style.display = 'none';
+        tooltip.addClass('tag-tooltip-hidden');
         tooltip.createDiv({ cls: 'tag-tooltip-content' });
         
-        // Add a status message to show loading or errors
         const statusEl = contentEl.createDiv({ cls: 'tag-network-status' });
         statusEl.setText('Loading visualization...');
         
-        // Check if we have data to display
         if (this.networkData.nodes.length === 0) {
-            statusEl.setText('No tags found in your vault. Add some tags to your notes first!');
+            statusEl.setText('No tags found in your vault. Add some tags first!');
             return;
         }
         
-        // Load the visualization library and render the network
         try {
             this.loadVisualizationLibrary(container, searchInput, tooltip, statusEl);
         } catch (error) {
-            console.error('Error loading visualization libraries:', error);
-            statusEl.setText('Error loading visualization. Check console for details.');
+            statusEl.setText('Error loading visualization. Please try again.');
         }
     }
     
-    private loadVisualizationLibrary(container: HTMLElement, searchInput: HTMLInputElement, tooltip: HTMLElement, statusEl: HTMLElement) {
-        // Instead of loading from CDN, we'll use a simpler approach with D3.js
-        // Load D3.js from CDN (more widely supported in Obsidian)
-        const script = document.createElement('script');
-        script.src = 'https://d3js.org/d3.v7.min.js';
-        script.onerror = () => {
-            console.error('Failed to load D3.js');
-            statusEl.setText('Failed to load visualization library. Check console for details.');
-        };
-        script.onload = () => {
-            try {
-                this.renderD3Network(container, searchInput, tooltip, statusEl);
-            } catch (error) {
-                console.error('Error rendering network:', error);
-                statusEl.setText('Error rendering network. Check console for details.');
-            }
-        };
-        document.head.appendChild(script);
+    private async loadVisualizationLibrary(container: HTMLElement, searchInput: HTMLInputElement, tooltip: HTMLElement, statusEl: HTMLElement) {
+        if (this.d3LoadPromise) {
+            await this.d3LoadPromise;
+            return;
+        }
+
+        if (window.d3) {
+            this.renderD3Network(container, searchInput, tooltip, statusEl);
+            return;
+        }
+
+        this.d3LoadPromise = new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://d3js.org/d3.v7.min.js';
+            script.async = true;
+
+            const cleanup = () => {
+                script.removeEventListener('load', handleLoad);
+                script.removeEventListener('error', handleError);
+            };
+
+            const handleLoad = () => {
+                cleanup();
+                try {
+                    this.renderD3Network(container, searchInput, tooltip, statusEl);
+                    resolve();
+                } catch (error) {
+                    statusEl.setText('Error rendering network. Please try again.');
+                    reject(error);
+                }
+            };
+
+            const handleError = (error: ErrorEvent) => {
+                cleanup();
+                statusEl.setText('Failed to load visualization library. Please check your internet connection.');
+                reject(error);
+            };
+
+            script.addEventListener('load', handleLoad);
+            script.addEventListener('error', handleError);
+            document.head.appendChild(script);
+
+            this.cleanup.push(() => {
+                cleanup();
+                script.remove();
+            });
+        });
+
+        try {
+            await this.d3LoadPromise;
+        } finally {
+            this.d3LoadPromise = null;
+        }
     }
     
     private renderD3Network(container: HTMLElement, searchInput: HTMLInputElement, tooltip: HTMLElement, statusEl: HTMLElement) {
-        // @ts-ignore - D3 is loaded dynamically
         const d3 = window.d3;
         if (!d3) {
             statusEl.setText('Error: D3.js library not loaded');
@@ -224,38 +247,33 @@ export class TagNetworkView extends Modal {
         }
         
         statusEl.setText('Rendering network...');
-        
-        // Clear the container
         container.empty();
         
-        // Set up the SVG
-        const width = container.clientWidth;
-        const height = container.clientHeight;
+        const width = container.clientWidth || 800;
+        const height = container.clientHeight || 600;
         
         const svg = d3.select(container).append('svg')
             .attr('width', width)
             .attr('height', height)
             .attr('viewBox', [0, 0, width, height])
-            .attr('style', 'max-width: 100%; height: auto;');
+            .attr('class', 'tag-network-svg');
         
-        // Create a group for the graph
         const g = svg.append('g');
         
-        // Add zoom behavior
         const zoom = d3.zoom()
             .scaleExtent([0.1, 8])
-            .on('zoom', (event: any) => {
+            .on('zoom', (event: { transform: any }) => {
                 g.attr('transform', event.transform);
             });
         
         svg.call(zoom);
         
-        // Prepare the data
         const nodes = this.networkData.nodes.map(node => ({
-            id: node.id,
-            label: node.label,
-            size: node.size,
-            frequency: node.frequency
+            ...node,
+            x: undefined,
+            y: undefined,
+            fx: undefined,
+            fy: undefined
         }));
         
         const links = this.networkData.edges.map(edge => ({
@@ -264,46 +282,39 @@ export class TagNetworkView extends Modal {
             weight: edge.weight
         }));
         
-        // Create a force simulation
         const simulation = d3.forceSimulation(nodes)
-            .force('link', d3.forceLink(links).id((d: any) => d.id).distance(100))
+            .force('link', d3.forceLink(links).id((d: NetworkNode) => d.id).distance(100))
             .force('charge', d3.forceManyBody().strength(-300))
             .force('center', d3.forceCenter(width / 2, height / 2))
-            .force('collision', d3.forceCollide().radius((d: any) => d.size + 5));
+            .force('collision', d3.forceCollide().radius((d: NetworkNode) => d.size + 5));
         
-        // Create the links
         const link = g.append('g')
-            .attr('stroke', '#999')
-            .attr('stroke-opacity', 0.6)
+                .attr('class', 'tag-network-link')
             .selectAll('line')
             .data(links)
             .join('line')
-            .attr('stroke-width', (d: any) => Math.sqrt(d.weight));
+            .attr('stroke-width', (d: NetworkEdge) => Math.sqrt(d.weight));
         
-        // Create the nodes
         const node = g.append('g')
             .selectAll('circle')
             .data(nodes)
             .join('circle')
-            .attr('r', (d: any) => d.size)
-            .attr('fill', (d: any) => this.getNodeColor(d.frequency))
+            .attr('class', 'tag-network-node')
+            .attr('r', (d: NetworkNode) => d.size)
+            .attr('fill', (d: NetworkNode) => this.getNodeColor(d.frequency))
             .call(this.drag(simulation));
         
-        // Add labels to nodes
         const labels = g.append('g')
             .selectAll('text')
             .data(nodes)
             .join('text')
-            .text((d: any) => d.label)
-            .attr('font-size', 12)
-            .attr('dx', (d: any) => d.size + 5)
-            .attr('dy', 4)
-            .attr('fill', '#333');
+            .attr('class', 'tag-network-label')
+            .text((d: NetworkNode) => d.label)
+            .attr('dx', (d: NetworkNode) => d.size + 5)
+            .attr('dy', 4);
         
-        // Add tooltip behavior
-        node.on('mouseover', (event: any, d: any) => {
-            // Highlight the node and its connections
-            node.attr('opacity', (n: any) => {
+        const handleMouseOver = (event: MouseEvent, d: NetworkNode) => {
+            node.attr('opacity', (n: NetworkNode) => {
                 const isConnected = links.some((link: any) => 
                     (link.source.id === d.id && link.target.id === n.id) || 
                     (link.target.id === d.id && link.source.id === n.id)
@@ -315,8 +326,7 @@ export class TagNetworkView extends Modal {
                 l.source.id === d.id || l.target.id === d.id ? 1 : 0.1
             );
             
-            // Show tooltip
-            tooltip.style.display = 'block';
+            tooltip.addClass('visible');
             tooltip.style.left = `${event.pageX + 5}px`;
             tooltip.style.top = `${event.pageY + 5}px`;
             
@@ -332,23 +342,22 @@ export class TagNetworkView extends Modal {
                     <div class="tag-tooltip-info">Connected to ${connectedNodes} other tags</div>
                 `;
             }
-        });
+        };
         
-        node.on('mouseout', () => {
-            // Reset opacity
+        const handleMouseOut = () => {
             node.attr('opacity', 1);
             link.attr('stroke-opacity', 0.6);
-            
-            // Hide tooltip
-            tooltip.style.display = 'none';
-        });
+            tooltip.removeClass('visible');
+        };
         
-        // Add search functionality
-        searchInput.addEventListener('input', () => {
+        node.on('mouseover', handleMouseOver)
+            .on('mouseout', handleMouseOut);
+        
+        const handleSearch = () => {
             const searchTerm = searchInput.value.toLowerCase();
             
             if (searchTerm.length > 0) {
-                node.attr('opacity', (d: any) => 
+                node.attr('opacity', (d: NetworkNode) => 
                     d.label.toLowerCase().includes(searchTerm) ? 1 : 0.2
                 );
                 
@@ -361,9 +370,11 @@ export class TagNetworkView extends Modal {
                 node.attr('opacity', 1);
                 link.attr('stroke-opacity', 0.6);
             }
-        });
+        };
         
-        // Update positions on each tick of the simulation
+        searchInput.addEventListener('input', handleSearch);
+        this.cleanup.push(() => searchInput.removeEventListener('input', handleSearch));
+        
         simulation.on('tick', () => {
             link
                 .attr('x1', (d: any) => d.source.x)
@@ -379,14 +390,12 @@ export class TagNetworkView extends Modal {
                 .attr('x', (d: any) => d.x)
                 .attr('y', (d: any) => d.y);
         });
-        
-        // Hide the status message
+
+        this.cleanup.push(() => simulation.stop());
         statusEl.style.display = 'none';
     }
     
-    // Drag behavior for D3
     private drag(simulation: any) {
-        // @ts-ignore - D3 is loaded dynamically
         const d3 = window.d3;
         
         function dragstarted(event: any) {
@@ -412,14 +421,11 @@ export class TagNetworkView extends Modal {
             .on('end', dragended);
     }
     
-    
     private getNodeColor(frequency: number, opacity: number = 1): string {
-        // Color scale from light blue to dark blue based on frequency
         const minFreq = 1;
         const maxFreq = Math.max(...this.networkData.nodes.map(n => n.frequency));
         const normalizedFreq = (frequency - minFreq) / (maxFreq - minFreq);
         
-        // Generate color from light blue to dark blue
         const r = Math.floor(100 - normalizedFreq * 100);
         const g = Math.floor(149 - normalizedFreq * 100);
         const b = Math.floor(237 - normalizedFreq * 50);
@@ -429,6 +435,12 @@ export class TagNetworkView extends Modal {
     
     onClose() {
         const { contentEl } = this;
+        this.cleanup.forEach(cleanup => cleanup());
+        this.cleanup = [];
+        const d3Script = document.querySelector('script[src*="d3.v7.min.js"]');
+        if (d3Script) {
+            d3Script.remove();
+        }
         contentEl.empty();
     }
 }

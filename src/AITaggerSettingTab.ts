@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting, ButtonComponent } from 'obsidian';
+import { App, PluginSettingTab, Setting, ButtonComponent, Notice } from 'obsidian';
 import AITaggerPlugin from './main';
 import { ConnectionTestResult } from './services';
 import { TaggingMode } from './services/prompts/tagPrompts';
@@ -29,6 +29,9 @@ export class AITaggerSettingTab extends PluginSettingTab {
     }
 
     private createServiceTypeDropdown(): void {
+        if (!this.plugin.settings.serviceType) {
+            this.plugin.settings.serviceType = 'cloud';
+        }
         new Setting(this.containerEl)
             .setName('Service type')
             .setDesc('Choose the AI service provider to use')
@@ -136,7 +139,7 @@ export class AITaggerSettingTab extends PluginSettingTab {
                                 await this.plugin.saveSettings();
                                 this.display();
                             } catch (error) {
-                                console.error('Failed to load cloud endpoints:', error);
+                                new Notice('Failed to load cloud endpoints');
                             }
                         })
                 );
@@ -167,16 +170,77 @@ export class AITaggerSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
-        new Setting(containerEl)
+        const modelSetting = new Setting(containerEl)
             .setName('Model name')
-            .setDesc('Name of the model to use with your local service')
-            .addText(text => text
-                .setPlaceholder('llama2')
-                .setValue(this.plugin.settings.localModel)
-                .onChange(async (value) => {
-                    this.plugin.settings.localModel = value;
-                    await this.plugin.saveSettings();
-                }));
+            .setDesc('Name of the model to use with your local service');
+            
+        const modelInputContainer = modelSetting.controlEl.createDiv('model-input-container');
+        const modelInput = modelInputContainer.createEl('input', {
+            type: 'text',
+            cls: 'model-input',
+            attr: {
+                placeholder: 'llama2',
+                value: this.plugin.settings.localModel
+            }
+        });
+        
+        const dropdownContainer = modelInputContainer.createDiv('model-dropdown-container');
+        dropdownContainer.style.display = 'none';
+        
+        modelInput.addEventListener('focus', async () => {
+            try {
+                dropdownContainer.empty();
+                dropdownContainer.createEl('div', {
+                    text: 'Loading models...',
+                    cls: 'model-dropdown-loading'
+                });
+                dropdownContainer.style.display = 'block';
+                
+                const { fetchLocalModels } = await import('./services/localModelFetcher');
+                const models = await fetchLocalModels(this.plugin.settings.localEndpoint);
+                
+                dropdownContainer.empty();
+                
+                if (models.length === 0) {
+                    dropdownContainer.createEl('div', {
+                        text: 'No models found',
+                        cls: 'model-dropdown-empty'
+                    });
+                    return;
+                }
+                
+                models.forEach(model => {
+                    const modelItem = dropdownContainer.createEl('div', {
+                        text: model,
+                        cls: 'model-dropdown-item'
+                    });
+                    
+                    modelItem.addEventListener('click', async () => {
+                        modelInput.value = model;
+                        this.plugin.settings.localModel = model;
+                        await this.plugin.saveSettings();
+                        dropdownContainer.style.display = 'none';
+                    });
+                });
+            } catch (error) {
+                dropdownContainer.empty();
+                dropdownContainer.createEl('div', {
+                    text: 'Failed to load models',
+                    cls: 'model-dropdown-error'
+                });
+            }
+        });
+        
+        modelInput.addEventListener('input', async () => {
+            this.plugin.settings.localModel = modelInput.value;
+            await this.plugin.saveSettings();
+        });
+        
+        document.addEventListener('click', (event) => {
+            if (!modelInputContainer.contains(event.target as Node)) {
+                dropdownContainer.style.display = 'none';
+            }
+        });
 
         this.createTestButton();
     }
@@ -224,10 +288,10 @@ export class AITaggerSettingTab extends PluginSettingTab {
                 this.statusEl.setText('Testing...');
                 break;
             case 'success':
-                this.statusEl.setText(message || 'Connection successful');
+                this.statusEl.setText(message || 'Connected');
                 break;
             case 'error':
-                this.statusEl.setText(message || 'Connection failed');
+                this.statusEl.setText(message || 'Error');
                 break;
         }
     }
@@ -319,9 +383,10 @@ export class AITaggerSettingTab extends PluginSettingTab {
             .addDropdown(dropdown => dropdown
                 .addOptions({
                     [TaggingMode.PredefinedTags]: 'Use predefined tags only',
-                    [TaggingMode.GenerateNew]: 'Generate new tags',
                     [TaggingMode.ExistingTags]: 'Use existing tags only',
-                    [TaggingMode.Hybrid]: 'Mix of generated and existing tags'
+                    [TaggingMode.GenerateNew]: 'Generate new tags',
+                    [TaggingMode.HybridGenerateExisting]: 'Generate new + match existing tags',
+                    [TaggingMode.HybridGeneratePredefined]: 'Generate new + match predefined tags'
                 })
                 .setValue(this.plugin.settings.taggingMode)
                 .onChange(async (value) => {
@@ -329,8 +394,151 @@ export class AITaggerSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
+        const excludedSetting = new Setting(containerEl)
+            .setName('Excluded paths')
+            .setDesc('Add file or folder paths to exclude from tagging (ignored during batch operations)');
+        
+        const excludedInputContainer = excludedSetting.settingEl.createDiv('path-input-container');
+        const pathInput = excludedInputContainer.createEl('input', { 
+            type: 'text', 
+            placeholder: 'Enter path',
+            cls: 'path-input'
+        });
+        
+        const dropdownContainer = excludedInputContainer.createDiv('path-dropdown-container');
+        dropdownContainer.style.display = 'none';
+        
+        const updateDropdown = async (searchTerm: string) => {
+            try {
+                const items: {path: string, isFolder: boolean}[] = [];
+                
+                this.app.vault.getAllLoadedFiles().forEach(file => {
+                    if (file.path.toLowerCase().contains(searchTerm.toLowerCase())) {
+                        items.push({
+                            path: file.path,
+                            isFolder: 'children' in file
+                        });
+                    }
+                });
+                
+                items.sort((a, b) => {
+                    if (a.isFolder && !b.isFolder) return -1;
+                    if (!a.isFolder && b.isFolder) return 1;
+                    return a.path.localeCompare(b.path);
+                });
+                
+                const limitedItems = items.slice(0, 50);
+                dropdownContainer.empty();
+                
+                if (limitedItems.length === 0) {
+                    dropdownContainer.createEl('div', {
+                        text: 'No matching paths',
+                        cls: 'path-dropdown-empty'
+                    });
+                    return;
+                }
+                
+                limitedItems.forEach(item => {
+                    const pathItem = dropdownContainer.createEl('div', {
+                        cls: 'path-dropdown-item'
+                    });
+                    
+                    pathItem.createSpan({
+                        cls: `path-item-icon ${item.isFolder ? 'folder-icon' : 'file-icon'}`
+                    });
+                    
+                    pathItem.createSpan({
+                        text: item.path,
+                        cls: 'path-item-text'
+                    });
+                    
+                    pathItem.addEventListener('click', () => {
+                        pathInput.value = item.path;
+                        dropdownContainer.style.display = 'none';
+                    });
+                });
+            } catch (error) {
+                dropdownContainer.empty();
+                dropdownContainer.createEl('div', {
+                    text: 'Error loading paths',
+                    cls: 'path-dropdown-error'
+                });
+            }
+        };
+        
+        pathInput.addEventListener('focus', () => {
+            dropdownContainer.style.display = 'block';
+            updateDropdown(pathInput.value);
+        });
+        
+        pathInput.addEventListener('input', () => {
+            if (dropdownContainer.style.display === 'block') {
+                updateDropdown(pathInput.value);
+            }
+        });
+        
+        document.addEventListener('click', (event) => {
+            if (!excludedInputContainer.contains(event.target as Node)) {
+                dropdownContainer.style.display = 'none';
+            }
+        });
+        
+        const addButton = new ButtonComponent(excludedInputContainer)
+            .setButtonText('Add')
+            .onClick(async () => {
+                const newPath = pathInput.value.trim();
+                if (!newPath) {
+                    new Notice('Please enter a path');
+                    return;
+                }
+                if (this.plugin.settings.excludedFolders.includes(newPath)) {
+                    new Notice('Path already added');
+                    return;
+                }
+                const exists = await this.app.vault.adapter.exists(newPath);
+                if (exists) {
+                    this.plugin.settings.excludedFolders.push(newPath);
+                    await this.plugin.saveSettings();
+                    new Notice('Path added successfully');
+                    renderExcludedPaths();
+                    pathInput.value = '';
+                    dropdownContainer.style.display = 'none';
+                } else {
+                    new Notice('Path does not exist');
+                }
+            });
+        // Create the list container below the setting
+        const excludedListContainer = containerEl.createDiv({ cls: 'excluded-list' });
+        const renderExcludedPaths = () => {
+            excludedListContainer.empty();
+            this.plugin.settings.excludedFolders.forEach((p, index) => {
+                const row = excludedListContainer.createDiv({ cls: 'excluded-path-row' });
+                row.createEl('span', { text: p, cls: 'excluded-path-text' });
+                new ButtonComponent(row)
+                    .setButtonText('Delete')
+                    .onClick(async () => {
+                        this.plugin.settings.excludedFolders.splice(index, 1);
+                        await this.plugin.saveSettings();
+                        renderExcludedPaths();
+                    });
+            });
+        };
+        renderExcludedPaths();
+
         // Tag Range Settings
         containerEl.createEl('h3', { text: 'Tag range settings' });
+
+        new Setting(containerEl)
+            .setName('Maximum predefined tags')
+            .setDesc('Maximum number of predefined tags to use (0-10)')
+            .addSlider(slider => slider
+                .setLimits(0, 10, 1)
+                .setValue(this.plugin.settings.tagRangePredefinedMax)
+                .setDynamicTooltip()
+                .onChange(async (value) => {
+                    this.plugin.settings.tagRangePredefinedMax = value;
+                    await this.plugin.saveSettings();
+                }));
 
         new Setting(containerEl)
             .setName('Maximum existing tags')
@@ -353,18 +561,6 @@ export class AITaggerSettingTab extends PluginSettingTab {
                 .setDynamicTooltip()
                 .onChange(async (value) => {
                     this.plugin.settings.tagRangeGenerateMax = value;
-                    await this.plugin.saveSettings();
-                }));
-
-        new Setting(containerEl)
-            .setName('Maximum predefined tags')
-            .setDesc('Maximum number of predefined tags to use (0-10)')
-            .addSlider(slider => slider
-                .setLimits(0, 10, 1)
-                .setValue(this.plugin.settings.tagRangePredefinedMax)
-                .setDynamicTooltip()
-                .onChange(async (value) => {
-                    this.plugin.settings.tagRangePredefinedMax = value;
                     await this.plugin.saveSettings();
                 }));
 
@@ -406,20 +602,168 @@ export class AITaggerSettingTab extends PluginSettingTab {
 
         containerEl.createEl('h1', { text: 'Predefined tags' });
 
-        new Setting(containerEl)
+        // Add note about Obsidian tag rules
+        const tagRulesInfo = containerEl.createDiv({ cls: 'tag-rules-info' });
+        tagRulesInfo.createEl('p', { 
+            text: 'Note: Obsidian tags must follow these rules:', 
+            cls: 'setting-item-description' 
+        });
+        const rulesList = tagRulesInfo.createEl('ul', { cls: 'setting-item-description' });
+        rulesList.createEl('li', { text: 'Must start with # symbol (the plugin will add it automatically if missing)' });
+        rulesList.createEl('li', { text: 'Can contain letters, numbers, hyphens, and underscores' });
+        rulesList.createEl('li', { text: 'No spaces allowed (use hyphens or underscores instead)' });
+        rulesList.createEl('li', { text: 'Supports international characters (e.g., #技术, #프로그래밍)' });
+        rulesList.createEl('li', { text: 'Example format in predefined tags file: technology, artificial_intelligence, coding-tips (with or without #)' });
+
+        const predefinedTagsSetting = new Setting(containerEl)
             .setName('Predefined tags file')
-            .setDesc('Path to a file containing predefined tags (one tag per line)')
-            .addText(text => text
-                .setPlaceholder('path/to/your/tags.txt')
-                .setValue(this.plugin.settings.predefinedTagsPath)
-                .onChange(async (value) => {
-                    this.plugin.settings.predefinedTagsPath = value;
-                    await this.plugin.saveSettings();
-                }));
+            .setDesc('Path to a file containing predefined tags (one tag per line)');
+        
+        const tagsFileInputContainer = predefinedTagsSetting.controlEl.createDiv('path-input-container');
+        const tagsFileInput = tagsFileInputContainer.createEl('input', { 
+            type: 'text', 
+            placeholder: 'path/to/your/tags.txt',
+            cls: 'path-input',
+            value: this.plugin.settings.predefinedTagsPath || ''
+        });
+        
+        const tagsDropdownContainer = tagsFileInputContainer.createDiv('path-dropdown-container');
+        tagsDropdownContainer.style.display = 'none';
+        
+        const updateTagsDropdown = async (searchTerm: string) => {
+            try {
+                const items: {path: string, isFolder: boolean}[] = [];
+                
+                this.app.vault.getFiles().forEach(file => {
+                    if (file.path.toLowerCase().contains(searchTerm.toLowerCase())) {
+                        items.push({
+                            path: file.path,
+                            isFolder: false
+                        });
+                    }
+                });
+                
+                items.sort((a, b) => a.path.localeCompare(b.path));
+                const limitedItems = items.slice(0, 50);
+                tagsDropdownContainer.empty();
+                
+                if (limitedItems.length === 0) {
+                    tagsDropdownContainer.createEl('div', {
+                        text: 'No matching files',
+                        cls: 'path-dropdown-empty'
+                    });
+                    return;
+                }
+                
+                limitedItems.forEach(item => {
+                    const pathItem = tagsDropdownContainer.createEl('div', {
+                        cls: 'path-dropdown-item'
+                    });
+                    
+                    pathItem.createSpan({
+                        cls: 'path-item-icon file-icon'
+                    });
+                    
+                    pathItem.createSpan({
+                        text: item.path,
+                        cls: 'path-item-text'
+                    });
+                    
+                    pathItem.addEventListener('click', async () => {
+                        tagsFileInput.value = item.path;
+                        this.plugin.settings.predefinedTagsPath = item.path;
+                        await this.plugin.saveSettings();
+                        tagsDropdownContainer.style.display = 'none';
+                    });
+                });
+            } catch (error) {
+                tagsDropdownContainer.empty();
+                tagsDropdownContainer.createEl('div', {
+                    text: 'Error loading files',
+                    cls: 'path-dropdown-error'
+                });
+            }
+        };
+        
+        tagsFileInput.addEventListener('focus', () => {
+            tagsDropdownContainer.style.display = 'block';
+            updateTagsDropdown(tagsFileInput.value);
+        });
+        
+        tagsFileInput.addEventListener('input', async () => {
+            this.plugin.settings.predefinedTagsPath = tagsFileInput.value;
+            await this.plugin.saveSettings();
+            
+            if (tagsDropdownContainer.style.display === 'block') {
+                updateTagsDropdown(tagsFileInput.value);
+            }
+        });
+        
+        document.addEventListener('click', (event) => {
+            if (!tagsFileInputContainer.contains(event.target as Node)) {
+                tagsDropdownContainer.style.display = 'none';
+            }
+        });
+        
+        // Add validate tags button
+        predefinedTagsSetting.addButton(button => {
+            button
+                .setButtonText('Validate tags')
+                .onClick(async () => {
+                    if (!this.plugin.settings.predefinedTagsPath) {
+                        new Notice('Please set a predefined tags file path first', 3000);
+                        return;
+                    }
+                    
+                    try {
+                        const tagsContent = await this.app.vault.adapter.read(this.plugin.settings.predefinedTagsPath);
+                        const tags = tagsContent.split('\n')
+                            .map(line => line.trim())
+                            .filter(line => line.length > 0);
+                        
+                        if (tags.length === 0) {
+                            new Notice('No tags found in the file');
+                            return;
+                        }
+                        
+                        // Validate each tag
+                        const invalidTags: string[] = [];
+                        const validTags: string[] = [];
+                        
+                        for (const tag of tags) {
+                            // Ensure tag starts with #
+                            const tagWithHash = tag.startsWith('#') ? tag : `#${tag}`;
+                            
+                            // First check: if tag doesn't start with #, it must start with a letter
+                            if (!tag.startsWith('#') && !/^[\p{L}]/u.test(tag)) {
+                                invalidTags.push(tag);
+                                continue;
+                            }
+
+                            // Second check: tag (with #) must only contain letters, numbers, hyphens, and underscores
+                            const isValid = /^#[\p{L}\p{N}_-]+$/u.test(tagWithHash);
+                            
+                            if (isValid) {
+                                validTags.push(tagWithHash);
+                            } else {
+                                invalidTags.push(tag);
+                            }
+                        }
+                        
+                        if (invalidTags.length > 0) {
+                            new Notice(`Found ${invalidTags.length} invalid tags: ${invalidTags.join(', ')}`, 5000);
+                        } else {
+                            new Notice(`All ${validTags.length} tags are valid!`, 3000);
+                        }
+                    } catch (error) {
+                        new Notice(`Error reading tags file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                    }
+                });
+        });
 
         containerEl.createEl('h1', { text: 'Support developer' });
 
-        const supportEl = containerEl.createDiv('support-container');
+        const supportEl = containerEl.createDiv({ cls: 'support-container' });
         supportEl.createSpan({text: 'If you find this plugin helpful, consider buying me a coffee ☕️'});
         
         const button = new ButtonComponent(supportEl)

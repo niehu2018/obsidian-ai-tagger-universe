@@ -1,4 +1,4 @@
-import { Plugin, Notice, TFile, App, MarkdownView } from 'obsidian';
+import { Plugin, Notice, TFile, App, MarkdownView, Modal } from 'obsidian';
 import { LLMService, LocalLLMService, CloudLLMService, ConnectionTestResult, LLMServiceConfig } from './services';
 import { TagUtils, TagOperationResult } from './tagUtils';
 import { TaggingMode } from './services/prompts/tagPrompts';
@@ -73,23 +73,15 @@ export default class AITaggerPlugin extends Plugin {
         this.addSettingTab(new AITaggerSettingTab(this.app, this));
         registerCommands(this);
 
-        // Add ribbon icons
-        this.addRibbonIcon('tags', 'AI tag current note', () => {
-            this.analyzeCurrentNote();
-        });
-        
-        this.addRibbonIcon('graph', 'Show tag network', () => {
-            this.showTagNetwork();
-        });
+        this.addRibbonIcon('tags', 'AI Tagger Universe', () => this.analyzeCurrentNote());
+        this.addRibbonIcon('graph', 'Show tag network', () => this.showTagNetwork());
     }
 
     async onunload() {
         if (this.llmService) {
             await this.llmService.dispose();
         }
-        
         this.eventHandlers.cleanup();
-        // Force refresh to ensure proper cleanup of UI elements
         this.app.workspace.trigger('layout-change');
     }
     
@@ -110,8 +102,7 @@ export default class AITaggerPlugin extends Plugin {
             
             new TagNetworkView(this.app, networkData).open();
         } catch (error) {
-            console.error('Error showing tag network:', error);
-            new Notice('Error building tag network. Check console for details.', 5000);
+            new Notice('Error building tag network', 5000);
         }
     }
 
@@ -119,12 +110,80 @@ export default class AITaggerPlugin extends Plugin {
         return this.llmService.testConnection();
     }
 
+    // Confirmation modal for clearing all tags
+    async showConfirmationDialog(message: string): Promise<boolean> {
+        return new Promise((resolve) => {
+            const modal = new Modal(this.app);
+            modal.containerEl.addClass('ai-tagger-confirm-modal');
+            
+            // Create header with warning icon
+            const headerEl = modal.contentEl.createEl('div', {
+                cls: 'ai-tagger-modal-header'
+            });
+            
+            const iconSpan = headerEl.createSpan({
+                text: '⚠️ ',
+                cls: 'ai-tagger-warning-icon'
+            });
+            
+            headerEl.createSpan({
+                text: 'Warning: Time-consuming Operation',
+                cls: 'ai-tagger-title-text'
+            });
+            
+            // Create message content
+            const contentEl = modal.contentEl.createEl('div', {
+                text: message,
+                cls: 'ai-tagger-modal-content'
+            });
+            
+            // Create button container
+            const buttonContainer = modal.contentEl.createDiv({
+                cls: 'ai-tagger-button-container'
+            });
+            
+            // Create Cancel button
+            const cancelButton = buttonContainer.createEl('button', { 
+                text: 'Cancel',
+                cls: 'ai-tagger-cancel-button'
+            });
+            
+            cancelButton.addEventListener('click', () => {
+                modal.close();
+                resolve(false);
+            });
+            
+            // Create Confirm button
+            const confirmButton = buttonContainer.createEl('button', { 
+                text: 'Confirm',
+                cls: 'ai-tagger-confirm-button'
+            });
+            
+            confirmButton.addEventListener('click', () => {
+                modal.close();
+                resolve(true);
+            });
+            
+            modal.open();
+        });
+    }
+
     async clearAllNotesTags() {
+        const markdownFiles = this.app.vault.getMarkdownFiles();
+        const confirmed = await this.showConfirmationDialog(
+            `This will remove all tags from ${markdownFiles.length} notes in your vault. This action cannot be undone.`
+        );
+        
+        if (!confirmed) {
+            new Notice('Operation cancelled');
+            return;
+        }
+
         new Notice('Starting to clear tags from all notes...');
         let count = 0;
-        
-        // Get all markdown files from the vault
-        const markdownFiles = this.app.vault.getMarkdownFiles();
+        let processedCount = 0;
+        const totalFiles = markdownFiles.length;
+        let lastNoticeTime = Date.now();
         
         for (const file of markdownFiles) {
             try {
@@ -136,28 +195,27 @@ export default class AITaggerPlugin extends Plugin {
             } catch (error) {
                 console.error(`Error clearing tags from ${file.path}:`, error);
             }
+            
+            processedCount++;
+            const currentTime = Date.now();
+            if (currentTime - lastNoticeTime >= 15000 || processedCount === totalFiles) {
+                new Notice(`Progress: ${processedCount}/${totalFiles} files processed`);
+                lastNoticeTime = currentTime;
+            }
         }
 
-        // Force refresh metadata cache
         new Notice('Refreshing metadata cache...');
         try {
-            // Trigger a layout change to force metadata refresh
             this.app.workspace.trigger('layout-change');
-            
-            // Wait a moment for the cache to update
             await new Promise(resolve => setTimeout(resolve, 1000));
             
-            // Force refresh of all files
             for (const file of markdownFiles) {
                 this.app.metadataCache.trigger('changed', file);
             }
             
-            // Wait again for the cache to fully update
             await new Promise(resolve => setTimeout(resolve, 1000));
-            
             new Notice(`Successfully cleared tags from ${count} notes and refreshed metadata cache`);
         } catch (error) {
-            console.error('Error refreshing metadata cache:', error);
             new Notice(`Successfully cleared tags from ${count} notes, but metadata refresh failed`);
         }
     }
@@ -202,10 +260,76 @@ export default class AITaggerPlugin extends Plugin {
         if (files.length === 0) return;
 
         const totalFiles = files.length;
+        new Notice(`Analyzing and modifying tags in ${totalFiles} file${totalFiles > 1 ? 's' : ''} in your vault...`);
+
         new Notice(`Starting to analyze ${totalFiles} file${totalFiles > 1 ? 's' : ''}...`);
         let processedCount = 0;
         let successCount = 0;
+        let lastNoticeTime = Date.now();
 
+        if (this.settings.taggingMode === TaggingMode.PredefinedTags) {
+            if (!this.settings.predefinedTagsPath) {
+                new Notice('Predefined tags mode requires a tags file. Please set the predefined tags file path in settings.', 5000);
+                return;
+            }
+            
+            try {
+                const tagsContent = await this.app.vault.adapter.read(this.settings.predefinedTagsPath);
+                const predefinedTags = tagsContent.split('\n')
+                    .map((line: string) => line.trim())
+                    .filter((line: string) => line.length > 0);
+
+                if (predefinedTags.length === 0) {
+                    new Notice('No predefined tags found in the file. Please add tags to your predefined tags file.', 5000);
+                    return;
+                }
+                
+                for (const file of files) {
+                    try {
+                        const content = await this.app.vault.read(file);
+                        if (!content.trim()) continue;
+                        
+                        const analysis = await this.llmService.analyzeTags(
+                            content, 
+                            predefinedTags, 
+                            TaggingMode.PredefinedTags, 
+                            this.settings.tagRangePredefinedMax
+                        );
+                        
+                        if (!analysis?.matchedExistingTags?.length) continue;
+                        
+                        const result = await TagUtils.updateNoteTags(
+                            this.app,
+                            file,
+                            [],
+                            analysis.matchedExistingTags
+                        );
+
+                        if (result.success) {
+                            successCount++;
+                        }
+                        
+                        this.handleTagUpdateResult(result, true);
+                        processedCount++;
+                        
+                        const currentTime = Date.now();
+                        if (currentTime - lastNoticeTime >= 15000 || processedCount === totalFiles) {
+                            new Notice(`Progress: ${processedCount}/${totalFiles} files processed`);
+                            lastNoticeTime = currentTime;
+                        }
+                    } catch (error) {
+                        new Notice(`Error processing ${file.path}`);
+                    }
+                }
+                
+                new Notice(`Completed! Successfully tagged ${successCount} out of ${totalFiles} files`);
+                return;
+            } catch (error) {
+                new Notice(`Error reading predefined tags file: ${error instanceof Error ? error.message : 'Unknown error'}`, 5000);
+                return;
+            }
+        }
+        
         const existingTags = TagUtils.getAllTags(this.app);
 
         for (const file of files) {
@@ -215,36 +339,89 @@ export default class AITaggerPlugin extends Plugin {
 
                 const maxTags = (() => {
                     switch (this.settings.taggingMode) {
-                        case TaggingMode.PredefinedTags:
-                            return this.settings.tagRangePredefinedMax;
                         case TaggingMode.ExistingTags:
                             return this.settings.tagRangeMatchMax;
-                        case TaggingMode.Hybrid:
+                        case TaggingMode.HybridGenerateExisting:
+                        case TaggingMode.HybridGeneratePredefined:
+                            return this.settings.tagRangeMatchMax + this.settings.tagRangeGenerateMax;
                         case TaggingMode.GenerateNew:
                         default:
                             return this.settings.tagRangeGenerateMax;
                     }
                 })();
-                const analysis = await this.llmService.analyzeTags(content, existingTags, this.settings.taggingMode, maxTags, this.settings.language);
-                const result = await TagUtils.updateNoteTags(
-                    this.app,
-                    file,
-                    analysis.suggestedTags,
-                    analysis.matchedExistingTags
-                );
+                
+                // Only pass language parameter for GenerateNew mode or hybrid modes that include generation
+                let analysis;
+                if (this.settings.taggingMode === TaggingMode.GenerateNew || 
+                    this.settings.taggingMode === TaggingMode.HybridGenerateExisting ||
+                    this.settings.taggingMode === TaggingMode.HybridGeneratePredefined) {
+                    analysis = await this.llmService.analyzeTags(
+                        content, 
+                        existingTags, 
+                        this.settings.taggingMode, 
+                        maxTags, 
+                        this.settings.language
+                    );
+                } else {
+                    analysis = await this.llmService.analyzeTags(
+                        content, 
+                        existingTags, 
+                        this.settings.taggingMode, 
+                        maxTags
+                    );
+                }
+                
+                let result;
+                
+                switch (this.settings.taggingMode) {
+                    case TaggingMode.ExistingTags:
+                        if (!analysis?.matchedExistingTags?.length) continue;
+                        
+                        result = await TagUtils.updateNoteTags(
+                            this.app,
+                            file,
+                            [],
+                            analysis.matchedExistingTags
+                        );
+                        break;
+                        
+                    case TaggingMode.GenerateNew:
+                        if (!analysis?.suggestedTags?.length) continue;
+                        
+                        result = await TagUtils.updateNoteTags(
+                            this.app,
+                            file,
+                            analysis.suggestedTags,
+                            []
+                        );
+                        break;
+                        
+                    case TaggingMode.HybridGenerateExisting:
+                    case TaggingMode.HybridGeneratePredefined:
+                        if (!analysis?.suggestedTags?.length && !analysis?.matchedExistingTags?.length) continue;
+                        
+                        result = await TagUtils.updateNoteTags(
+                            this.app,
+                            file,
+                            analysis.suggestedTags ?? [],
+                            analysis.matchedExistingTags ?? []
+                        );
+                        break;
+                }
 
-                if (result.success) {
+                if (result && result.success) {
                     successCount++;
                 }
                 
                 this.handleTagUpdateResult(result, true);
                 processedCount++;
                 
-                if (processedCount % 5 === 0 || processedCount === totalFiles) {
+                const currentTime = Date.now();
+                if (currentTime - lastNoticeTime >= 15000 || processedCount === totalFiles) {
                     new Notice(`Progress: ${processedCount}/${totalFiles} files processed`);
+                    lastNoticeTime = currentTime;
                 }
             } catch (error) {
-                console.error(`Error processing ${file.path}:`, error);
                 new Notice(`Error processing ${file.path}`);
             }
         }
@@ -266,16 +443,61 @@ export default class AITaggerPlugin extends Plugin {
                 return;
             }
 
+            if (this.settings.taggingMode === TaggingMode.PredefinedTags) {
+                if (!this.settings.predefinedTagsPath) {
+                    new Notice('Predefined tags mode requires a tags file. Please set the predefined tags file path in settings.', 5000);
+                    return;
+                }
+                
+                try {
+                    const tagsContent = await this.app.vault.adapter.read(this.settings.predefinedTagsPath);
+                    const predefinedTags = tagsContent.split('\n')
+                        .map((line: string) => line.trim())
+                        .filter((line: string) => line.length > 0);
+
+                    if (predefinedTags.length === 0) {
+                        new Notice('No predefined tags found in the file. Please add tags to your predefined tags file.', 5000);
+                        return;
+                    }
+                    
+                    new Notice('Analyzing note content with predefined tags...');
+                    const analysis = await this.llmService.analyzeTags(
+                        content, 
+                        predefinedTags, 
+                        TaggingMode.PredefinedTags, 
+                        this.settings.tagRangePredefinedMax
+                    );
+                    
+                    if (!analysis?.matchedExistingTags?.length) {
+                        new Notice('No matching predefined tags found for this note.', 5000);
+                        return;
+                    }
+                    
+                    const result = await TagUtils.updateNoteTags(
+                        this.app,
+                        activeFile,
+                        [],
+                        analysis.matchedExistingTags
+                    );
+
+                    this.handleTagUpdateResult(result);
+                    return;
+                } catch (error) {
+                    new Notice(`Error reading predefined tags file: ${error instanceof Error ? error.message : 'Unknown error'}`, 5000);
+                    return;
+                }
+            }
+            
             const existingTags = TagUtils.getAllTags(this.app);
             new Notice('Analyzing note content...');
             
             const maxTags = (() => {
                 switch (this.settings.taggingMode) {
-                    case TaggingMode.PredefinedTags:
-                        return this.settings.tagRangePredefinedMax;
                     case TaggingMode.ExistingTags:
                         return this.settings.tagRangeMatchMax;
-                    case TaggingMode.Hybrid:
+                    case TaggingMode.HybridGenerateExisting:
+                    case TaggingMode.HybridGeneratePredefined:
+                        return this.settings.tagRangeMatchMax + this.settings.tagRangeGenerateMax;
                     case TaggingMode.GenerateNew:
                     default:
                         return this.settings.tagRangeGenerateMax;
@@ -283,26 +505,77 @@ export default class AITaggerPlugin extends Plugin {
             })();
             
             try {
-                const analysis = await this.llmService.analyzeTags(content, existingTags, this.settings.taggingMode, maxTags, this.settings.language);
-                if (!analysis.suggestedTags.length && !analysis.matchedExistingTags.length) {
-                    new Notice('No tags were generated or matched. The LLM service may not have returned any tags or all generated tags were invalid.', 5000);
-                    return;
+                // Only pass language parameter for GenerateNew mode or hybrid modes that include generation
+                let analysis;
+                if (this.settings.taggingMode === TaggingMode.GenerateNew || 
+                    this.settings.taggingMode === TaggingMode.HybridGenerateExisting ||
+                    this.settings.taggingMode === TaggingMode.HybridGeneratePredefined) {
+                    analysis = await this.llmService.analyzeTags(
+                        content, 
+                        existingTags, 
+                        this.settings.taggingMode, 
+                        maxTags, 
+                        this.settings.language
+                    );
+                } else {
+                    analysis = await this.llmService.analyzeTags(
+                        content, 
+                        existingTags, 
+                        this.settings.taggingMode, 
+                        maxTags
+                    );
                 }
                 
-                const result = await TagUtils.updateNoteTags(
-                    this.app,
-                    activeFile,
-                    analysis.suggestedTags,
-                    analysis.matchedExistingTags
-                );
-
-                this.handleTagUpdateResult(result);
+                switch (this.settings.taggingMode) {
+                    case TaggingMode.ExistingTags:
+                        if (!analysis?.matchedExistingTags?.length) {
+                            new Notice('No matching existing tags found for this note.', 5000);
+                            return;
+                        }
+                        
+                        await TagUtils.updateNoteTags(
+                            this.app,
+                            activeFile,
+                            [],
+                            analysis.matchedExistingTags
+                        );
+                        break;
+                        
+                    case TaggingMode.GenerateNew:
+                        if (!analysis?.suggestedTags?.length) {
+                            new Notice('No new tags were generated for this note.', 5000);
+                            return;
+                        }
+                        
+                        await TagUtils.updateNoteTags(
+                            this.app,
+                            activeFile,
+                            analysis.suggestedTags,
+                            []
+                        );
+                        break;
+                        
+                    case TaggingMode.HybridGenerateExisting:
+                    case TaggingMode.HybridGeneratePredefined:
+                        if (!analysis?.suggestedTags?.length && !analysis?.matchedExistingTags?.length) {
+                            new Notice('No tags were generated or matched for this note.', 5000);
+                            return;
+                        }
+                        
+                        const result = await TagUtils.updateNoteTags(
+                            this.app,
+                            activeFile,
+                            analysis.suggestedTags ?? [],
+                            analysis.matchedExistingTags ?? []
+                        );
+                        
+                        this.handleTagUpdateResult(result);
+                        break;
+                }
             } catch (analysisError) {
-                console.error('Error during tag analysis:', analysisError);
                 new Notice(`Error analyzing tags: ${analysisError instanceof Error ? analysisError.message : 'Unknown error'}`, 5000);
             }
         } catch (error) {
-            console.error('Error in analyzeCurrentNote:', error);
             new Notice(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`, 5000);
         }
     }
