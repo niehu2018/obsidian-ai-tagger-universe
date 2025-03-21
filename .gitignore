@@ -6,8 +6,8 @@ node_modules
 .vscode/
 dist/
 build/
+Library/
 *.js
 *.js.map
 *.d.ts
 package-lock.json
-to_do_list.md
