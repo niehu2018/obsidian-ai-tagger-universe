@@ -1,5 +1,7 @@
-import { App, Modal } from 'obsidian';
+import { App, ItemView, ViewStateResult, WorkspaceLeaf } from 'obsidian';
 import { NetworkData, NetworkNode, NetworkEdge } from '../../utils/tagNetworkUtils';
+
+export const TAG_NETWORK_VIEW_TYPE = 'tag-network-view';
 
 declare global {
     interface Window {
@@ -7,17 +9,29 @@ declare global {
     }
 }
 
-export class TagNetworkView extends Modal {
+export class TagNetworkView extends ItemView {
     private networkData: NetworkData;
     private cleanup: (() => void)[] = [];
     private d3LoadPromise: Promise<void> | null = null;
     
-    constructor(app: App, networkData: NetworkData) {
-        super(app);
-        this.networkData = networkData;
+    constructor(leaf: WorkspaceLeaf, private data: NetworkData) {
+        super(leaf);
+        this.networkData = data;
     }
-    
-    onOpen() {
+
+    getViewType(): string {
+        return TAG_NETWORK_VIEW_TYPE;
+    }
+
+    getDisplayText(): string {
+        return 'Tag Network';
+    }
+
+    getIcon(): string {
+        return 'graph';
+    }
+
+    async onOpen(): Promise<void> {
         const { contentEl } = this;
         contentEl.empty();
         contentEl.addClass('tag-network-view');
@@ -67,9 +81,35 @@ export class TagNetworkView extends Modal {
         }
         
         try {
-            this.loadVisualizationLibrary(container, searchInput, tooltip, statusEl);
+            await this.loadVisualizationLibrary(container, searchInput, tooltip, statusEl);
         } catch (error) {
             statusEl.setText('Error loading visualization. Please try again.');
+        }
+    }
+
+    async onClose(): Promise<void> {
+        this.cleanup.forEach(cleanup => cleanup());
+        this.cleanup = [];
+        const d3Script = document.querySelector('script[src*="d3.v7.min.js"]');
+        if (d3Script) {
+            d3Script.remove();
+        }
+        this.contentEl.empty();
+    }
+
+    public async onResize(): Promise<void> {
+        // Re-render visualization with new dimensions
+        const container = this.contentEl.querySelector('.tag-network-container') as HTMLElement;
+        const searchInput = this.contentEl.querySelector('.tag-network-search-input') as HTMLInputElement;
+        const tooltip = this.contentEl.querySelector('.tag-tooltip') as HTMLElement;
+        const statusEl = this.contentEl.querySelector('.tag-network-status') as HTMLElement;
+        
+        if (container && searchInput && tooltip && statusEl) {
+            try {
+                await this.loadVisualizationLibrary(container, searchInput, tooltip, statusEl);
+            } catch (error) {
+                console.error('Failed to resize visualization:', error);
+            }
         }
     }
     
@@ -320,16 +360,5 @@ export class TagNetworkView extends Modal {
         const b = Math.floor(237 - normalizedFreq * 50);
         
         return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-    }
-    
-    onClose() {
-        const { contentEl } = this;
-        this.cleanup.forEach(cleanup => cleanup());
-        this.cleanup = [];
-        const d3Script = document.querySelector('script[src*="d3.v7.min.js"]');
-        if (d3Script) {
-            d3Script.remove();
-        }
-        contentEl.empty();
     }
 }

@@ -48,14 +48,10 @@ export class AliyunAdapter extends BaseAdapter {
                 throw new Error('Invalid response format: missing content');
             }
             
-            // Log the raw content for debugging
-            console.log('Aliyun raw response content:', content);
-            
             // Try to extract JSON from the content
             let jsonContent;
             try {
                 jsonContent = this.extractJsonFromContent(content);
-                console.log('Extracted JSON content:', jsonContent);
             } catch (jsonError) {
                 console.error('JSON extraction error:', jsonError);
                 
@@ -63,7 +59,6 @@ export class AliyunAdapter extends BaseAdapter {
                 try {
                     if (typeof content === 'string' && (content.trim().startsWith('{') && content.trim().endsWith('}'))) {
                         jsonContent = JSON.parse(content);
-                        console.log('Parsed content directly as JSON:', jsonContent);
                     }
                 } catch (directParseError) {
                     console.error('Direct JSON parse error:', directParseError);
@@ -74,7 +69,6 @@ export class AliyunAdapter extends BaseAdapter {
                     // Extract hashtags from the content
                     const hashtagRegex = /#[\p{L}\p{N}-]+/gu;
                     const hashtags = content.match(hashtagRegex) || [];
-                    console.log('Manually extracted hashtags:', hashtags);
                     
                     return {
                         matchedExistingTags: [],
@@ -97,7 +91,6 @@ export class AliyunAdapter extends BaseAdapter {
                         jsonContent.generatedTags : [];
                 
                 if (matchedTags.length > 0 || newTags.length > 0) {
-                    console.log('Using alternative field names:', { matchedTags, newTags });
                     return {
                         matchedExistingTags: matchedTags,
                         suggestedTags: newTags
@@ -106,7 +99,6 @@ export class AliyunAdapter extends BaseAdapter {
                 
                 // If we have a tags array but not separated into matched/new
                 if (Array.isArray(jsonContent?.tags)) {
-                    console.log('Found single tags array:', jsonContent.tags);
                     return {
                         matchedExistingTags: [],
                         suggestedTags: jsonContent.tags

@@ -111,13 +111,13 @@
 }
 
 .support-button {
-    background-color: var(--interactive-accent);
-    color: var(--text-on-accent);
+    background-color: #3498db;
+    color: white;
     margin: 0 auto;
 }
 
 .support-button:hover {
-    background-color: var(--interactive-accent-hover);
+    background-color: #2980b9;
 }
 
 /* Tag Network Visualization  Styles */
