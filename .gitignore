@@ -1,0 +1,13 @@
+main.js
+data.json
+*.map
+.DS_Store
+node_modules
+.vscode/
+dist/
+build/
+*.js
+*.js.map
+*.d.ts
+package-lock.json
+to_do_list.md
