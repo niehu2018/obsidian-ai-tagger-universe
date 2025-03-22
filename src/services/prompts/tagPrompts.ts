@@ -59,22 +59,27 @@ ${content}
 
 Return only a JSON object in this exact format:
 {
-    "matchedTags": ["#tag1", "#tag2"]
+    "matchedTags": ["machine_learning", "deep-learning"]
 }`;
             break;
 
         case TaggingMode.GenerateNew:
             const generateOnlyLimit = TAG_GENERATE_RANGE.MAX;
             // Use a standard example format for all languages
-            const tagExamples = `- Example format: #topic, #concept, #subject`;
+            const tagExamples = `Example formats:
+- snake_case: machine_learning, data_science
+- kebab-case: artificial-intelligence, deep-learning
+- camelCase: computerVision, naturalLanguage
+- PascalCase: MachineLearning, DeepLearning`;
             
-            // Only consider language parameter for GenerateNew mode
+            // Handle language parameter for GenerateNew mode
             let genLangInstructions = '';
             if (language && language !== 'default') {
                 const languageName = languageNames[language] || language;
-                genLangInstructions = `IMPORTANT: Generate all tags in ${languageName} language only.
-Regardless of what language the content is in, all tags must be in ${languageName} only.
-First understand the content, then if needed translate concepts to ${languageName}, then generate tags in ${languageName}.
+                genLangInstructions = `IMPORTANT: Follow these two steps:
+1. Generate appropriate tags based on the content
+2. Translate each tag to ${languageName}
+- Ensure translated tags follow the same format rules (no spaces, only allowed characters)
 
 `;
             }
@@ -82,17 +87,26 @@ First understand the content, then if needed translate concepts to ${languageNam
             prompt = `${genLangInstructions}Analyze the following content and generate up to ${generateOnlyLimit} relevant tags.
 
 Requirements for tags:
-- Must start with # symbol
-- Can contain letters, numbers, and hyphens
+- Must contain at least one non-numeric character (e.g., 'y1984' is valid, '1984' is not)
+- Use camelCase, PascalCase, snake_case, or kebab-case for multi-word tags
+- Only letters, numbers, underscores (_), and hyphens (-) are allowed
 - No spaces allowed
 ${tagExamples}
 
 Content:
 ${content}
 
-Return only a JSON object in this exact format:
+Return only a JSON object in this exact format:${
+    language && language !== 'default' 
+    ? `
 {
-    "newTags": ["#tag1", "#tag2", "#tag3"]
+    "newTags": ["data_analysis", "machine-learning", "computerVision"],         // Tags in English
+    "translatedTags": ["translated_tag1", "translated-tag2", "translatedTag3"]  // Tags in ${languageNames[language]}
+}`
+    : `
+{
+    "newTags": ["data_analysis", "machine-learning", "computerVision","news","sports"]
+}`
 }`;
             break;
 
