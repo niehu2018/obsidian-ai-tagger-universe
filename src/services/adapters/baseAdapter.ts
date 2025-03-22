@@ -11,14 +11,10 @@ export abstract class BaseAdapter extends BaseLLMService {
             throw new Error('Provider request format not configured');
         }
 
-        const systemPrompt = language
-            ? `You are a professional document tag analysis assistant. Please analyze and generate tags in ${language} language.`
-            : 'You are a professional document tag analysis assistant.';
-
         return {
             ...this.provider.requestFormat.body,
             messages: [
-                { role: 'system', content: systemPrompt },
+                { role: 'system', content: BaseLLMService.SYSTEM_PROMPT },
                 { role: 'user', content: prompt }
             ]
         };
