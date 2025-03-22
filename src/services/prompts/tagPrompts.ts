@@ -45,8 +45,10 @@ export function buildTagPrompt(
     
     switch (mode) {
         case TaggingMode.PredefinedTags:
-            const predefinedLimit = TAG_PREDEFINED_RANGE.MAX;
-            prompt = `Analyze the following content and select up to ${predefinedLimit} most relevant tags from the provided tag list.
+        case TaggingMode.ExistingTags:
+            const tagLimit = mode === TaggingMode.PredefinedTags ? TAG_PREDEFINED_RANGE.MAX : TAG_MATCH_RANGE.MAX;
+            const tagSource = mode === TaggingMode.PredefinedTags ? 'provided tag list' : 'existing tags in the vault';
+            prompt = `Analyze the following content and select up to ${tagLimit} most relevant tags from the ${tagSource}.
 Only use exact matches from the provided tags, do not modify or generate new tags.
 
 Available tags:
@@ -94,22 +96,6 @@ Return only a JSON object in this exact format:
 }`;
             break;
 
-        case TaggingMode.ExistingTags:
-            const existingLimit = TAG_MATCH_RANGE.MAX;
-            prompt = `Analyze the following content and select up to ${existingLimit} most relevant tags from the existing tags in the vault.
-Only use exact matches from the provided tags, do not modify or generate new tags.
-
-Existing tags in vault:
-${candidateTags.join(', ')}
-
-Content:
-${content}
-
-Return only a JSON object in this exact format:
-{
-    "matchedTags": ["#tag1", "#tag2"]
-}`;
-            break;
     }
 
     return prompt;

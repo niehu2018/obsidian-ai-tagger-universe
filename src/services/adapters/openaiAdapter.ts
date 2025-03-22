@@ -7,7 +7,7 @@ export class OpenAIAdapter extends BaseAdapter {
         super({
             ...config,
             endpoint: config.endpoint || endpoints.openai,
-            modelName: config.modelName || 'gpt-4-turbo-preview'
+            modelName: config.modelName || 'gpt-4-turbo'
         });
         this.provider = {
             name: 'openai',
