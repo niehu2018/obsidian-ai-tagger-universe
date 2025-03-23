@@ -1,15 +1,31 @@
 # AI Tagger Universe: Easy Tag Generation & Management for Obsidian
 
 ![AI Tagger Universe](https://img.shields.io/badge/Obsidian-AI%20Tagger%20Universe-blue)
+![Obsidian Downloads](https://img.shields.io/badge/dynamic/json?logo=obsidian&color=%23483699&label=downloads&query=%24%5B%22ai-tagger-universe%22%5D.downloads&url=https%3A%2F%2Fraw.githubusercontent.com%2Fobsidianmd%2Fobsidian-releases%2Fmaster%2Fcommunity-plugin-stats.json)
+![Obsidian Compatibility](https://img.shields.io/badge/Obsidian-v1.4.0+-blue)
 
 Automatically generate intelligent tags for your Obsidian notes using AI. This plugin analyzes your content and adds relevant tags to your note's frontmatter, helping you organize and discover connections in your knowledge base.
+
+## 🔌 Installation
+
+This plugin can be installed directly from the Obsidian Community Plugins browser:
+1. Open Obsidian Settings
+2. Navigate to Community Plugins
+3. Disable Safe Mode (if enabled)
+4. Search for "AI Tagger Universe"
+5. Click Install, then Enable
+
+Alternatively, you can manually install the plugin:
+1. Download the latest release from this repository
+2. Extract the files to your Obsidian vault's `.obsidian/plugins/ai-tagger-universe` folder
+3. Reload Obsidian and enable the plugin in the Community Plugins settings
 
 ## ✨ Key Features
 
 ### 🤖 Flexible AI Integration
 - **Use your preferred AI service**:
   - **Local LLMs**: Ollama, LM Studio, LocalAI, or any OpenAI-compatible endpoint
-  - **Cloud Services**: OpenAI, Google Gemini, Claude, Groq, Mistral, and 10+ more providers
+  - **Cloud Services**: OpenAI, Claude, Gemini, Groq, Grok, Mistral, DeepSeek, Cohere, SiliconFlow, Aliyun, Bedrock, Vertex AI, OpenRouter, and more
 
 ### 🏷️ Smart Tagging System
 - **Multiple tagging modes**:
