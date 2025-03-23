@@ -1,6 +1,7 @@
 import { BaseAdapter } from './baseAdapter';
 import { BaseResponse, RequestBody, AdapterConfig } from './types';
 import * as endpoints from './cloudEndpoints.json';
+import { BaseLLMService } from "../baseService";
 
 export class VertexAdapter extends BaseAdapter {
     private readonly defaultConfig = {
@@ -35,16 +36,16 @@ export class VertexAdapter extends BaseAdapter {
     }
 
     public formatRequest(prompt: string): RequestBody {
-        const messages = [
-            {
-                role: 'system',
-                content: 'You are a professional document tag analysis assistant.'
-            },
-            {
-                role: 'user',
-                content: prompt
-            }
-        ];
+    const messages = [
+        {
+            role: 'system',
+            content: BaseLLMService.SYSTEM_PROMPT
+        },
+        {
+            role: 'user',
+            content: prompt
+        }
+    ];
         
         return {
             model: this.config.modelName || 'gemini-pro',

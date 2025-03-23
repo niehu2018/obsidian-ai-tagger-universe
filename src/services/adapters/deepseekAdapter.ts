@@ -1,6 +1,7 @@
 import { BaseAdapter } from "./baseAdapter";
 import { AdapterConfig, RequestBody } from "./types";
 import * as endpoints from './cloudEndpoints.json';
+import { BaseLLMService } from "../baseService";
 
 export class DeepseekAdapter extends BaseAdapter {
   constructor(config: AdapterConfig) {
@@ -42,7 +43,7 @@ export class DeepseekAdapter extends BaseAdapter {
       messages: [
         {
           role: 'system',
-          content: 'You are a professional document tag analysis assistant.'
+          content: BaseLLMService.SYSTEM_PROMPT
         },
         {
           role: 'user',
@@ -64,12 +65,18 @@ export class DeepseekAdapter extends BaseAdapter {
 
   parseResponse(response: any): any {
     try {
+      if (response.error && response.error.message) {
+        throw new Error(response.error.message);
+      }
       let result = response;
       for (const key of this.provider.responseFormat.path) {
         if (!result || typeof result !== 'object') {
           throw new Error('Invalid response structure');
         }
         result = result[key];
+      }
+      if (typeof result !== 'string') {
+        result = JSON.stringify(result);
       }
       return result;
     } catch (error: unknown) {

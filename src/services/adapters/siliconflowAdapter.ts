@@ -1,5 +1,6 @@
 import { BaseAdapter } from "./baseAdapter";
 import { AdapterConfig, RequestBody } from "./types";
+import { BaseLLMService } from "../baseService";
 
 export class SiliconflowAdapter extends BaseAdapter {
   constructor(config: AdapterConfig) {
@@ -34,10 +35,16 @@ export class SiliconflowAdapter extends BaseAdapter {
   formatRequest(prompt: string): RequestBody {
     return {
       model: this.config.modelName || 'siliconflow-chat',
-      messages: [{
-        role: 'user',
-        content: prompt
-      }]
+      messages: [
+        {
+          role: 'system',
+          content: BaseLLMService.SYSTEM_PROMPT
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ]
     };
   }
 
@@ -71,6 +78,18 @@ export class SiliconflowAdapter extends BaseAdapter {
   }
 
   parseResponse(response: any): any {
+    try {
+      // Check for errors using errorPath
+      let errorVal = response;
+      for (const key of this.provider.responseFormat.errorPath) {
+        errorVal = errorVal[key];
+      }
+      if (errorVal) {
+        throw new Error(errorVal);
+      }
+    } catch (err) {
+      // If the errorPath lookup fails, continue with normal parsing
+    }
     try {
       let result = response;
       for (const key of this.provider.responseFormat.path) {
