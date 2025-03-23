@@ -1,11 +1,11 @@
 {
   "name": "ai-tagger-universe",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "Automatically analyze note content and add relevant tags using AI",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
-    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "build": "npx tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
     "version": "node version-bump.mjs && git add manifest.json versions.json"
   },
   "keywords": [
