@@ -1,6 +1,5 @@
 import { BaseAdapter } from './baseAdapter';
-import { AdapterConfig, RequestBody } from './types';
-import { BaseLLMService } from "../baseService";
+import { AdapterConfig } from './types';
 import * as endpoints from './cloudEndpoints.json';
 
 export class ClaudeAdapter extends BaseAdapter {
@@ -41,41 +40,5 @@ export class ClaudeAdapter extends BaseAdapter {
             'anthropic-version': this.anthropicVersion,
             'x-api-key': this.config.apiKey
         };
-    }
-    
-    formatRequest(prompt: string): RequestBody {
-        return {
-            model: this.config.modelName,
-            messages: [
-                {
-                    role: 'system',
-                    content: BaseLLMService.SYSTEM_PROMPT
-                },
-                {
-                    role: 'user',
-                    content: prompt
-                }
-            ],
-            max_tokens: 1024
-        };
-    }
-    
-    parseResponse(response: any): any {
-        if (!response || !response.content || !Array.isArray(response.content)) {
-            throw new Error('Invalid response structure from Claude API');
-        }
-
-        try {
-            const content = response.content[0]?.text;
-            if (!content) {
-                throw new Error('No content found in Claude response');
-            }
-
-            // Let base class handle parsing and tag extraction
-            return super.parseResponse({ content: [{ text: content }] });
-        } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : 'Unknown error';
-            throw new Error(`Failed to parse Claude response: ${message}`);
-        }
     }
 }

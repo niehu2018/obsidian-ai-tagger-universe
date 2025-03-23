@@ -1,7 +1,6 @@
 import { BaseAdapter } from './baseAdapter';
 import { BaseResponse, RequestBody, AdapterConfig } from './types';
 import * as endpoints from './cloudEndpoints.json';
-import { BaseLLMService } from '../baseService';
 
 export class GrokAdapter extends BaseAdapter {
     private readonly defaultConfig = {
@@ -39,7 +38,7 @@ export class GrokAdapter extends BaseAdapter {
             messages: [
                 {
                     role: 'system',
-                    content: BaseLLMService.SYSTEM_PROMPT
+                    content: 'You are a professional document tag analysis assistant.'
                 },
                 {
                     role: 'user',

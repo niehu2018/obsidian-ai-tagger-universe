@@ -8,7 +8,6 @@ import { LanguageCode } from './types';
  * Provides common functionality for tag analysis and request handling
  */
 export abstract class BaseLLMService {
-    protected static readonly SYSTEM_PROMPT = 'You are a professional document tag analysis assistant.';
     protected endpoint: string;
     protected modelName: string;
     protected readonly TIMEOUT = 30000; // 30 seconds timeout

@@ -1,5 +1,4 @@
 import { BaseAdapter } from './baseAdapter';
-import { BaseLLMService } from '../baseService';
 import { BaseResponse, RequestBody, AdapterConfig } from './types';
 import * as endpoints from './cloudEndpoints.json';
 
@@ -38,7 +37,7 @@ export class BedrockAdapter extends BaseAdapter {
         const messages = [
             {
                 role: 'system',
-                content: BaseLLMService.SYSTEM_PROMPT
+                content: 'You are a professional document tag analysis assistant.'
             },
             {
                 role: 'user',
