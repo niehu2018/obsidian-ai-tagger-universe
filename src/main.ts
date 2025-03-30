@@ -4,11 +4,12 @@ import {
     ConnectionTestResult,
     LLMService, 
     LocalLLMService,
-    CloudLLMService 
+    CloudLLMService,
+    LLMResponse
 } from './services';
 import { ConfirmationModal } from './ui/modals/ConfirmationModal';
 import { TagUtils, TagOperationResult } from './utils/tagUtils';
-import { TaggingMode } from './services/prompts/tagPrompts';
+import { TaggingMode } from './services/prompts/types';
 import { registerCommands } from './commands/index';
 import { AITaggerSettings, DEFAULT_SETTINGS } from './core/settings';
 import { AITaggerSettingTab } from './ui/settings/AITaggerSettingTab';
@@ -31,7 +32,7 @@ export default class AITaggerPlugin extends Plugin {
             endpoint: DEFAULT_SETTINGS.localEndpoint,
             modelName: DEFAULT_SETTINGS.localModel,
             language: DEFAULT_SETTINGS.language
-        });
+        }, app);
         this.eventHandlers = new EventHandlers(app);
         this.tagNetworkManager = new TagNetworkManager(app);
         this.tagOperations = new TagOperations(app);
@@ -64,14 +65,14 @@ export default class AITaggerPlugin extends Plugin {
                 endpoint: this.settings.localEndpoint,
                 modelName: this.settings.localModel,
                 language: this.settings.language
-            })
+            }, this.app)
             : new CloudLLMService({
                 endpoint: this.settings.cloudEndpoint,
                 apiKey: this.settings.cloudApiKey,
                 modelName: this.settings.cloudModel,
                 type: this.settings.cloudServiceType,
                 language: this.settings.language
-            });
+            }, this.app);
     }
 
     public async onload(): Promise<void> {
@@ -98,7 +99,7 @@ export default class AITaggerPlugin extends Plugin {
             'tags', 
             'Analyze and tag current note', 
             (evt: MouseEvent) => {
-                this.analyzeCurrentNote();
+                this.analyzeAndTagCurrentNote();
             }
         );
         
@@ -257,9 +258,33 @@ export default class AITaggerPlugin extends Plugin {
         const statusNotice = new Notice(`Analyzing ${files.length} files...`, 0);
         
         try {
-            await (this.settings.taggingMode === TaggingMode.PredefinedTags
-                ? this.processPredefinedTagsMode(files)
-                : this.processStandardTaggingMode(files));
+            let processed = 0, successful = 0;
+            let lastNotice = Date.now();
+
+            for (const file of files) {
+                try {
+                    const content = await this.app.vault.read(file);
+                    if (!content.trim()) continue;
+                    
+                    // 使用统一方法分析和标记
+                    const result = await this.analyzeAndTagNote(file, content);
+                    
+                    result.success && successful++;
+                    this.handleTagUpdateResult(result, true); // 静默模式
+                    processed++;
+
+                    // 每15秒更新一次进度
+                    if (Date.now() - lastNotice >= 15000) {
+                        new Notice(`Progress: ${processed}/${files.length} files processed`, 3000);
+                        lastNotice = Date.now();
+                    }
+                } catch (error) {
+                    console.error(`Error processing ${file.path}:`, error);
+                    new Notice(`Error processing ${file.path}`, 4000);
+                }
+            }
+
+            new Notice(`Successfully tagged ${successful} out of ${files.length} files`, 4000);
         } catch (error) {
             console.error('Batch processing failed:', error);
             new Notice('Failed to complete batch processing', 4000);
@@ -268,143 +293,23 @@ export default class AITaggerPlugin extends Plugin {
         }
     }
 
-    private async processPredefinedTagsMode(files: TFile[]): Promise<void> {
-        if (!this.settings.predefinedTagsPath) {
-            throw new Error('Predefined tags mode requires a tags file');
-        }
-
-        const tagsContent = await this.app.vault.adapter.read(this.settings.predefinedTagsPath);
-        const predefinedTags = tagsContent.split('\n')
-            .map(line => line.trim())
-            .filter(Boolean);
-
-        if (!predefinedTags.length) {
-            throw new Error('No predefined tags found in tags file');
-        }
-
-        let processed = 0, successful = 0;
-        let lastNotice = Date.now();
-
-        for (const file of files) {
-            try {
-                const content = await this.app.vault.read(file);
-                if (!content.trim()) continue;
-
-                const analysis = await this.llmService.analyzeTags(
-                    content,
-                    predefinedTags,
-                    TaggingMode.PredefinedTags,
-                    this.settings.tagRangePredefinedMax
-                );
-
-                if (!analysis?.matchedExistingTags?.length) continue;
-
-                const result = await TagUtils.updateNoteTags(
-                    this.app,
-                    file,
-                    [],
-                    analysis.matchedExistingTags,
-                    true
-                );
-
-                result.success && successful++;
-                this.handleTagUpdateResult(result, true);
-                processed++;
-
-                if (Date.now() - lastNotice >= 15000) {
-                    new Notice(`Progress: ${processed}/${files.length} files processed`, 3000);
-                    lastNotice = Date.now();
-                }
-            } catch (error) {
-                console.error(`Error processing ${file.path}:`, error);
-                new Notice(`Error processing ${file.path}`, 4000);
-            }
-        }
-
-        new Notice(`Successfully tagged ${successful} out of ${files.length} files`, 4000);
-    }
-
-    private async processStandardTaggingMode(files: TFile[]): Promise<void> {
-        const existingTags = TagUtils.getAllTags(this.app);
-        let processed = 0, successful = 0;
-        let lastNotice = Date.now();
-
-        for (const file of files) {
-            try {
-                const content = await this.app.vault.read(file);
-                if (!content.trim()) continue;
-
-                const analysis = await this.analyzeContent(content, existingTags, this.calculateMaxTags());
-                const result = await this.updateTags(file, analysis);
-
-                result?.success && successful++;
-                this.handleTagUpdateResult(result, true);
-                processed++;
-
-                if (Date.now() - lastNotice >= 15000) {
-                    new Notice(`Progress: ${processed}/${files.length} files processed`, 3000);
-                    lastNotice = Date.now();
-                }
-            } catch (error) {
-                console.error(`Error processing ${file.path}:`, error);
-                new Notice(`Error processing ${file.path}`, 4000);
-            }
-        }
-
-        new Notice(`Successfully tagged ${successful} out of ${files.length} files`, 4000);
-    }
-
     private calculateMaxTags(): number {
         switch (this.settings.taggingMode) {
-            case TaggingMode.ExistingTags:
-                return this.settings.tagRangeMatchMax;
-            case TaggingMode.HybridGenerateExisting:
-            case TaggingMode.HybridGeneratePredefined:
-                return this.settings.tagRangeMatchMax + this.settings.tagRangeGenerateMax;
+            case TaggingMode.PredefinedTags:
+                return this.settings.tagRangePredefinedMax;
+            case TaggingMode.Hybrid:
+                return this.settings.tagRangePredefinedMax + this.settings.tagRangeGenerateMax;
+            case TaggingMode.GenerateNew:
             default:
                 return this.settings.tagRangeGenerateMax;
         }
     }
 
-    private async analyzeContent(content: string, existingTags: string[], maxTags: number) {
-        return await this.llmService.analyzeTags(
-            content,
-            existingTags,
-            this.settings.taggingMode,
-            maxTags,
-            [TaggingMode.GenerateNew, TaggingMode.HybridGenerateExisting, TaggingMode.HybridGeneratePredefined]
-                .includes(this.settings.taggingMode) ? this.settings.language : undefined
-        );
-    }
-
-    private async updateTags(file: TFile, analysis: any) {
-        if (!analysis) return null;
-
-        const { matchedExistingTags = [], suggestedTags = [] } = analysis;
-
-        switch (this.settings.taggingMode) {
-            case TaggingMode.ExistingTags:
-                return matchedExistingTags.length 
-                    ? await TagUtils.updateNoteTags(this.app, file, [], matchedExistingTags, true)
-                    : null;
-                
-            case TaggingMode.GenerateNew:
-                return suggestedTags.length
-                    ? await TagUtils.updateNoteTags(this.app, file, suggestedTags, [], true)
-                    : null;
-                
-            case TaggingMode.HybridGenerateExisting:
-            case TaggingMode.HybridGeneratePredefined:
-                return (suggestedTags.length || matchedExistingTags.length)
-                    ? await TagUtils.updateNoteTags(this.app, file, suggestedTags, matchedExistingTags, true)
-                    : null;
-            
-            default:
-                return null;
-        }
-    }
-
-    public async analyzeCurrentNote(): Promise<void> {
+    /**
+     * Analyzes and tags the currently open note
+     * @returns Promise that resolves when the operation completes
+     */
+    public async analyzeAndTagCurrentNote(): Promise<void> {
         const activeFile = this.app.workspace.getActiveFile();
         if (!activeFile) {
             new Notice('Please open a note before analyzing', 3000);
@@ -418,61 +323,219 @@ export default class AITaggerPlugin extends Plugin {
         }
 
         try {
-            await (this.settings.taggingMode === TaggingMode.PredefinedTags
-                ? this.analyzeWithPredefinedTags(activeFile, content)
-                : this.analyzeWithStandardMode(activeFile, content));
+            // 使用新的统一方法分析和标记
+            const result = await this.analyzeAndTagNote(activeFile, content);
+            
+            // 处理结果
+            this.handleTagUpdateResult(result);
         } catch (error) {
             console.error('Failed to analyze note:', error);
             new Notice('Failed to analyze note. Please check console for details.', 4000);
         }
     }
 
-    private async analyzeWithPredefinedTags(file: TFile, content: string): Promise<void> {
-        if (!this.settings.predefinedTagsPath) {
-            throw new Error('Predefined tags mode requires a tags file');
-        }
-
-        const tagsContent = await this.app.vault.adapter.read(this.settings.predefinedTagsPath);
-        const predefinedTags = tagsContent.split('\n')
-            .map(line => line.trim())
-            .filter(Boolean);
-
-        if (!predefinedTags.length) {
-            new Notice('No predefined tags found in tags file', 3000);
-            return;
-        }
-
-        const analysis = await this.llmService.analyzeTags(
+    /**
+     * Analyzes content using hybrid mode and generates tags
+     * First generates new tags, then matches from predefined tags, and finally merges results
+     * @param content Content to analyze
+     * @returns Analysis result with tags
+     */
+    public async analyzeWithHybridMode(content: string): Promise<{ tags: string[] }> {
+        
+        // 1. Generate new tags
+        const generatedResult = await this.llmService.analyzeTags(
             content,
-            predefinedTags,
-            TaggingMode.PredefinedTags,
-            this.settings.tagRangePredefinedMax
+            [], // Empty array for new tag generation
+            TaggingMode.GenerateNew,
+            this.settings.tagRangeGenerateMax,
+            this.settings.language
         );
-
-        if (!analysis?.matchedExistingTags?.length) {
-            new Notice('No matching tags found for this note', 3000);
-            return;
+        const generatedTags = generatedResult?.suggestedTags || [];
+        
+        // 2. Get predefined tags list
+        let predefinedTags: string[] = [];
+        if (this.settings.tagSourceType === 'file') {
+            const fileTags = await TagUtils.getTagsFromFile(this.app, this.settings.predefinedTagsPath);
+            if (fileTags) {
+                predefinedTags = fileTags;
+            }
+        } else {
+            predefinedTags = TagUtils.getAllTags(this.app);
         }
-
-        const result = await TagUtils.updateNoteTags(
-            this.app,
-            file,
-            [],
-            analysis.matchedExistingTags,
-            true
-        );
-
-        this.handleTagUpdateResult(result);
+        
+        // 3. Match against predefined tags
+        let matchedTags: string[] = [];
+        if (predefinedTags.length > 0) {
+            const matchResult = await this.llmService.analyzeTags(
+                content,
+                predefinedTags,
+                TaggingMode.PredefinedTags,
+                this.settings.tagRangePredefinedMax
+            );
+            matchedTags = matchResult?.matchedExistingTags || [];
+        }
+        
+        // 4. Merge results and ensure no duplicates
+        // Use TagUtils.formatTags to normalize tag format
+        const normalizedGeneratedTags = TagUtils.formatTags(generatedTags);
+        const normalizedMatchedTags = TagUtils.formatTags(matchedTags);
+        
+        // Use TagUtils.mergeTags to combine and deduplicate
+        const allTags = TagUtils.mergeTags(normalizedGeneratedTags, normalizedMatchedTags);
+        
+        return { tags: allTags };
     }
 
-    private async analyzeWithStandardMode(file: TFile, content: string): Promise<void> {
-        const analysis = await this.analyzeContent(content, TagUtils.getAllTags(this.app), this.calculateMaxTags());
-        const result = await this.updateTags(file, analysis);
-        
-        if (result) {
-            this.handleTagUpdateResult(result);
-        } else {
-            new Notice('No relevant tags were generated or matched for this note', 3000);
+    /**
+     * Analyzes note content and applies tags
+     * Supports receiving direct analysis results or analyzing based on content
+     * @param file Target file
+     * @param contentOrAnalysis File content or existing analysis result
+     * @returns Tag operation result
+     */
+    public async analyzeAndTagNote(file: TFile, contentOrAnalysis: string | LLMResponse): Promise<TagOperationResult> {
+        try {
+            // Check if file is excluded
+            if (this.isFileExcluded(file)) {
+                return {
+                    success: false,
+                    message: 'This file is excluded by exclusion patterns'
+                };
+            }
+
+            let analysis: LLMResponse;
+            
+            // Determine parameter type
+            if (typeof contentOrAnalysis === 'string') {
+                const content = contentOrAnalysis.trim();
+                if (!content) {
+                    return {
+                        success: false,
+                        message: 'Cannot analyze empty note'
+                    };
+                }
+                
+                // Analyze based on the configured tagging mode
+                switch (this.settings.taggingMode) {
+                    case TaggingMode.GenerateNew:
+                        analysis = await this.llmService.analyzeTags(
+                            content,
+                            [], // Empty array, generate tags purely based on content
+                            TaggingMode.GenerateNew,
+                            this.settings.tagRangeGenerateMax,
+                            this.settings.language
+                        );
+                        break;
+                    
+                    case TaggingMode.PredefinedTags:
+                        // Get candidate tags (from file or vault)
+                        const predefinedTags = this.settings.tagSourceType === 'file'
+                            ? await TagUtils.getTagsFromFile(this.app, this.settings.predefinedTagsPath) || []
+                            : TagUtils.getAllTags(this.app);
+                        
+                        if (!predefinedTags.length) {
+                            return {
+                                success: false,
+                                message: 'No predefined tags available'
+                            };
+                        }
+                        
+                        analysis = await this.llmService.analyzeTags(
+                            content,
+                            predefinedTags,
+                            TaggingMode.PredefinedTags,
+                            this.settings.tagRangePredefinedMax
+                        );
+                        break;
+
+                    case TaggingMode.Hybrid:
+                        // Hybrid mode - uses the specialized hybrid mode method
+                        const hybridResult = await this.analyzeWithHybridMode(content);
+                        if (!hybridResult.tags.length) {
+                            return {
+                                success: false,
+                                message: 'No relevant tags were found or generated'
+                            };
+                        }
+                        
+                        // Apply hybrid mode tags directly
+                        return await TagUtils.writeTagsToFrontmatter(
+                            this.app,
+                            file,
+                            hybridResult.tags,
+                            this.settings.replaceTags
+                        );
+                    
+                    default:
+                        return {
+                            success: false,
+                            message: `Unsupported tagging mode: ${this.settings.taggingMode}`
+                        };
+                }
+            } else {
+                // Use the provided analysis result directly
+                analysis = contentOrAnalysis;
+            }
+            
+            // Process tags from analysis result
+            const suggestedTags = analysis.suggestedTags || [];
+            const matchedTags = analysis.matchedExistingTags || [];
+            
+            // Merge tags
+            let allTags: string[] = [];
+            
+            if (this.settings.taggingMode === TaggingMode.PredefinedTags) {
+                allTags = matchedTags;
+            } else if (this.settings.taggingMode === TaggingMode.GenerateNew) {
+                allTags = suggestedTags;
+            } else {
+                // Hybrid mode, combine both types of tags
+                allTags = [...suggestedTags, ...matchedTags];
+            }
+            
+            // Filter empty tags and format
+            const formattedTags = TagUtils.formatTags(allTags);
+            
+            if (!formattedTags.length) {
+                return {
+                    success: false,
+                    message: 'No valid tags were found or generated'
+                };
+            }
+            
+            // Apply tags to the note
+            return await TagUtils.writeTagsToFrontmatter(
+                this.app,
+                file,
+                formattedTags,
+                this.settings.replaceTags
+            );
+        } catch (error) {
+            console.error('Error tagging note:', error);
+            return {
+                success: false,
+                message: error instanceof Error ? error.message : 'Unknown error occurred'
+            };
         }
+    }
+    
+    /**
+     * 检查文件是否被排除
+     * @param file 要检查的文件
+     * @returns 是否被排除
+     */
+    private isFileExcluded(file: TFile): boolean {
+        if (!this.settings.excludedFolders?.length) return false;
+        
+        const filePath = file.path;
+        return this.settings.excludedFolders.some(pattern => {
+            if (pattern.startsWith('/')) {
+                // 如果以/开头，则为完整路径匹配
+                return filePath === pattern.substring(1);
+            } else {
+                // 否则为部分路径匹配
+                return filePath.includes(pattern);
+            }
+        });
     }
 }

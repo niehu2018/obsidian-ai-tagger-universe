@@ -1,8 +1,9 @@
 import { LLMResponse, LLMServiceConfig, ConnectionTestResult, ConnectionTestError } from './types';
 import { BaseLLMService } from './baseService';
 import { AdapterType, createAdapter, BaseAdapter } from './adapters';
-import { TaggingMode } from './prompts/tagPrompts';
+import { TaggingMode } from './prompts/types';
 import { LanguageCode } from './types';
+import { App } from 'obsidian';
 
 export class CloudLLMService extends BaseLLMService {
     private adapter: BaseAdapter;
@@ -10,8 +11,8 @@ export class CloudLLMService extends BaseLLMService {
     private readonly MAX_RETRIES = 3;
     private readonly RETRY_DELAY = 1000; // 1 second
 
-    constructor(config: Omit<LLMServiceConfig, 'type'> & { type: AdapterType }) {
-        super(config);
+    constructor(config: Omit<LLMServiceConfig, 'type'> & { type: AdapterType }, app: App) {
+        super(config, app);
         this.adapter = createAdapter(config.type, {
             endpoint: config.endpoint,
             apiKey: config.apiKey || '',
@@ -150,77 +151,30 @@ export class CloudLLMService extends BaseLLMService {
         }
     }
 
+    /**
+     * Analyzes content and returns tag suggestions
+     * @param content - Content to analyze
+     * @param existingTags - Array of existing tags to consider
+     * @param mode - Tagging mode
+     * @param maxTags - Maximum number of tags to return
+     * @param language - Language for generated tags
+     * @returns Promise resolving to tag analysis result
+     */
     async analyzeTags(content: string, existingTags: string[], mode: TaggingMode, maxTags: number, language?: LanguageCode): Promise<LLMResponse> {
-        try {
-            // Validate that we have content to analyze
-            if (!content.trim()) {
-                throw new Error('Empty content provided for analysis');
-            }
-
-            // Truncate content if too long
-            if (content.length > this.MAX_CONTENT_LENGTH) {
-                content = content.slice(0, this.MAX_CONTENT_LENGTH) + '...';
-            }
-
-            // Handle hybrid modes by making separate calls for each component mode
-            if (mode === TaggingMode.HybridGenerateExisting) {
-                // First generate new tags
-                const generateResult = await this.analyzeTagsInternal(content, existingTags, TaggingMode.GenerateNew, maxTags / 2, language);
-                
-                // Then match existing tags
-                const matchResult = await this.analyzeTagsInternal(content, existingTags, TaggingMode.ExistingTags, maxTags / 2, language);
-                
-                // Combine results and remove duplicates
-                const suggestedTags = generateResult.suggestedTags;
-                const matchedExistingTags = matchResult.matchedExistingTags || [];
-                
-                // Remove any tags from suggestedTags that also appear in matchedExistingTags
-                const uniqueSuggestedTags = suggestedTags.filter(tag => !matchedExistingTags.includes(tag));
-                
-                return {
-                    suggestedTags: uniqueSuggestedTags,
-                    matchedExistingTags: matchedExistingTags
-                };
-            } else if (mode === TaggingMode.HybridGeneratePredefined) {
-                // First generate new tags
-                const generateResult = await this.analyzeTagsInternal(content, existingTags, TaggingMode.GenerateNew, maxTags / 2, language);
-                
-                // Then match predefined tags
-                const matchResult = await this.analyzeTagsInternal(content, existingTags, TaggingMode.PredefinedTags, maxTags / 2, language);
-                
-                // Combine results and remove duplicates
-                const suggestedTags = generateResult.suggestedTags;
-                const matchedExistingTags = matchResult.matchedExistingTags || [];
-                
-                // Remove any tags from suggestedTags that also appear in matchedExistingTags
-                const uniqueSuggestedTags = suggestedTags.filter(tag => !matchedExistingTags.includes(tag));
-                
-                return {
-                    suggestedTags: uniqueSuggestedTags,
-                    matchedExistingTags: matchedExistingTags
-                };
-            } else {
-                // Handle non-hybrid modes directly
-                return await this.analyzeTagsInternal(content, existingTags, mode, maxTags, language);
-            }
-        } catch (error) {
-            return this.handleError(error, 'Tag analysis');
-        }
+        // Use the base class implementation
+        return super.analyzeTags(content, existingTags, mode, maxTags, language);
     }
 
-    private async analyzeTagsInternal(content: string, existingTags: string[], mode: TaggingMode, maxTags: number, language?: LanguageCode): Promise<LLMResponse> {
-        const systemPrompt = 'You are a professional document tag analysis assistant. You need to analyze document content, match relevant tags from existing ones, and generate new relevant tags.';
-        const prompt = this.buildPrompt(content, existingTags, mode, maxTags, language);
-
-        // Validate that the prompt was built successfully
-        if (!prompt.trim()) {
-            throw new Error('Failed to build analysis prompt');
-        }
-
-        const response = await this.makeRequestWithRetry(`${systemPrompt}\n\n${prompt}`, 30000);
-        const responseText = await response.text();
+    /**
+     * Sends a request to the LLM service and returns the response
+     * @param prompt - The prompt to send 
+     * @returns Promise resolving to the response
+     */
+    protected async sendRequest(prompt: string): Promise<string> {
+        const response = await this.makeRequestWithRetry(prompt, this.TIMEOUT);
 
         if (!response.ok) {
+            const responseText = await response.text();
             try {
                 const errorJson = JSON.parse(responseText);
                 throw new Error(errorJson.error?.message || errorJson.message || `API error: ${response.status}`);
@@ -229,22 +183,28 @@ export class CloudLLMService extends BaseLLMService {
             }
         }
 
-        // Parse and validate response
-        let parsedResponse = this.adapter.parseResponse(JSON.parse(responseText));
-        
-        // Ensure we always have arrays for tags
-        const matchedTags = Array.isArray(parsedResponse.matchedExistingTags) ? parsedResponse.matchedExistingTags : [];
-        const suggestedTags = Array.isArray(parsedResponse.suggestedTags) ? parsedResponse.suggestedTags : [];
+        const responseText = await response.text();
+        try {
+            const data = JSON.parse(responseText);
+            // Try to get the completion content based on adapter or standard format
+            const content = this.adapter.parseResponseContent(data);
+            if (!content) {
+                throw new Error('No content found in response');
+            }
+            return content;
+        } catch (error) {
+            if (error instanceof Error) {
+                throw error;
+            }
+            throw new Error(`Failed to parse response: ${responseText.substring(0, 100)}...`);
+        }
+    }
 
-        // Ensure all tags are properly formatted strings
-        parsedResponse.matchedExistingTags = matchedTags
-            .map((tag: unknown) => String(tag).trim())
-            .filter((tag: string) => tag.length > 0);
-            
-        parsedResponse.suggestedTags = suggestedTags
-            .map((tag: unknown) => String(tag).trim())
-            .filter((tag: string) => tag.length > 0);
-
-        return parsedResponse;
+    /**
+     * Gets the maximum content length for this service
+     * @returns Maximum content length
+     */
+    protected getMaxContentLength(): number {
+        return this.MAX_CONTENT_LENGTH;
     }
 }

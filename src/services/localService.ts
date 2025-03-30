@@ -1,14 +1,17 @@
-import { LLMResponse, LLMServiceConfig, ConnectionTestResult, ConnectionTestError, SYSTEM_PROMPT } from './types';
+import { LLMResponse, LLMServiceConfig, ConnectionTestResult, ConnectionTestError } from './types';
+import { SYSTEM_PROMPT } from '../utils/constants';
 import { BaseLLMService } from './baseService';
-import { TaggingMode } from './prompts/tagPrompts';
+import { TaggingMode } from './prompts/types';
+import { LanguageCode } from './types';
+import { App } from 'obsidian';
 
 export class LocalLLMService extends BaseLLMService {
-    private readonly MAX_CONTENT_LENGTH = 8000; // Local models can handle more content
-    private readonly MAX_RETRIES = 2; // Fewer retries for local service
-    private readonly RETRY_DELAY = 500; // 0.5 second
-
-    constructor(config: LLMServiceConfig) {
-        super(config);
+    private readonly MAX_CONTENT_LENGTH = 4000;
+    private readonly MAX_RETRIES = 3;
+    private readonly RETRY_DELAY = 1000; // 1 second
+    
+    constructor(config: LLMServiceConfig, app: App) {
+        super(config, app);
         // Ensure endpoint ends with standard chat completions path
         this.endpoint = this.normalizeEndpoint(config.endpoint);
         this.validateLocalConfig(); // Validate on construction
@@ -175,70 +178,26 @@ export class LocalLLMService extends BaseLLMService {
         }
     }
 
-    async analyzeTags(content: string, existingTags: string[], mode: TaggingMode, maxTags: number, language?: 'en' | 'zh' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'pt' | 'ru'): Promise<LLMResponse> {
-        try {
-            // Validate content
-            if (!content.trim()) {
-                throw new Error('Empty content provided for analysis');
-            }
-
-            // Truncate if too long
-            if (content.length > this.MAX_CONTENT_LENGTH) {
-                content = content.slice(0, this.MAX_CONTENT_LENGTH) + '...';
-            }
-
-            // Handle hybrid modes by making separate calls for each component mode
-            if (mode === TaggingMode.HybridGenerateExisting) {
-                // First generate new tags
-                const generateResult = await this.analyzeTagsInternal(content, existingTags, TaggingMode.GenerateNew, maxTags / 2, language);
-                
-                // Then match existing tags
-                const matchResult = await this.analyzeTagsInternal(content, existingTags, TaggingMode.ExistingTags, maxTags / 2, language);
-                
-                // Combine results and remove duplicates
-                const suggestedTags = generateResult.suggestedTags;
-                const matchedExistingTags = matchResult.matchedExistingTags;
-                
-                // Remove any tags from suggestedTags that also appear in matchedExistingTags
-                const uniqueSuggestedTags = suggestedTags.filter(tag => !matchedExistingTags?.includes(tag));
-                
-                return {
-                    suggestedTags: uniqueSuggestedTags,
-                    matchedExistingTags: matchedExistingTags
-                };
-            } else if (mode === TaggingMode.HybridGeneratePredefined) {
-                // First generate new tags
-                const generateResult = await this.analyzeTagsInternal(content, existingTags, TaggingMode.GenerateNew, maxTags / 2, language);
-                
-                // Then match predefined tags
-                const matchResult = await this.analyzeTagsInternal(content, existingTags, TaggingMode.PredefinedTags, maxTags / 2, language);
-                
-                // Combine results and remove duplicates
-                const suggestedTags = generateResult.suggestedTags;
-                const matchedExistingTags = matchResult.matchedExistingTags;
-                
-                // Remove any tags from suggestedTags that also appear in matchedExistingTags
-                const uniqueSuggestedTags = suggestedTags.filter(tag => !matchedExistingTags?.includes(tag));
-                
-                return {
-                    suggestedTags: uniqueSuggestedTags,
-                    matchedExistingTags: matchedExistingTags
-                };
-            } else {
-                // Handle non-hybrid modes directly
-                return await this.analyzeTagsInternal(content, existingTags, mode, maxTags, language);
-            }
-        } catch (error) {
-            return this.handleError(error, 'Tag analysis');
-        }
+    /**
+     * Analyzes content and returns tag suggestions
+     * @param content - Content to analyze
+     * @param existingTags - Array of existing tags to consider
+     * @param mode - Tagging mode
+     * @param maxTags - Maximum number of tags to return
+     * @param language - Language for generated tags
+     * @returns Promise resolving to tag analysis result
+     */
+    async analyzeTags(content: string, existingTags: string[], mode: TaggingMode, maxTags: number, language?: LanguageCode): Promise<LLMResponse> {
+        // Use the base class implementation
+        return super.analyzeTags(content, existingTags, mode, maxTags, language);
     }
 
-    private async analyzeTagsInternal(content: string, existingTags: string[], mode: TaggingMode, maxTags: number, language?: 'en' | 'zh' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'pt' | 'ru'): Promise<LLMResponse> {
-        const prompt = this.buildPrompt(content, existingTags, mode, maxTags, language);
-        if (!prompt.trim()) {
-            throw new Error('Failed to build analysis prompt');
-        }
-
+    /**
+     * Sends a request to the LLM service and returns the response
+     * @param prompt - The prompt to send
+     * @returns Promise resolving to the response
+     */
+    protected async sendRequest(prompt: string): Promise<string> {
         const response = await this.makeRequestWithRetry({
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -254,22 +213,28 @@ export class LocalLLMService extends BaseLLMService {
                         content: prompt
                     }
                 ],
-                temperature: 0.3  // Lower temperature for more focused responses
+                temperature: 0.3
             })
-        }, 30000);
+        }, this.TIMEOUT);
 
-        const responseText = await response.text();
-        try {
-            const data = JSON.parse(responseText);
-            const textToAnalyze = data.choices?.[0]?.message?.content;
-            
-            if (textToAnalyze) {
-                return this.parseResponse(textToAnalyze, mode, maxTags);
-            } else {
-                throw new Error('Missing response content');
-            }
-        } catch {
-            throw new Error('Invalid response format from local service');
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP error ${response.status}: ${errorText || response.statusText}`);
         }
+
+        const data = await response.json();
+        if (!data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
+            throw new Error('Invalid response format from service');
+        }
+
+        return data.choices[0]?.message?.content || '';
+    }
+
+    /**
+     * Gets the maximum content length for this service
+     * @returns Maximum content length
+     */
+    protected getMaxContentLength(): number {
+        return this.MAX_CONTENT_LENGTH;
     }
 }
