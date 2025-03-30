@@ -96,15 +96,5 @@ export class TaggingSettingsSection extends BaseSettingSection {
                         await this.plugin.saveSettings();
                     });
             });
-            
-        new Setting(this.containerEl)
-            .setName('Replace existing tags')
-            .setDesc('Whether to replace existing tags instead of merging with them')
-            .addToggle(toggle => toggle
-                .setValue(this.plugin.settings.replaceTags)
-                .onChange(async (value) => {
-                    this.plugin.settings.replaceTags = value;
-                    await this.plugin.saveSettings();
-                }));
     }
 }

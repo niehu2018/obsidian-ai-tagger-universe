@@ -42,5 +42,5 @@ export const DEFAULT_SETTINGS: AITaggerSettings = {
     tagRangeMatchMax: 5,
     tagRangeGenerateMax: 5,
     tagRangePredefinedMax: 5,
-    replaceTags: false
+    replaceTags: true
 };

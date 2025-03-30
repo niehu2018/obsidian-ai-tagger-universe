@@ -12,7 +12,7 @@ export function registerPredefinedTagsCommands(plugin: AITaggerPlugin) {
         editorCallback: async (editor: Editor, ctx: MarkdownView | MarkdownFileInfo) => {
             const view = ctx instanceof MarkdownView ? ctx : null;
             if (!view?.file) {
-                new Notice('Open a note');
+                new Notice('No active file');
                 return;
             }
 
@@ -41,7 +41,7 @@ export function registerPredefinedTagsCommands(plugin: AITaggerPlugin) {
                     return;
                 }
 
-                const result = await TagUtils.updateNoteTags(plugin.app, view?.file, [], matchedTags);
+                const result = await TagUtils.updateNoteTags(plugin.app, view.file, [], matchedTags, false, true);
                 plugin.handleTagUpdateResult(result);
             } catch (error) {
                 console.error('Error assigning predefined tags:', error);
@@ -115,7 +115,7 @@ export function registerPredefinedTagsCommands(plugin: AITaggerPlugin) {
                         const analysis = await plugin.llmService.analyzeTags(content, predefinedTags, TaggingMode.PredefinedTags, plugin.settings.tagRangePredefinedMax);
                         const matchedTags = analysis.matchedExistingTags || [];
                         
-                        const result = await TagUtils.updateNoteTags(plugin.app, file, [], matchedTags);
+                        const result = await TagUtils.updateNoteTags(plugin.app, file, [], matchedTags, false, true);
                         if (result.success) {
                             successCount++;
                         }
@@ -188,7 +188,7 @@ export function registerPredefinedTagsCommands(plugin: AITaggerPlugin) {
                         const analysis = await plugin.llmService.analyzeTags(content, predefinedTags, TaggingMode.PredefinedTags, plugin.settings.tagRangePredefinedMax);
                         const matchedTags = analysis.matchedExistingTags || [];
                         
-                        const result = await TagUtils.updateNoteTags(plugin.app, file, [], matchedTags);
+                        const result = await TagUtils.updateNoteTags(plugin.app, file, [], matchedTags, false, true);
                         if (result.success) {
                             successCount++;
                         }

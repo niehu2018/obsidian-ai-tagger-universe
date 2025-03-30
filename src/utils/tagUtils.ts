@@ -191,6 +191,7 @@ export class TagUtils {
      * @param newTags - Array of new tags to add
      * @param matchedTags - Array of matched existing tags to add
      * @param silent - Whether to suppress notifications
+     * @param replaceTags - Whether to replace existing tags (true) or merge with them (false)
      * @returns Promise resolving to operation result
      */
     static async updateNoteTags(
@@ -198,7 +199,8 @@ export class TagUtils {
         file: TFile,
         newTags: string[],
         matchedTags: string[],
-        silent: boolean = false
+        silent: boolean = false,
+        replaceTags: boolean = true
     ): Promise<TagOperationResult> {
         try {
             if (!Array.isArray(newTags) || !Array.isArray(matchedTags)) {
@@ -220,11 +222,19 @@ export class TagUtils {
                 const cache = app.metadataCache.getFileCache(file);
                 const existingFrontmatter = cache?.frontmatter;
                 
-                if (existingFrontmatter) {
+                // If we're not replacing tags, we need to merge with existing ones
+                if (!replaceTags && existingFrontmatter) {
                     const existingTags = Array.isArray(existingFrontmatter.tags) ? 
                         existingFrontmatter.tags.map(String) : 
                         typeof existingFrontmatter.tags === 'string' ? 
                             [existingFrontmatter.tags] : [];
+                    
+                    // If we have existing tags and we're not replacing, combine them
+                    if (existingTags.length > 0) {
+                        const combined = this.mergeTags(existingTags, yamlReadyTags);
+                        yamlReadyTags.length = 0;
+                        yamlReadyTags.push(...combined);
+                    }
                     
                     const existingSet = new Set(existingTags.map(t => t.toString().trim()));
                     const newSet = new Set(yamlReadyTags.map(t => t.toString().trim()));
@@ -291,7 +301,7 @@ export class TagUtils {
                 throw new Error(`Failed to update frontmatter: ${updateError instanceof Error ? updateError.message : String(updateError)}`);
             }
 
-            const successMessage = `Added ${yamlReadyTags.length} tag${yamlReadyTags.length === 1 ? '' : 's'}`;
+            const successMessage = `${replaceTags ? "Replaced" : "Added"} ${yamlReadyTags.length} tag${yamlReadyTags.length === 1 ? '' : 's'}`;
             !silent && new Notice(successMessage, 3000);
 
             return {
