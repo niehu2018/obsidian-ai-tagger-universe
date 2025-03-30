@@ -1,159 +1,28 @@
-/**
- * Supported language codes for tag analysis
- */
-export type LanguageCode = 
-    | 'ar'   // Arabic
-    | 'cs'   // Czech
-    | 'da'   // Danish
-    | 'de'   // German
-    | 'en'   // English
-    | 'es'   // Spanish
-    | 'fr'   // French
-    | 'id'   // Indonesian
-    | 'it'   // Italian
-    | 'ja'   // Japanese
-    | 'ko'   // Korean
-    | 'nl'   // Dutch
-    | 'no'   // Norwegian
-    | 'pl'   // Polish
-    | 'pt'   // Portuguese
-    | 'pt-BR' // Brazilian Portuguese
-    | 'ro'   // Romanian
-    | 'ru'   // Russian
-    | 'tr'   // Turkish
-    | 'uk'   // Ukrainian
-    | 'zh'   // Chinese (Simplified)
-    | 'zh-TW'; // Chinese (Traditional)
+export const SYSTEM_PROMPT = 
+    'You are a professional document tag analysis assistant. ' +
+    'Please return your response as a plain text string of comma-separated tags. ' +
+    'For example: "hello, world, hello world, hello-world"';
 
-/**
- * Supported LLM service types
- */
-export type ServiceType = 
-    | 'openai'            // OpenAI API
-    | 'gemini'            // Google Gemini
-    | 'deepseek'          // DeepSeek
-    | 'aliyun'            // Alibaba Cloud
-    | 'claude'            // Anthropic Claude
-    | 'groq'              // Groq
-    | 'vertex'            // Google Vertex AI
-    | 'openrouter'        // OpenRouter
-    | 'bedrock'           // AWS Bedrock
-    | 'requesty'          // Requesty
-    | 'cohere'            // Cohere
-    | 'grok'              // xAI Grok
-    | 'mistral'           // Mistral AI
-    | 'openai-compatible'; // OpenAI-compatible APIs
+export const MAX_CONCURRENT_REQUESTS = 3;
 
-/**
- * Configuration for LLM adapters
- */
-export interface AdapterConfig {
-    /** API endpoint URL */
-    endpoint?: string;
-    /** API authentication key */
-    apiKey?: string;
-    /** Model identifier */
-    modelName: string;
-    /** Additional service-specific configuration */
-    [key: string]: unknown;
-}
-
-/**
- * Error type for API-related errors
- */
-export class APIError extends Error {
-    /**
-     * Creates a new API error
-     * @param message - Error message
-     * @param statusCode - HTTP status code
-     */
-    constructor(message: string, public statusCode: number) {
-        super(message);
-        this.name = 'APIError';
-    }
-}
-
-/**
- * Response from LLM tag analysis
- */
 export interface LLMResponse {
-    /** Array of newly suggested tags */
     suggestedTags: string[];
-    /** Array of matched existing tags */
-    matchedExistingTags: string[];
-    /** Optional response identifier */
-    id?: string;
-    /** Optional usage statistics */
-    usage?: unknown;
+    matchedExistingTags?: string[];
 }
 
-/**
- * Configuration for LLM services
- */
 export interface LLMServiceConfig {
-    /** API endpoint URL */
     endpoint: string;
-    /** API authentication key */
-    apiKey?: string;
-    /** Model identifier */
     modelName: string;
-    /** Service type */
-    type?: ServiceType;
-    /** Language for tag analysis */
-    language?: LanguageCode | 'default';
+    apiKey?: string;
+    apiSecret?: string;
 }
 
-/**
- * Result of connection test
- */
-export enum ConnectionTestResult {
-    /** Connection test succeeded */
-    Success = "success",
-    /** Connection test failed */
-    Failed = "failed"
-}
-
-/**
- * Error information for connection test failures
- */
 export interface ConnectionTestError {
-    /** Type of connection error */
-    type: "timeout" | "auth" | "network" | "unknown";
-    /** Error message */
+    type: "auth" | "network" | "timeout" | "unknown";
     message: string;
-    /** Optional error details */
-    details?: unknown;
 }
 
-/**
- * Interface for LLM service implementations
- */
-export interface LLMService {
-    /**
-     * Analyzes content and generates tags
-     * @param content - Content to analyze
-     * @param candidateTags - Array of candidate tags
-     * @param mode - Tagging mode
-     * @param maxTags - Maximum number of tags to return
-     * @param language - Language for tag analysis
-     * @returns Promise resolving to tag analysis result
-     */
-    analyzeTags(
-        content: string, 
-        candidateTags: string[], 
-        mode?: 'predefined' | 'generate' | 'existing' | 'hybrid' | 'hybrid-generate-existing' | 'hybrid-generate-predefined',
-        maxTags?: number,
-        language?: LanguageCode | 'default'
-    ): Promise<LLMResponse>;
-
-    /**
-     * Tests connection to the LLM service
-     * @returns Promise resolving to connection test result
-     */
-    testConnection(): Promise<{ result: ConnectionTestResult; error?: ConnectionTestError }>;
-
-    /**
-     * Cleans up service resources
-     */
-    dispose(): Promise<void>;
+export enum ConnectionTestResult {
+    Success = "success",
+    Failed = "failed"
 }

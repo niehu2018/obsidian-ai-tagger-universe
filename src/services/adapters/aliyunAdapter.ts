@@ -71,6 +71,7 @@ export class AliyunAdapter extends BaseAdapter {
                     const hashtags = content.match(hashtagRegex) || [];
                     
                     return {
+                        text: content,
                         matchedExistingTags: [],
                         suggestedTags: hashtags
                     };
@@ -92,6 +93,7 @@ export class AliyunAdapter extends BaseAdapter {
                 
                 if (matchedTags.length > 0 || newTags.length > 0) {
                     return {
+                        text: content,
                         matchedExistingTags: matchedTags,
                         suggestedTags: newTags
                     };
@@ -100,6 +102,7 @@ export class AliyunAdapter extends BaseAdapter {
                 // If we have a tags array but not separated into matched/new
                 if (Array.isArray(jsonContent?.tags)) {
                     return {
+                        text: content,
                         matchedExistingTags: [],
                         suggestedTags: jsonContent.tags
                     };
@@ -109,6 +112,7 @@ export class AliyunAdapter extends BaseAdapter {
             }
             
             return {
+                text: content,
                 matchedExistingTags: jsonContent.matchedTags || [],
                 suggestedTags: jsonContent.newTags || []
             };

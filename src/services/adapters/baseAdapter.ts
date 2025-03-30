@@ -1,5 +1,6 @@
 import { BaseLLMService } from "../baseService";
 import { AdapterConfig } from "./types";
+import { SYSTEM_PROMPT } from "../types";
 import { TaggingMode } from "../prompts/tagPrompts";
 
 export abstract class BaseAdapter extends BaseLLMService {
@@ -7,20 +8,25 @@ export abstract class BaseAdapter extends BaseLLMService {
     protected provider: any;
 
     public formatRequest(prompt: string, language?: string): any {
-        if (!this.provider?.requestFormat?.body) {
-            throw new Error('Provider request format not configured');
+        if (this.provider?.requestFormat?.body) {
+            // For providers that need specific request format
+            return {
+                ...this.provider.requestFormat.body,
+                messages: [
+                    { role: 'system', content: SYSTEM_PROMPT },
+                    { role: 'user', content: prompt }
+                ]
+            };
         }
 
-        const systemPrompt = language
-            ? `You are a professional document tag analysis assistant. Please analyze and generate tags in ${language} language.`
-            : 'You are a professional document tag analysis assistant.';
-
+        // Default OpenAI-compatible format (same as LocalLLMService)
         return {
-            ...this.provider.requestFormat.body,
+            model: this.modelName,
             messages: [
-                { role: 'system', content: systemPrompt },
+                { role: 'system', content: SYSTEM_PROMPT },
                 { role: 'user', content: prompt }
-            ]
+            ],
+            temperature: 0.3
         };
     }
 

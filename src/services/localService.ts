@@ -1,4 +1,4 @@
-import { LLMResponse, LLMServiceConfig, ConnectionTestResult, ConnectionTestError } from './types';
+import { LLMResponse, LLMServiceConfig, ConnectionTestResult, ConnectionTestError, SYSTEM_PROMPT } from './types';
 import { BaseLLMService } from './baseService';
 import { TaggingMode } from './prompts/tagPrompts';
 
@@ -200,7 +200,7 @@ export class LocalLLMService extends BaseLLMService {
                 const matchedExistingTags = matchResult.matchedExistingTags;
                 
                 // Remove any tags from suggestedTags that also appear in matchedExistingTags
-                const uniqueSuggestedTags = suggestedTags.filter(tag => !matchedExistingTags.includes(tag));
+                const uniqueSuggestedTags = suggestedTags.filter(tag => !matchedExistingTags?.includes(tag));
                 
                 return {
                     suggestedTags: uniqueSuggestedTags,
@@ -218,7 +218,7 @@ export class LocalLLMService extends BaseLLMService {
                 const matchedExistingTags = matchResult.matchedExistingTags;
                 
                 // Remove any tags from suggestedTags that also appear in matchedExistingTags
-                const uniqueSuggestedTags = suggestedTags.filter(tag => !matchedExistingTags.includes(tag));
+                const uniqueSuggestedTags = suggestedTags.filter(tag => !matchedExistingTags?.includes(tag));
                 
                 return {
                     suggestedTags: uniqueSuggestedTags,
@@ -247,7 +247,7 @@ export class LocalLLMService extends BaseLLMService {
                 messages: [
                     {
                         role: 'system',
-                        content: 'You are a professional document tag analyst. Analyze content and suggest relevant tags.'
+                        content: SYSTEM_PROMPT
                     },
                     {
                         role: 'user',
