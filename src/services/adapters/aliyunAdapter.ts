@@ -6,38 +6,20 @@ export class AliyunAdapter extends BaseAdapter {
     constructor(config: AdapterConfig) {
         super({
             ...config,
-            endpoint: config.endpoint || endpoints.aliyun
+            endpoint: config.endpoint || endpoints.aliyun,
+            modelName: config.modelName || 'qwen-max'
         });
         this.provider = {
             name: 'aliyun',
             requestFormat: {
-                url: '/v1/chat/completions',
-                headers: {},
                 body: {
-                    model: config.modelName || 'qwen-max',
-                    messages: []
+                    model: this.config.modelName || 'qwen-max'
                 }
             },
             responseFormat: {
                 path: ['choices', '0', 'message', 'content'],
                 errorPath: ['error', 'message']
             }
-        };
-    }
-
-    public formatRequest(prompt: string): RequestBody {
-        return {
-            model: this.config.modelName || 'qwen-max',
-            messages: [
-                {
-                    role: 'system',
-                    content: 'You are a professional document tag analysis assistant.'
-                },
-                {
-                    role: 'user',
-                    content: prompt
-                }
-            ]
         };
     }
 

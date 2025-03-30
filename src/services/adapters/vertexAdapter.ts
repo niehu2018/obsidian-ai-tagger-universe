@@ -1,6 +1,7 @@
 import { BaseAdapter } from './baseAdapter';
 import { BaseResponse, RequestBody, AdapterConfig } from './types';
 import * as endpoints from './cloudEndpoints.json';
+import { SYSTEM_PROMPT } from '../types';
 
 export class VertexAdapter extends BaseAdapter {
     private readonly defaultConfig = {
@@ -38,7 +39,7 @@ export class VertexAdapter extends BaseAdapter {
         const messages = [
             {
                 role: 'system',
-                content: 'You are a professional document tag analysis assistant.'
+                content: SYSTEM_PROMPT
             },
             {
                 role: 'user',
@@ -46,9 +47,12 @@ export class VertexAdapter extends BaseAdapter {
             }
         ];
         
+        // 使用基本的格式化后添加 Vertex AI 特定的字段
+        const baseRequest = super.formatRequest(prompt);
+        
         return {
+            ...baseRequest,
             model: this.config.modelName || 'gemini-pro',
-            messages,
             maxTokens: this.defaultConfig.maxOutputTokens,
             ...this.defaultConfig,
             _vertex: {
@@ -77,6 +81,7 @@ export class VertexAdapter extends BaseAdapter {
             }
 
             return {
+                text: content,
                 matchedExistingTags: jsonContent.matchedTags,
                 suggestedTags: jsonContent.newTags
             };

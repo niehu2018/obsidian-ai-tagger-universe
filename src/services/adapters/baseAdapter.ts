@@ -7,6 +7,13 @@ export abstract class BaseAdapter extends BaseLLMService {
     protected config: AdapterConfig;
     protected provider: any;
 
+    /**
+     * Formats a request for the cloud service
+     * Handles provider-specific request formats
+     * @param prompt - The prompt to send to the LLM
+     * @param language - Optional language code
+     * @returns Formatted request body
+     */
     public formatRequest(prompt: string, language?: string): any {
         if (this.provider?.requestFormat?.body) {
             // For providers that need specific request format
@@ -18,16 +25,9 @@ export abstract class BaseAdapter extends BaseLLMService {
                 ]
             };
         }
-
-        // Default OpenAI-compatible format (same as LocalLLMService)
-        return {
-            model: this.modelName,
-            messages: [
-                { role: 'system', content: SYSTEM_PROMPT },
-                { role: 'user', content: prompt }
-            ],
-            temperature: 0.3
-        };
+        
+        // If no provider-specific format, use the parent class implementation
+        return super.formatRequest(prompt, language);
     }
 
     public parseResponse(response: any): any {

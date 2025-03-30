@@ -1,5 +1,6 @@
 import { BaseAdapter } from './baseAdapter';
 import { BaseResponse, RequestBody, LLMServiceProvider, AdapterConfig } from './types';
+import { SYSTEM_PROMPT } from '../types';
 
 export class OpenAICompatibleAdapter extends BaseAdapter {
     constructor(config: AdapterConfig) {
@@ -21,10 +22,13 @@ export class OpenAICompatibleAdapter extends BaseAdapter {
         };
     }
 
-    public formatRequest(prompt: string): RequestBody {
-        const body: RequestBody = {
+    public formatRequest(prompt: string): RequestBody & Record<string, any> {
+        const body: RequestBody & Record<string, any> = {
             model: this.config.modelName,
             messages: [{
+                role: 'system',
+                content: SYSTEM_PROMPT
+            }, {
                 role: 'user',
                 content: prompt
             }]
@@ -61,6 +65,7 @@ export class OpenAICompatibleAdapter extends BaseAdapter {
             }
 
             return {
+                text: content,
                 matchedExistingTags: jsonContent.matchedTags,
                 suggestedTags: jsonContent.newTags
             };

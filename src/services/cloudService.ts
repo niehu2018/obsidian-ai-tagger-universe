@@ -2,6 +2,7 @@ import { LLMResponse, LLMServiceConfig, ConnectionTestResult, ConnectionTestErro
 import { BaseLLMService } from './baseService';
 import { AdapterType, createAdapter, BaseAdapter } from './adapters';
 import { TaggingMode } from './prompts/tagPrompts';
+import { LanguageCode } from './types';
 
 export class CloudLLMService extends BaseLLMService {
     private adapter: BaseAdapter;
@@ -13,8 +14,9 @@ export class CloudLLMService extends BaseLLMService {
         super(config);
         this.adapter = createAdapter(config.type, {
             endpoint: config.endpoint,
-            apiKey: config.apiKey,
-            modelName: config.modelName
+            apiKey: config.apiKey || '',
+            modelName: config.modelName,
+            language: config.language
         });
     }
 
@@ -148,7 +150,7 @@ export class CloudLLMService extends BaseLLMService {
         }
     }
 
-    async analyzeTags(content: string, existingTags: string[], mode: TaggingMode, maxTags: number, language?: 'en' | 'zh' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'pt' | 'ru'): Promise<LLMResponse> {
+    async analyzeTags(content: string, existingTags: string[], mode: TaggingMode, maxTags: number, language?: LanguageCode): Promise<LLMResponse> {
         try {
             // Validate that we have content to analyze
             if (!content.trim()) {
@@ -170,7 +172,7 @@ export class CloudLLMService extends BaseLLMService {
                 
                 // Combine results and remove duplicates
                 const suggestedTags = generateResult.suggestedTags;
-                const matchedExistingTags = matchResult.matchedExistingTags;
+                const matchedExistingTags = matchResult.matchedExistingTags || [];
                 
                 // Remove any tags from suggestedTags that also appear in matchedExistingTags
                 const uniqueSuggestedTags = suggestedTags.filter(tag => !matchedExistingTags.includes(tag));
@@ -188,7 +190,7 @@ export class CloudLLMService extends BaseLLMService {
                 
                 // Combine results and remove duplicates
                 const suggestedTags = generateResult.suggestedTags;
-                const matchedExistingTags = matchResult.matchedExistingTags;
+                const matchedExistingTags = matchResult.matchedExistingTags || [];
                 
                 // Remove any tags from suggestedTags that also appear in matchedExistingTags
                 const uniqueSuggestedTags = suggestedTags.filter(tag => !matchedExistingTags.includes(tag));
@@ -206,7 +208,7 @@ export class CloudLLMService extends BaseLLMService {
         }
     }
 
-    private async analyzeTagsInternal(content: string, existingTags: string[], mode: TaggingMode, maxTags: number, language?: 'en' | 'zh' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'pt' | 'ru'): Promise<LLMResponse> {
+    private async analyzeTagsInternal(content: string, existingTags: string[], mode: TaggingMode, maxTags: number, language?: LanguageCode): Promise<LLMResponse> {
         const systemPrompt = 'You are a professional document tag analysis assistant. You need to analyze document content, match relevant tags from existing ones, and generate new relevant tags.';
         const prompt = this.buildPrompt(content, existingTags, mode, maxTags, language);
 

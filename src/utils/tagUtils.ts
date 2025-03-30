@@ -48,68 +48,6 @@ export interface TagOperationResult {
 
 export class TagUtils {
     /**
-     * Validates a single tag according to Obsidian's tag requirements
-     * @param tag - The tag to validate
-     * @returns boolean indicating if the tag is valid
-     */
-    static validateTag(tag: unknown): boolean {
-        let tagStr: string;
-        if (typeof tag !== 'string') {
-            try {
-                tagStr = String(tag);
-            } catch (e) {
-                return false;
-            }
-        } else {
-            tagStr = tag;
-        }
-        if (!tagStr) return false;
-        
-        const normalizedTag = tagStr.trim();
-        if (!normalizedTag.startsWith('#')) {
-            // First character must be a letter from any language
-            if (!/^[\p{Letter}]/u.test(normalizedTag)) {
-                return false;
-            }
-        }
-        
-        const tagWithHash = normalizedTag.startsWith('#') ? normalizedTag : `#${normalizedTag}`;
-        // Tag can contain letters from any language, numbers, and hyphens
-        const isValid = /^#[\p{Letter}\p{Number}-]+$/u.test(tagWithHash);
-        // Obsidian doesn't allow tags to end with a hyphen
-        return isValid && !tagWithHash.endsWith('-');
-    }
-
-    /**
-     * Validates an array of tags
-     * @param tags - Array of tags to validate
-     * @returns Object containing arrays of valid and invalid tags
-     */
-    static validateTags(tags: unknown[]): { valid: string[], invalid: string[] } {
-        if (!Array.isArray(tags)) {
-            return { valid: [], invalid: [] };
-        }
-
-        const valid: string[] = [];
-        const invalid: string[] = [];
-        
-        for (const tag of tags) {
-            try {
-                const tagStr = typeof tag === 'string' ? tag : String(tag);
-                if (this.validateTag(tagStr)) {
-                    valid.push(tagStr);
-                } else {
-                    invalid.push(tagStr);
-                }
-            } catch (e) {
-                if (tag) invalid.push(String(tag));
-            }
-        }
-
-        return { valid, invalid };
-    }
-
-    /**
      * Gets existing tags from frontmatter
      * @param frontmatter - The frontmatter object from Obsidian's metadata cache
      * @returns Array of valid tags
@@ -123,7 +61,7 @@ export class TagUtils {
                 [frontmatter.tags] : 
                 [];
 
-        return this.validateTags(tags).valid;
+        return tags.map(tag => String(tag)); // 所有标签都视为有效
     }
 
     /**
@@ -133,23 +71,19 @@ export class TagUtils {
      * @returns Array of unique, sorted tags
      */
     static mergeTags(existingTags: string[], newTags: string[]): string[] {
-        const { valid: validExisting } = this.validateTags(existingTags);
-        const { valid: validNew } = this.validateTags(newTags);
+        const validExisting = existingTags.map(tag => String(tag));
+        const validNew = newTags.map(tag => String(tag));
         return [...new Set([...validExisting, ...validNew])].sort();
     }
 
     /**
      * Formats a tag to ensure it starts with # and is properly formatted
      * @param tag - Tag to format
-     * @throws {TagError} If tag format is invalid
      * @returns Formatted tag string
      */
     static formatTag(tag: unknown): string {
         const tagStr = typeof tag === 'string' ? tag : String(tag);
         const formattedTag = tagStr.trim().startsWith('#') ? tagStr.trim() : `#${tagStr.trim()}`;
-        if (!this.validateTag(formattedTag)) {
-            throw new TagError(`Invalid tag format: ${tagStr} (must start with # or a letter, and can only contain letters, numbers, and hyphens)`);
-        }
         return formattedTag;
     }
 
@@ -240,8 +174,10 @@ static async clearTags(app: App, file: TFile): Promise<TagOperationResult> {
             const filteredNewTags = [...new Set(stringNewTags.filter(tag => tag.trim()))];
             const filteredMatchedTags = [...new Set(stringMatchedTags.filter(tag => tag.trim()))];
 
-            const { valid: validNewTags, invalid: invalidNewTags } = this.validateTags(filteredNewTags);
-            const { valid: validMatchedTags } = this.validateTags(filteredMatchedTags);
+            // 将所有标签视为有效
+            const validNewTags = filteredNewTags;
+            const invalidNewTags: string[] = [];
+            const validMatchedTags = filteredMatchedTags;
 
             if (invalidNewTags.length > 0 && !silent) {
                 new Notice(`Skipped invalid tags: ${invalidNewTags.join(', ')}`, 3000);

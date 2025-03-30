@@ -1,12 +1,12 @@
 import { BaseAdapter } from './baseAdapter';
 import { BaseResponse, RequestBody, AdapterConfig } from './types';
 import * as endpoints from './cloudEndpoints.json';
+import { SYSTEM_PROMPT } from '../types';
 
 export class GrokAdapter extends BaseAdapter {
     private readonly defaultConfig = {
-        temperature: 0.7,
-        max_tokens: 1024,
-        stream: false
+        max_tokens: 2048,
+        temperature: 0.7
     };
 
     constructor(config: AdapterConfig) {
@@ -33,18 +33,10 @@ export class GrokAdapter extends BaseAdapter {
     }
 
     public formatRequest(prompt: string): RequestBody {
+        const baseRequest = super.formatRequest(prompt);
+        
         return {
-            model: this.config.modelName,
-            messages: [
-                {
-                    role: 'system',
-                    content: 'You are a professional document tag analysis assistant.'
-                },
-                {
-                    role: 'user',
-                    content: prompt
-                }
-            ],
+            ...baseRequest,
             ...this.defaultConfig
         };
     }
@@ -62,6 +54,7 @@ export class GrokAdapter extends BaseAdapter {
             }
 
             return {
+                text: content,
                 matchedExistingTags: jsonContent.matchedTags,
                 suggestedTags: jsonContent.newTags
             };

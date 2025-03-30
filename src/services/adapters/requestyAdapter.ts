@@ -1,6 +1,7 @@
 import { BaseAdapter } from './baseAdapter';
 import { BaseResponse, RequestBody, AdapterConfig } from './types';
 import * as endpoints from './cloudEndpoints.json';
+import { SYSTEM_PROMPT } from '../types';
 
 export class RequestyAdapter extends BaseAdapter {
     private readonly defaultConfig = {
@@ -32,18 +33,10 @@ export class RequestyAdapter extends BaseAdapter {
     }
 
     public formatRequest(prompt: string): RequestBody {
+        const baseRequest = super.formatRequest(prompt);
+        
         return {
-            model: this.config.modelName,
-            messages: [
-                {
-                    role: 'system',
-                    content: 'You are a professional document tag analysis assistant.'
-                },
-                {
-                    role: 'user',
-                    content: prompt
-                }
-            ],
+            ...baseRequest,
             ...this.defaultConfig
         };
     }
@@ -56,12 +49,12 @@ export class RequestyAdapter extends BaseAdapter {
             }
 
             const jsonContent = this.extractJsonFromContent(content);
-
             if (!Array.isArray(jsonContent?.matchedTags) || !Array.isArray(jsonContent?.newTags)) {
                 throw new Error('Invalid response format: missing required arrays');
             }
 
             return {
+                text: content,
                 matchedExistingTags: jsonContent.matchedTags,
                 suggestedTags: jsonContent.newTags
             };

@@ -1,4 +1,4 @@
-import { LLMServiceConfig, LLMResponse, ConnectionTestResult, ConnectionTestError } from './types';
+import { LLMServiceConfig, LLMResponse, ConnectionTestResult, ConnectionTestError, SYSTEM_PROMPT } from './types';
 import { buildTagPrompt, TaggingMode } from './prompts/tagPrompts';
 
 import { LanguageCode } from './types';
@@ -20,6 +20,25 @@ export abstract class BaseLLMService {
     constructor(config: LLMServiceConfig) {
         this.endpoint = config.endpoint.trim();
         this.modelName = config.modelName.trim();
+    }
+
+    /**
+     * Formats a request for the LLM service
+     * This serves as a default implementation. Specific service adapters should override as needed.
+     * @param prompt - The prompt to send to the LLM
+     * @param language - Optional language code
+     * @returns Formatted request body
+     */
+    public formatRequest(prompt: string, language?: string): any {
+        // Default OpenAI-compatible format
+        return {
+            model: this.modelName,
+            messages: [
+                { role: 'system', content: SYSTEM_PROMPT },
+                { role: 'user', content: prompt }
+            ],
+            temperature: 0.3
+        };
     }
 
     /**
@@ -90,37 +109,6 @@ export abstract class BaseLLMService {
     }
 
     /**
-     * Validates a single tag format
-     * @param tag - Tag to validate
-     * @returns True if valid, false otherwise
-     */
-    protected validateTag(tag: string): boolean {
-        if (typeof tag !== 'string' || !tag) return false;
-        // Must start with # and contain only letters, numbers, and hyphens
-        const tagRegex = /^#[\p{Letter}\p{Number}-]+$/u;
-        return tagRegex.test(tag) && !tag.endsWith('-');
-    }
-
-    /**
-     * Validates an array of tags
-     * @param tags - Array of tags to validate
-     * @returns Validated tags array
-     * @throws Error if any tags are invalid
-     */
-    protected validateTags(tags: string[]): string[] {
-        if (!Array.isArray(tags) || tags.length === 0) {
-            throw new Error('No tags provided for validation');
-        }
-
-        const invalidTag = tags.find(tag => !this.validateTag(tag));
-        if (invalidTag) {
-            throw new Error(`Invalid tag format: ${invalidTag} (must start with # and contain only letters, numbers, and hyphens)`);
-        }
-
-        return [...new Set(tags)]; // Remove duplicates
-    }
-
-    /**
      * Extracts JSON content from an LLM response
      * @param response - Raw response from LLM
      * @param retryCount - Number of retries attempted
@@ -166,9 +154,7 @@ export abstract class BaseLLMService {
             const hashtags = response.match(hashtagRegex);
             if (hashtags) {
                 hashtags.forEach(tag => {
-                    if (this.validateTag(tag)) {
-                        tags.add(tag);
-                    }
+                    tags.add(tag);
                 });
             }
             
@@ -177,9 +163,7 @@ export abstract class BaseLLMService {
             let match;
             while ((match = potentialTagsRegex.exec(response)) !== null) {
                 const tag = `#${match[1]}`;
-                if (this.validateTag(tag)) {
-                    tags.add(tag);
-                }
+                tags.add(tag);
             }
             
             if (tags.size > 0) {
@@ -244,10 +228,8 @@ export abstract class BaseLLMService {
                         throw new Error('Response missing matchedTags field or not an array');
                     }
                     
-                    // Apply tag limit and validate
-                    const validatedMatchedTags = this.validateTags(
-                        parsed.matchedTags.slice(0, maxTags)
-                    );
+                    // Apply tag limit
+                    const validatedMatchedTags = parsed.matchedTags.slice(0, maxTags);
                     
                     return {
                         matchedExistingTags: validatedMatchedTags,
@@ -259,10 +241,8 @@ export abstract class BaseLLMService {
                         throw new Error('Response missing newTags field or not an array');
                     }
                     
-                    // Apply tag limit and validate
-                    const validatedNewTags = this.validateTags(
-                        parsed.newTags.slice(0, maxTags)
-                    );
+                    // Apply tag limit
+                    const validatedNewTags = parsed.newTags.slice(0, maxTags);
                     
                     return {
                         matchedExistingTags: [],
@@ -279,13 +259,9 @@ export abstract class BaseLLMService {
                     const halfMaxTags = Math.floor(maxTags / 2);
                     const remainingTags = maxTags - halfMaxTags;
 
-                    // Validate and slice tags
-                    const hybridMatchedTags = this.validateTags(
-                        parsed.matchedTags.slice(0, halfMaxTags)
-                    );
-                    const hybridNewTags = this.validateTags(
-                        parsed.newTags.slice(0, remainingTags)
-                    );
+                    // Apply tag limit
+                    const hybridMatchedTags = parsed.matchedTags.slice(0, halfMaxTags);
+                    const hybridNewTags = parsed.newTags.slice(0, remainingTags);
 
                     return {
                         matchedExistingTags: hybridMatchedTags,

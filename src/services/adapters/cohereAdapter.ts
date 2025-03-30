@@ -33,18 +33,10 @@ export class CohereAdapter extends BaseAdapter {
     }
 
     public formatRequest(prompt: string): RequestBody {
+        const baseRequest = super.formatRequest(prompt);
+        
         return {
-            messages: [
-                {
-                    role: 'system',
-                    content: 'You are a professional document tag analysis assistant.'
-                },
-                {
-                    role: 'user',
-                    content: prompt
-                }
-            ],
-            model: this.config.modelName,
+            ...baseRequest,
             message: prompt,
             ...this.defaultConfig,
             connectors: []
@@ -62,6 +54,7 @@ export class CohereAdapter extends BaseAdapter {
                 throw new Error('Invalid response format: missing required arrays');
             }
             return {
+                text: content,
                 matchedExistingTags: jsonContent.matchedTags,
                 suggestedTags: jsonContent.newTags
             };

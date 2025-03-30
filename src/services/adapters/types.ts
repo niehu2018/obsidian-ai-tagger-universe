@@ -1,3 +1,5 @@
+import { LanguageCode } from '../types';
+
 export interface FetchOptions {
     method: string;
     headers: Record<string, string>;
@@ -10,7 +12,7 @@ export interface AdapterConfig {
     apiSecret?: string;
     model?: string;
     modelName?: string;
-    language?: string;
+    language?: LanguageCode;
 }
 
 export interface RequestBody {
@@ -54,3 +56,16 @@ export interface RequestConfig {
 }
 
 export type AdapterResponse = Promise<BaseResponse>;
+
+export interface LLMServiceProvider {
+    name: string;
+    requestFormat: {
+        url?: string;
+        headers?: Record<string, string>;
+        body?: any;
+    };
+    responseFormat: {
+        path: (string | number)[];
+        errorPath?: (string | number)[];
+    };
+}

@@ -1,6 +1,7 @@
 import { BaseAdapter } from './baseAdapter';
 import { BaseResponse, RequestBody, AdapterConfig } from './types';
 import * as endpoints from './cloudEndpoints.json';
+import { SYSTEM_PROMPT } from '../types';
 
 export class GroqAdapter extends BaseAdapter {
     private readonly defaultConfig = {
@@ -32,18 +33,10 @@ export class GroqAdapter extends BaseAdapter {
     }
 
     public formatRequest(prompt: string): RequestBody {
+        const baseRequest = super.formatRequest(prompt);
+        
         return {
-            model: this.config.modelName || this.defaultConfig.defaultModel,
-            messages: [
-                {
-                    role: 'system',
-                    content: 'You are a professional document tag analysis assistant.'
-                },
-                {
-                    role: 'user',
-                    content: prompt
-                }
-            ],
+            ...baseRequest,
             temperature: this.defaultConfig.temperature
         };
     }
@@ -62,6 +55,7 @@ export class GroqAdapter extends BaseAdapter {
             }
 
             return {
+                text: content,
                 matchedExistingTags: jsonContent.matchedTags,
                 suggestedTags: jsonContent.newTags
             };

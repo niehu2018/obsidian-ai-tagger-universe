@@ -11,33 +11,14 @@ export class OpenRouterAdapter extends BaseAdapter {
         this.provider = {
             name: 'openrouter',
             requestFormat: {
-                url: '/api/v1/chat/completions',
-                headers: {},
                 body: {
-                    model: config.modelName,
-                    messages: []
+                    model: this.config.modelName
                 }
             },
             responseFormat: {
                 path: ['choices', '0', 'message', 'content'],
                 errorPath: ['error', 'message']
             }
-        };
-    }
-
-    public formatRequest(prompt: string): RequestBody {
-        return {
-            model: this.config.modelName,
-            messages: [
-                {
-                    role: 'system',
-                    content: 'You are a professional document tag analysis assistant.'
-                },
-                {
-                    role: 'user',
-                    content: prompt
-                }
-            ]
         };
     }
 
@@ -55,6 +36,7 @@ export class OpenRouterAdapter extends BaseAdapter {
             }
 
             return {
+                text: content,
                 matchedExistingTags: jsonContent.matchedTags,
                 suggestedTags: jsonContent.newTags
             };

@@ -11,7 +11,8 @@ export class BedrockAdapter extends BaseAdapter {
     constructor(config: AdapterConfig) {
         super({
             ...config,
-            endpoint: config.endpoint || endpoints.bedrock
+            endpoint: config.endpoint || endpoints.bedrock,
+            modelName: config.modelName || 'anthropic.claude-3-haiku-20240307-v1:0'
         });
         this.provider = {
             name: 'bedrock',
@@ -19,9 +20,7 @@ export class BedrockAdapter extends BaseAdapter {
                 url: '/model/invoke',
                 headers: {},
                 body: {
-                    prompt: '',
-                    ...this.defaultConfig,
-                    anthropic_version: config.modelName.includes('claude') ? '2023-01-01' : undefined
+                    model: this.modelName
                 }
             },
             responseFormat: {
@@ -33,28 +32,19 @@ export class BedrockAdapter extends BaseAdapter {
 
     public formatRequest(prompt: string): RequestBody {
         const modelName = this.config.modelName || '';
-
-        const messages = [
-            {
-                role: 'system',
-                content: 'You are a professional document tag analysis assistant.'
-            },
-            {
-                role: 'user',
-                content: prompt
-            }
-        ];
-
+        const baseRequest = super.formatRequest(prompt);
+        
+        // 根据模型类型提供不同的请求格式
         if (modelName.includes('claude')) {
             return {
-                messages,
+                ...baseRequest,
                 prompt: `\n\nHuman: ${prompt}\n\nAssistant: `,
                 ...this.defaultConfig,
                 anthropic_version: '2023-01-01'
             };
         } else if (modelName.includes('titan')) {
             return {
-                messages,
+                ...baseRequest,
                 inputText: prompt,
                 textGenerationConfig: {
                     maxTokenCount: this.defaultConfig.max_tokens,
@@ -65,7 +55,7 @@ export class BedrockAdapter extends BaseAdapter {
         }
         
         return {
-            messages,
+            ...baseRequest,
             prompt,
             ...this.defaultConfig
         };
@@ -73,13 +63,15 @@ export class BedrockAdapter extends BaseAdapter {
 
     public parseResponse(response: any): BaseResponse {
         try {
-            let content: string;
-            if (this.config.modelName.includes('claude')) {
-                content = response.completion;
-            } else if (this.config.modelName.includes('titan')) {
-                content = response.results?.[0]?.outputText;
+            let content: string = '';
+            const modelName = this.config.modelName || '';
+            
+            if (modelName.includes('claude')) {
+                content = response.completion || '';
+            } else if (modelName.includes('titan')) {
+                content = response.results?.[0]?.outputText || '';
             } else {
-                content = response.generation;
+                content = response.generation || '';
             }
 
             if (!content) {
@@ -93,6 +85,7 @@ export class BedrockAdapter extends BaseAdapter {
             }
 
             return {
+                text: content,
                 matchedExistingTags: jsonContent.matchedTags,
                 suggestedTags: jsonContent.newTags
             };
