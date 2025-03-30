@@ -1,7 +1,7 @@
 import { BaseLLMService } from "../baseService";
 import { AdapterConfig } from "./types";
-import { SYSTEM_PROMPT } from "../types";
-import { TaggingMode } from "../prompts/tagPrompts";
+import { SYSTEM_PROMPT } from "../../utils/constants";
+import { TaggingMode } from "../prompts/types";
 
 export abstract class BaseAdapter extends BaseLLMService {
     protected config: AdapterConfig;
@@ -118,12 +118,12 @@ export abstract class BaseAdapter extends BaseLLMService {
             ...config,
             endpoint: config.endpoint ?? "",
             modelName: config.modelName ?? ""
-        });
+        }, null as any);  // Pass null for app as it's not needed in the adapter
         this.config = config;
     }
 
     async analyzeTags(content: string, existingTags: string[]): Promise<any> {
-        const prompt = this.buildPrompt(content, existingTags, TaggingMode.HybridGenerateExisting, 10, this.config.language);
+        const prompt = this.buildPrompt(content, existingTags, TaggingMode.Hybrid, 10, this.config.language);
         const response = await this.makeRequest(prompt);
         return this.parseResponse(response);
     }
@@ -179,5 +179,44 @@ export abstract class BaseAdapter extends BaseLLMService {
             const message = error instanceof Error ? error.message : 'Unknown error';
             throw new Error(`Failed to parse JSON: ${message}`);
         }
+    }
+
+    /**
+     * Extracts the main content from a cloud provider response
+     * @param response The response object from the cloud provider
+     * @returns The extracted content as a string
+     */
+    public parseResponseContent(response: any): string {
+        try {
+            if (!this.provider?.responseFormat?.contentPath) {
+                // Default OpenAI-like format
+                return response.choices?.[0]?.message?.content || '';
+            }
+
+            // Follow provider-specific content path
+            let content = response;
+            for (const key of this.provider.responseFormat.contentPath) {
+                if (!content || typeof content !== 'object') {
+                    throw new Error('Invalid response structure');
+                }
+                content = content[key];
+            }
+            
+            return typeof content === 'string' ? content : JSON.stringify(content);
+        } catch (error) {
+            console.error('Failed to parse response content:', error);
+            return '';
+        }
+    }
+
+    /**
+     * Sends a request to the LLM service
+     * Abstract method implementation required by BaseLLMService
+     * @param prompt - The prompt to send
+     * @returns Promise resolving to the response
+     */
+    protected async sendRequest(prompt: string): Promise<string> {
+        const response = await this.makeRequest(prompt);
+        return this.parseResponseContent(response);
     }
 }

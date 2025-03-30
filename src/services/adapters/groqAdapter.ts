@@ -1,7 +1,7 @@
 import { BaseAdapter } from './baseAdapter';
 import { BaseResponse, RequestBody, AdapterConfig } from './types';
 import * as endpoints from './cloudEndpoints.json';
-import { SYSTEM_PROMPT } from '../types';
+import { SYSTEM_PROMPT } from '../../utils/constants';
 
 export class GroqAdapter extends BaseAdapter {
     private readonly defaultConfig = {

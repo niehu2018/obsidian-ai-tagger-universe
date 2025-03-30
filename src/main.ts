@@ -266,14 +266,14 @@ export default class AITaggerPlugin extends Plugin {
                     const content = await this.app.vault.read(file);
                     if (!content.trim()) continue;
                     
-                    // 使用统一方法分析和标记
+                    // Use the unified method to analyze and tag
                     const result = await this.analyzeAndTagNote(file, content);
                     
                     result.success && successful++;
-                    this.handleTagUpdateResult(result, true); // 静默模式
+                    this.handleTagUpdateResult(result, true); // Silent mode
                     processed++;
 
-                    // 每15秒更新一次进度
+                    // Update progress every 15 seconds
                     if (Date.now() - lastNotice >= 15000) {
                         new Notice(`Progress: ${processed}/${files.length} files processed`, 3000);
                         lastNotice = Date.now();
@@ -323,10 +323,10 @@ export default class AITaggerPlugin extends Plugin {
         }
 
         try {
-            // 使用新的统一方法分析和标记
+            // Use the unified method to analyze and tag
             const result = await this.analyzeAndTagNote(activeFile, content);
             
-            // 处理结果
+            // Process the result
             this.handleTagUpdateResult(result);
         } catch (error) {
             console.error('Failed to analyze note:', error);
@@ -336,23 +336,11 @@ export default class AITaggerPlugin extends Plugin {
 
     /**
      * Analyzes content using hybrid mode and generates tags
-     * First generates new tags, then matches from predefined tags, and finally merges results
      * @param content Content to analyze
-     * @returns Analysis result with tags
+     * @returns Array of tags
      */
     public async analyzeWithHybridMode(content: string): Promise<{ tags: string[] }> {
-        
-        // 1. Generate new tags
-        const generatedResult = await this.llmService.analyzeTags(
-            content,
-            [], // Empty array for new tag generation
-            TaggingMode.GenerateNew,
-            this.settings.tagRangeGenerateMax,
-            this.settings.language
-        );
-        const generatedTags = generatedResult?.suggestedTags || [];
-        
-        // 2. Get predefined tags list
+        // Get predefined tags list
         let predefinedTags: string[] = [];
         if (this.settings.tagSourceType === 'file') {
             const fileTags = await TagUtils.getTagsFromFile(this.app, this.settings.predefinedTagsPath);
@@ -363,22 +351,19 @@ export default class AITaggerPlugin extends Plugin {
             predefinedTags = TagUtils.getAllTags(this.app);
         }
         
-        // 3. Match against predefined tags
-        let matchedTags: string[] = [];
-        if (predefinedTags.length > 0) {
-            const matchResult = await this.llmService.analyzeTags(
-                content,
-                predefinedTags,
-                TaggingMode.PredefinedTags,
-                this.settings.tagRangePredefinedMax
-            );
-            matchedTags = matchResult?.matchedExistingTags || [];
-        }
+        // Use the hybrid mode in LLM service directly
+        const hybridResult = await this.llmService.analyzeTags(
+            content,
+            predefinedTags,
+            TaggingMode.Hybrid,
+            Math.max(this.settings.tagRangeGenerateMax, this.settings.tagRangePredefinedMax), // Use the larger max tag setting
+            this.settings.language
+        );
         
-        // 4. Merge results and ensure no duplicates
+        // Merge results and ensure no duplicates
         // Use TagUtils.formatTags to normalize tag format
-        const normalizedGeneratedTags = TagUtils.formatTags(generatedTags);
-        const normalizedMatchedTags = TagUtils.formatTags(matchedTags);
+        const normalizedGeneratedTags = TagUtils.formatTags(hybridResult.suggestedTags || []);
+        const normalizedMatchedTags = TagUtils.formatTags(hybridResult.matchedExistingTags || []);
         
         // Use TagUtils.mergeTags to combine and deduplicate
         const allTags = TagUtils.mergeTags(normalizedGeneratedTags, normalizedMatchedTags);
@@ -395,14 +380,6 @@ export default class AITaggerPlugin extends Plugin {
      */
     public async analyzeAndTagNote(file: TFile, contentOrAnalysis: string | LLMResponse): Promise<TagOperationResult> {
         try {
-            // Check if file is excluded
-            if (this.isFileExcluded(file)) {
-                return {
-                    success: false,
-                    message: 'This file is excluded by exclusion patterns'
-                };
-            }
-
             let analysis: LLMResponse;
             
             // Determine parameter type
@@ -449,22 +426,19 @@ export default class AITaggerPlugin extends Plugin {
                         break;
 
                     case TaggingMode.Hybrid:
-                        // Hybrid mode - uses the specialized hybrid mode method
-                        const hybridResult = await this.analyzeWithHybridMode(content);
-                        if (!hybridResult.tags.length) {
-                            return {
-                                success: false,
-                                message: 'No relevant tags were found or generated'
-                            };
-                        }
+                        // Get candidate tags (from file or vault)
+                        const hybridPredefinedTags = this.settings.tagSourceType === 'file'
+                            ? await TagUtils.getTagsFromFile(this.app, this.settings.predefinedTagsPath) || []
+                            : TagUtils.getAllTags(this.app);
                         
-                        // Apply hybrid mode tags directly
-                        return await TagUtils.writeTagsToFrontmatter(
-                            this.app,
-                            file,
-                            hybridResult.tags,
-                            this.settings.replaceTags
+                        analysis = await this.llmService.analyzeTags(
+                            content,
+                            hybridPredefinedTags,
+                            TaggingMode.Hybrid, 
+                            Math.max(this.settings.tagRangeGenerateMax, this.settings.tagRangePredefinedMax),
+                            this.settings.language
                         );
+                        break;
                     
                     default:
                         return {
@@ -517,25 +491,5 @@ export default class AITaggerPlugin extends Plugin {
                 message: error instanceof Error ? error.message : 'Unknown error occurred'
             };
         }
-    }
-    
-    /**
-     * 检查文件是否被排除
-     * @param file 要检查的文件
-     * @returns 是否被排除
-     */
-    private isFileExcluded(file: TFile): boolean {
-        if (!this.settings.excludedFolders?.length) return false;
-        
-        const filePath = file.path;
-        return this.settings.excludedFolders.some(pattern => {
-            if (pattern.startsWith('/')) {
-                // 如果以/开头，则为完整路径匹配
-                return filePath === pattern.substring(1);
-            } else {
-                // 否则为部分路径匹配
-                return filePath.includes(pattern);
-            }
-        });
     }
 }

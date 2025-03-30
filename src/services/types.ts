@@ -1,7 +1,4 @@
-export const SYSTEM_PROMPT = 
-    'You are a professional document tag analysis assistant. ' +
-    'Please return your response as a plain text string of comma-separated tags. ' +
-    'For example: "hello, world, hello world, hello-world"';
+import { TaggingMode } from './prompts/types';
 
 export const MAX_CONCURRENT_REQUESTS = 3;
 
@@ -47,8 +44,9 @@ export interface LLMService {
     analyzeTags(
         content: string, 
         candidateTags: string[], 
-        mode?: any,
-        maxTags?: number
+        mode: TaggingMode,
+        maxTags: number,
+        language?: LanguageCode
     ): Promise<LLMResponse>;
     
     testConnection(): Promise<{ result: ConnectionTestResult; error?: ConnectionTestError }>;

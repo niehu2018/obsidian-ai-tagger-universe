@@ -34,7 +34,7 @@ export function registerPredefinedTagsCommands(plugin: AITaggerPlugin) {
 
                 const content = await plugin.app.vault.read(view?.file);
                 const analysis = await plugin.llmService.analyzeTags(content, predefinedTags, TaggingMode.PredefinedTags, plugin.settings.tagRangePredefinedMax);
-                const matchedTags = analysis.matchedExistingTags;
+                const matchedTags = analysis.matchedExistingTags || [];
                 
                 if (matchedTags.length === 0) {
                     new Notice('No matching tags');
@@ -113,7 +113,7 @@ export function registerPredefinedTagsCommands(plugin: AITaggerPlugin) {
                         if (!content.trim()) continue;
 
                         const analysis = await plugin.llmService.analyzeTags(content, predefinedTags, TaggingMode.PredefinedTags, plugin.settings.tagRangePredefinedMax);
-                        const matchedTags = analysis.matchedExistingTags;
+                        const matchedTags = analysis.matchedExistingTags || [];
                         
                         const result = await TagUtils.updateNoteTags(plugin.app, file, [], matchedTags);
                         if (result.success) {
@@ -186,7 +186,7 @@ export function registerPredefinedTagsCommands(plugin: AITaggerPlugin) {
                         if (!content.trim()) continue;
 
                         const analysis = await plugin.llmService.analyzeTags(content, predefinedTags, TaggingMode.PredefinedTags, plugin.settings.tagRangePredefinedMax);
-                        const matchedTags = analysis.matchedExistingTags;
+                        const matchedTags = analysis.matchedExistingTags || [];
                         
                         const result = await TagUtils.updateNoteTags(plugin.app, file, [], matchedTags);
                         if (result.success) {

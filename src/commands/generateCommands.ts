@@ -1,7 +1,7 @@
 import { Editor, MarkdownFileInfo, MarkdownView, Menu, Notice, TFile } from 'obsidian';
-import AITaggerPlugin from '../main';
+import type AITaggerPlugin from '../main';
 import { TagUtils } from '../utils/tagUtils';
-import { TaggingMode } from '../services/prompts/tagPrompts';
+import { TaggingMode } from '../services/prompts/types';
 
 export function registerGenerateCommands(plugin: AITaggerPlugin) {
     // Command to generate tags for current note (with selection support)
@@ -31,23 +31,20 @@ export function registerGenerateCommands(plugin: AITaggerPlugin) {
                 let maxTags = plugin.settings.tagRangeGenerateMax;
                 if (plugin.settings.taggingMode === TaggingMode.PredefinedTags) {
                     maxTags = plugin.settings.tagRangePredefinedMax;
-                } else if (plugin.settings.taggingMode === TaggingMode.ExistingTags) {
-                    maxTags = plugin.settings.tagRangeMatchMax;
-                } else if (plugin.settings.taggingMode === TaggingMode.HybridGenerateExisting ||
-                           plugin.settings.taggingMode === TaggingMode.HybridGeneratePredefined) {
-                    maxTags = plugin.settings.tagRangeMatchMax + plugin.settings.tagRangeGenerateMax;
+                } else if (plugin.settings.taggingMode === TaggingMode.Hybrid) {
+                    maxTags = plugin.settings.tagRangePredefinedMax + plugin.settings.tagRangeGenerateMax;
                 }
 
-                let analysis;
-                if (plugin.settings.taggingMode === TaggingMode.GenerateNew || 
-                    plugin.settings.taggingMode === TaggingMode.HybridGenerateExisting ||
-                    plugin.settings.taggingMode === TaggingMode.HybridGeneratePredefined) {
-                    analysis = await plugin.llmService.analyzeTags(content, existingTags, plugin.settings.taggingMode, maxTags, plugin.settings.language);
-                } else {
-                    analysis = await plugin.llmService.analyzeTags(content, existingTags, plugin.settings.taggingMode, maxTags);
-                }
+                const analysis = await plugin.llmService.analyzeTags(
+                    content, 
+                    existingTags, 
+                    plugin.settings.taggingMode, 
+                    maxTags, 
+                    plugin.settings.language
+                );
+                
                 const suggestedTags = analysis.suggestedTags;
-                const matchedTags = analysis.matchedExistingTags;
+                const matchedTags = analysis.matchedExistingTags || [];
                 
                 const result = await TagUtils.updateNoteTags(plugin.app, view.file, suggestedTags, matchedTags, true);
                 

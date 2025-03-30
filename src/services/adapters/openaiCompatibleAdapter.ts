@@ -1,6 +1,6 @@
 import { BaseAdapter } from './baseAdapter';
 import { BaseResponse, RequestBody, LLMServiceProvider, AdapterConfig } from './types';
-import { SYSTEM_PROMPT } from '../types';
+import { SYSTEM_PROMPT } from '../../utils/constants';
 
 export class OpenAICompatibleAdapter extends BaseAdapter {
     constructor(config: AdapterConfig) {

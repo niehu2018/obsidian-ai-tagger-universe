@@ -90,66 +90,91 @@ export class TagUtils {
         return formatted.length > 0 ? formatted : '';
     }
 
-/**
- * Clears all tags from a file's frontmatter using a YAML parser for precise handling.
- * @param app - Obsidian App instance
- * @param file - File to clear tags from
- * @returns Promise resolving to operation result
- */
-static async clearTags(app: App, file: TFile): Promise<TagOperationResult> {
-  try {
-    const content = await app.vault.read(file);
-    const frontmatterRegex = /^---\r?\n([\s\S]*?)\r?\n---/;
-    const frontmatterMatch = frontmatterRegex.exec(content);
-    if (!frontmatterMatch) {
-      return { success: true, message: "Skipped: Note has no frontmatter", tags: [] };
+    /**
+     * Clears all tags from a file's frontmatter using Obsidian API.
+     * @param app - Obsidian App instance
+     * @param file - File to clear tags from
+     * @returns Promise resolving to operation result
+     */
+    static async clearTags(app: App, file: TFile): Promise<TagOperationResult> {
+        try {
+            const content = await app.vault.read(file);
+            const cache = app.metadataCache.getFileCache(file);
+            const frontmatterPosition = cache?.frontmatterPosition;
+            
+            if (!frontmatterPosition) {
+                return { success: true, message: "Skipped: Note has no frontmatter", tags: [] };
+            }
+            
+            const frontmatterText = content.substring(
+                frontmatterPosition.start.offset + 4, // Skip '---\n'
+                frontmatterPosition.end.offset - 4    // Skip '\n---'
+            );
+            
+            let frontmatter: any;
+            try {
+                frontmatter = yaml.load(frontmatterText) || {};
+            } catch (yamlError) {
+                console.error('YAML parse error:', yamlError);
+                return { 
+                    success: false, 
+                    message: "YAML parse error: " + (yamlError instanceof Error ? yamlError.message : String(yamlError)), 
+                    tags: [] 
+                };
+            }
+            
+            if (!frontmatter || typeof frontmatter !== 'object') {
+                return { success: true, message: "No valid frontmatter", tags: [] };
+            }
+            
+            if (!('tags' in frontmatter)) {
+                return { success: true, message: "No tags to clear", tags: [] };
+            }
+            
+            const tagsToRemove = Array.isArray(frontmatter.tags) ? 
+                frontmatter.tags.map(String) : 
+                typeof frontmatter.tags === 'string' ? 
+                    [frontmatter.tags] : [];
+            
+            delete frontmatter.tags;
+            
+            const newFrontmatter = yaml.dump(frontmatter).trim();
+            
+            const newContent = 
+                '---\n' + 
+                newFrontmatter + 
+                '\n---' + 
+                content.substring(frontmatterPosition.end.offset);
+            
+            if (newContent !== content) {
+                try {
+                    await app.vault.modify(file, newContent);
+                    
+                    // Allow a short delay for the metadata cache to update
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                } catch (modifyError) {
+                    console.error('Error modifying file:', modifyError);
+                    throw new Error(`Failed to modify file: ${modifyError instanceof Error ? modifyError.message : String(modifyError)}`);
+                }
+            }
+            
+            const removedTags = tagsToRemove.map((tag: string) => `#${tag}`);
+            
+            return {
+                success: true,
+                message: `Cleared ${removedTags.length} tag${removedTags.length === 1 ? '' : 's'}`,
+                tags: removedTags
+            };
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            console.error('Error in clearTags:', error);
+            new Notice(`Error clearing tags: ${message}`, 3000);
+            return {
+                success: false,
+                message: `Clear failed: ${message}`
+            };
+        }
     }
-
-    const fmContent = frontmatterMatch[1];
-    let fmObject: any;
-    try {
-      fmObject = yaml.load(fmContent);
-    } catch (yamlError) {
-      return { success: false, message: "YAML parse error: " + (yamlError instanceof Error ? yamlError.message : yamlError), tags: [] };
-    }
-
-    if (!fmObject || typeof fmObject !== 'object') {
-      return { success: true, message: "No valid frontmatter", tags: [] };
-    }
-
-    // Only proceed if there are tags to remove
-    if (!('tags' in fmObject)) {
-      return { success: true, message: "No tags to clear", tags: [] };
-    }
-
-    // Only remove the tags property, keeping all other frontmatter intact
-    delete fmObject['tags'];
-    const newFmContent = yaml.dump(fmObject || {}).trim();
-    
-    // Always preserve the frontmatter block even if empty
-    const newContent = `---\n${newFmContent || ''}\n---${content.slice(frontmatterMatch[0].length)}`;
-    
-    if (newContent !== content) {
-      await app.vault.modify(file, newContent);
-      await this.waitForMetadataUpdate(app, file);
-      app.metadataCache.trigger('changed', file);
-      app.workspace.trigger('file-open', file);
-    }
-
-    return {
-      success: true,
-      message: 'Cleared tags',
-      tags: []
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    new Notice(`Error clearing tags: ${message}`, 3000);
-    return {
-      success: false,
-      message: `Clear failed: ${message}`
-    };
-  }
-}
 
     /**
      * Updates tags in a file's frontmatter
@@ -259,15 +284,15 @@ static async clearTags(app: App, file: TFile): Promise<TagOperationResult> {
      * @param app - Obsidian App instance
      * @param file - File to wait for
      * @returns Promise that resolves when metadata is updated
-     * @throws {TagError} If metadata update times out
      */
     private static async waitForMetadataUpdate(app: App, file: TFile): Promise<void> {
-        return new Promise<void>((resolve, reject) => {
-            // Set a timeout to prevent hanging
+        return new Promise<void>((resolve) => {
+            // Set a timeout to resolve anyway after a maximum wait time
             const timeout = setTimeout(() => {
                 app.metadataCache.off('changed', eventHandler);
-                reject(new TagError('Metadata update timeout'));
-            }, 5000);
+                console.warn('Metadata update timeout, continuing anyway');
+                resolve();
+            }, 2000);
 
             // Define event handler with proper type annotation
             const eventHandler = (...args: unknown[]) => {
@@ -460,36 +485,48 @@ static async clearTags(app: App, file: TFile): Promise<TagOperationResult> {
                 finalTags = this.mergeTags(existingTags, formattedTags);
             }
             
-            // Create YAML frontmatter with tags
-            const yamlTags = finalTags.map(tag => `  - ${tag}`).join('\n');
+            // Create new content with updated frontmatter
             let newContent: string;
+            const frontmatterPosition = cache?.frontmatterPosition;
             
-            const frontmatterRegex = /^---\n([\s\S]*?)\n---/;
-            const hasFrontmatter = frontmatterRegex.test(content);
-            
-            if (hasFrontmatter) {
-                // Update existing frontmatter
-                newContent = content.replace(frontmatterRegex, (_, frontmatter) => {
-                    const processed = this.processFrontMatter(frontmatter);
-                    processed.push('tags:');
-                    if (finalTags.length > 0) {
-                        processed.push(...finalTags.map(tag => `  - ${tag}`));
-                    }
-                    return `---\n${processed.join('\n')}\n---`;
-                });
+            if (frontmatterPosition) {
+                // Extract and modify existing frontmatter
+                const frontmatterText = content.substring(
+                    frontmatterPosition.start.offset + 4, // Skip '---\n'
+                    frontmatterPosition.end.offset - 4    // Skip '\n---'
+                );
+                
+                let frontmatter: any;
+                try {
+                    frontmatter = yaml.load(frontmatterText) || {};
+                } catch (yamlError) {
+                    console.error('YAML parse error:', yamlError);
+                    throw new Error(`YAML parse error: ${yamlError instanceof Error ? yamlError.message : String(yamlError)}`);
+                }
+                
+                // Update tags in frontmatter
+                frontmatter.tags = finalTags;
+                
+                // Convert back to YAML
+                const newFrontmatter = yaml.dump(frontmatter).trim();
+                
+                // Reconstruct the file content
+                newContent = 
+                    '---\n' + 
+                    newFrontmatter + 
+                    '\n---' + 
+                    content.substring(frontmatterPosition.end.offset);
             } else {
                 // Create new frontmatter
+                const yamlTags = finalTags.map(tag => `  - ${tag}`).join('\n');
                 newContent = `---\ntags:\n${yamlTags}\n---\n${content}`;
             }
             
             // Write changes to file
             await app.vault.modify(file, newContent);
             
-            // Wait for metadata cache to update
-            await this.waitForMetadataUpdate(app, file);
-            
-            // Trigger file reloading
-            app.workspace.trigger('file-open', file);
+            // Allow a short delay for the metadata cache to update
+            await new Promise(resolve => setTimeout(resolve, 300));
             
             return {
                 success: true,
@@ -504,26 +541,5 @@ static async clearTags(app: App, file: TFile): Promise<TagOperationResult> {
                 message: `Failed to update tags: ${message}`
             };
         }
-    }
-    
-    /**
-     * Process frontmatter content to prepare for tag updates
-     * @param frontmatter - Frontmatter content as string
-     * @returns Array of processed lines
-     */
-    private static processFrontMatter(frontmatter: string): string[] {
-        // Remove empty object if present
-        frontmatter = frontmatter.replace(/^\s*{}\s*$/m, '').trim();
-        
-        const yaml = frontmatter.split('\n');
-        // Filter out any existing tags and empty objects
-        return yaml.filter(line => {
-            const trimmed = line.trim();
-            return !(
-                trimmed.startsWith('tags:') || 
-                trimmed.startsWith('- ') || 
-                trimmed === '{}'
-            );
-        });
     }
 }
