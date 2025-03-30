@@ -1,47 +1,141 @@
-import { App } from 'obsidian';
+import { App, TFolder, TFile } from 'obsidian';
 
 export interface VaultItem {
     path: string;
     isFolder: boolean;
     name: string;
+    children?: VaultItem[];
 }
 
 /**
- * Gets all paths from the vault, including files and folders
- * @param app The Obsidian app instance
- * @returns Array of VaultItem objects with path, isFolder, and name
+ * Get vault items matching a search term
  */
-export function getVaultItems(app: App): VaultItem[] {
-    const items: VaultItem[] = [];
+export function getVaultItems(app: App, searchTerm?: string): VaultItem[] {
+    console.log('getVaultItems called, retrieving paths...');
     
-    // Add all files
-    app.vault.getFiles().forEach(file => {
-        items.push({
+    // First collect all paths
+    const allItems: VaultItem[] = [];
+    collectAllPaths(app, allItems);
+    
+    console.log(`getVaultItems collected ${allItems.length} total items`);
+    
+    // Filter by search term if provided
+    if (searchTerm && searchTerm.trim()) {
+        const term = searchTerm.trim().toLowerCase();
+        const filteredItems = allItems.filter(item => 
+            item.path.toLowerCase().includes(term) || 
+            item.name.toLowerCase().includes(term)
+        );
+        console.log(`getVaultItems filtered to ${filteredItems.length} items matching "${term}"`);
+        return filteredItems;
+    }
+    
+    return allItems;
+}
+
+/**
+ * Collect all paths from the vault in a flattened structure
+ */
+function collectAllPaths(app: App, result: VaultItem[]): void {
+    console.log('collectAllPaths: Starting path collection...');
+    
+    // Get root folder
+    const rootFolder = app.vault.getRoot();
+    
+    // Process root folder contents
+    const files = app.vault.getFiles();
+    const folders = getAllFolders(app);
+    
+    console.log(`collectAllPaths: Found ${folders.length} folders and ${files.length} files`);
+    
+    // Add all folders to the result
+    for (const folder of folders) {
+        if (folder.path === '/') continue; // Skip root folder
+        
+        result.push({
+            path: folder.path.endsWith('/') ? folder.path : folder.path + '/',
+            isFolder: true,
+            name: folder.name
+        });
+    }
+    
+    // Add all files to the result
+    for (const file of files) {
+        result.push({
             path: file.path,
             isFolder: false,
             name: file.name
         });
-    });
+    }
     
-    // Add all folders
-    app.vault.getAllLoadedFiles().forEach(abstractFile => {
-        if ('children' in abstractFile) {  // Check if it's a folder
-            items.push({
-                path: abstractFile.path,
-                isFolder: true,
-                name: abstractFile.name
-            });
-        }
-    });
-    
-    return items;
+    console.log(`collectAllPaths: Added ${result.length} total items to result`);
 }
 
 /**
- * Gets just the path strings from all vault items
- * @param app The Obsidian app instance
- * @returns Array of path strings
+ * Get all folders in the vault
  */
-export function getPathStrings(app: App): string[] {
-    return getVaultItems(app).map(item => item.path);
+function getAllFolders(app: App): TFolder[] {
+    const result: TFolder[] = [];
+    const rootFolder = app.vault.getRoot();
+    
+    // Function to recursively collect folders
+    function collectFolders(folder: TFolder) {
+        result.push(folder);
+        
+        // Process all subfolders
+        for (const child of folder.children) {
+            if (child instanceof TFolder) {
+                collectFolders(child);
+            }
+        }
+    }
+    
+    collectFolders(rootFolder);
+    return result;
+}
+
+/**
+ * Get all flattened paths as strings
+ */
+export function getPathStrings(app: App, includeFiles: boolean = true): string[] {
+    const items = getVaultItems(app);
+    
+    if (includeFiles) {
+        return items.map(item => item.path);
+    } else {
+        return items.filter(item => item.isFolder).map(item => item.path);
+    }
+}
+
+/**
+ * Helper function to test if a path should be excluded
+ */
+export function isPathExcluded(path: string, excludedPatterns: string[]): boolean {
+    for (const pattern of excludedPatterns) {
+        try {
+            // Check if pattern is a regex (enclosed in /)
+            if (pattern.startsWith('/') && pattern.endsWith('/') && pattern.length > 2) {
+                const regex = new RegExp(pattern.slice(1, -1));
+                if (regex.test(path)) {
+                    return true;
+                }
+            } 
+            // Simple glob-like matching (* as wildcard)
+            else if (pattern.includes('*')) {
+                const regexPattern = pattern.replace(/\*/g, '.*');
+                const regex = new RegExp(`^${regexPattern}$`);
+                if (regex.test(path)) {
+                    return true;
+                }
+            }
+            // Direct path or folder matching 
+            else if (path === pattern || path.startsWith(pattern)) {
+                return true;
+            }
+        } catch (error) {
+            console.error(`Invalid exclusion pattern: ${pattern}`, error);
+        }
+    }
+    
+    return false;
 } 
