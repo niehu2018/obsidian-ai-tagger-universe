@@ -1,4 +1,5 @@
 import { TaggingMode } from '../services/prompts/tagPrompts';
+import { LanguageCode } from '../services/types';
 
 export interface AITaggerSettings {
     serviceType: 'local' | 'cloud';
@@ -12,7 +13,7 @@ export interface AITaggerSettings {
     excludedFolders: string[];
     cloudServiceType: 'openai' | 'gemini' | 'deepseek' | 'aliyun' | 'claude' | 'groq' | 'vertex' | 'openrouter' | 'bedrock' | 'requesty' | 'cohere' | 'grok' | 'mistral' | 'openai-compatible';
     predefinedTagsPath: string;
-    language: 'default' | 'ar' | 'cs' | 'da' | 'de' | 'en' | 'es' | 'fr' | 'id' | 'it' | 'ja' | 'ko' | 'nl' | 'no' | 'pl' | 'pt' | 'pt-BR' | 'ro' | 'ru' | 'tr' | 'uk' | 'zh' | 'zh-TW';
+    language: LanguageCode;
     tagDir: string;
     tagRangeMatchMax: number;
     tagRangeGenerateMax: number;

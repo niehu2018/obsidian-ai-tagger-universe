@@ -2,6 +2,8 @@ import { Setting } from 'obsidian';
 import type AITaggerPlugin from '../../main';
 import { TaggingMode } from '../../services/prompts/tagPrompts';
 import { BaseSettingSection } from './BaseSettingSection';
+import { LanguageCode } from '../../services/types';
+import { languageNames } from '../../services/languageUtils';
 
 export class TaggingSettingsSection extends BaseSettingSection {
 
@@ -97,37 +99,25 @@ export class TaggingSettingsSection extends BaseSettingSection {
         new Setting(this.containerEl)
             .setName('Output language')
             .setDesc('Language for generating tags')
-            .addDropdown(dropdown => 
-                dropdown
-                    .addOptions({
-                        'default': 'AI model default',
-                        'ar': 'العربية',
-                        'cs': 'Čeština',
-                        'da': 'Dansk',
-                        'de': 'Deutsch',
-                        'en': 'English',
-                        'es': 'Español',
-                        'fr': 'Français',
-                        'id': 'Bahasa Indonesia',
-                        'it': 'Italiano',
-                        'ja': '日本語',
-                        'ko': '한국어',
-                        'nl': 'Nederlands',
-                        'no': 'Norsk',
-                        'pl': 'Polski',
-                        'pt': 'Português',
-                        'pt-BR': 'Português do Brasil',
-                        'ro': 'Română',
-                        'ru': 'Русский',
-                        'tr': 'Türkçe',
-                        'uk': 'Українська',
-                        'zh': '中文',
-                        'zh-TW': '繁體中文'
-                    })
+            .addDropdown(dropdown => {
+                const options: Record<string, string> = { 
+                    'default': 'AI model default'
+                };
+                
+                // 添加所有支持的语言
+                Object.entries(languageNames).forEach(([code, name]) => {
+                    if (code !== 'default') {
+                        options[code] = name;
+                    }
+                });
+                
+                return dropdown
+                    .addOptions(options)
                     .setValue(this.plugin.settings.language)
                     .onChange(async (value) => {
-                        this.plugin.settings.language = value as 'default' | 'ar' | 'cs' | 'da' | 'de' | 'en' | 'es' | 'fr' | 'id' | 'it' | 'ja' | 'ko' | 'nl' | 'no' | 'pl' | 'pt' | 'pt-BR' | 'ro' | 'ru' | 'tr' | 'uk' | 'zh' | 'zh-TW';
+                        this.plugin.settings.language = value as LanguageCode;
                         await this.plugin.saveSettings();
-                    }));
+                    });
+            });
     }
 }

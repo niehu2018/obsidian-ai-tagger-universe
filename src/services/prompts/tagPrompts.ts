@@ -1,4 +1,6 @@
 import { TAG_PREDEFINED_RANGE, TAG_MATCH_RANGE, TAG_GENERATE_RANGE } from '../../utils/tagUtils';
+import { LanguageCode } from '../types';
+import { languageNames, getLanguageName } from '../languageUtils';
 
 export enum TaggingMode {
     PredefinedTags = 'predefined',
@@ -13,33 +15,9 @@ export function buildTagPrompt(
     candidateTags: string[], 
     mode: TaggingMode,
     maxTags: number = 5,
-    language?: 'default' | 'ar' | 'cs' | 'da' | 'de' | 'en' | 'es' | 'fr' | 'id' | 'it' | 'ja' | 'ko' | 'nl' | 'no' | 'pl' | 'pt' | 'pt-BR' | 'ro' | 'ru' | 'tr' | 'uk' | 'zh' | 'zh-TW'
+    language?: LanguageCode
 ): string {
-    // Map language codes to their proper names
-    const languageNames: Record<string, string> = {
-        'ar': 'Arabic',
-        'cs': 'Czech',
-        'da': 'Danish',
-        'de': 'German',
-        'en': 'English',
-        'es': 'Spanish',
-        'fr': 'French',
-        'id': 'Indonesian',
-        'it': 'Italian',
-        'ja': 'Japanese',
-        'ko': 'Korean',
-        'nl': 'Dutch',
-        'no': 'Norwegian',
-        'pl': 'Polish',
-        'pt': 'Portuguese',
-        'pt-BR': 'Brazilian Portuguese',
-        'ro': 'Romanian',
-        'ru': 'Russian',
-        'tr': 'Turkish',
-        'uk': 'Ukrainian',
-        'zh': 'Chinese (Simplified)',
-        'zh-TW': 'Chinese (Traditional)'
-    };
+    // Language mapping now imported from languageUtils.ts
     
     let prompt = '';
     
@@ -69,7 +47,7 @@ Return only a JSON object in this exact format:
             // Only consider language parameter for GenerateNew mode
             let genLangInstructions = '';
             if (language && language !== 'default') {
-                const languageName = languageNames[language] || language;
+                const languageName = getLanguageName(language);
                 genLangInstructions = `IMPORTANT: Generate all tags in ${languageName} language only.
 Regardless of what language the content is in, all tags must be in ${languageName} only.
 First understand the content, then if needed translate concepts to ${languageName}, then generate tags in ${languageName}.
