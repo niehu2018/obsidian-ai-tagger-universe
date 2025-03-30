@@ -36,15 +36,22 @@ export class TagUtils {
      * @returns Array of valid tags
      */
     static getExistingTags(frontmatter: { tags?: string | string[] | null } | null): string[] {
-        if (!frontmatter?.tags) return [];
+        if (!frontmatter) return [];
+        if (!('tags' in frontmatter) || frontmatter.tags === null || frontmatter.tags === undefined) return [];
 
-        const tags = Array.isArray(frontmatter.tags) ? 
-            frontmatter.tags : 
-            typeof frontmatter.tags === 'string' ? 
-                [frontmatter.tags] : 
-                [];
+        try {
+            const tags = Array.isArray(frontmatter.tags) ? 
+                frontmatter.tags : 
+                typeof frontmatter.tags === 'string' ? 
+                    [frontmatter.tags] : 
+                    [];
 
-        return tags.map(tag => String(tag)); // 所有标签都视为有效
+            return tags.filter(tag => tag !== null && tag !== undefined)
+                .map(tag => String(tag)); // Convert all tags to strings
+        } catch (error) {
+            console.error('Error getting existing tags:', error);
+            return [];
+        }
     }
 
     /**
@@ -78,8 +85,9 @@ export class TagUtils {
             formatted = formatted.substring(1);
         }
         
-        // Replace special characters with hyphens
-        formatted = formatted.replace(/[^\p{L}\p{N}]/gu, '-');
+        // Replace spaces and special characters with hyphens
+        formatted = formatted.replace(/\s+/g, '-'); // First replace spaces with hyphens
+        formatted = formatted.replace(/[^\p{L}\p{N}-]/gu, '-'); // Then replace other special chars
         
         // Collapse multiple consecutive hyphens into a single one
         formatted = formatted.replace(/-{2,}/g, '-');
@@ -177,11 +185,12 @@ export class TagUtils {
     }
 
     /**
-     * Updates tags in a file's frontmatter
+     * Updates note tags in the frontmatter using Obsidian API
      * @param app - Obsidian App instance
-     * @param file - File to update tags in
+     * @param file - File to update tags for
      * @param newTags - Array of new tags to add
      * @param matchedTags - Array of matched existing tags to add
+     * @param silent - Whether to suppress notifications
      * @returns Promise resolving to operation result
      */
     static async updateNoteTags(
@@ -193,84 +202,106 @@ export class TagUtils {
     ): Promise<TagOperationResult> {
         try {
             if (!Array.isArray(newTags) || !Array.isArray(matchedTags)) {
-                throw new TagError('Tag parameters must be arrays');
+                throw new TagError('Tags parameter must be an array');
             }
 
-            const stringNewTags = newTags.map(tag => String(tag));
-            const stringMatchedTags = matchedTags.map(tag => String(tag));
+            // Combine and format all tags
+            const allTags = [...newTags, ...matchedTags];
+            const yamlReadyTags = this.formatTags(allTags);
             
-            const filteredNewTags = [...new Set(stringNewTags.filter(tag => tag.trim()))];
-            const filteredMatchedTags = [...new Set(stringMatchedTags.filter(tag => tag.trim()))];
-
-            // 将所有标签视为有效
-            const validNewTags = filteredNewTags;
-            const invalidNewTags: string[] = [];
-            const validMatchedTags = filteredMatchedTags;
-
-            if (invalidNewTags.length > 0 && !silent) {
-                new Notice(`Skipped invalid tags: ${invalidNewTags.join(', ')}`, 3000);
-            }
-
-            if (validNewTags.length === 0 && validMatchedTags.length === 0) {
+            if (yamlReadyTags.length === 0) {
                 !silent && new Notice('No valid tags to add', 3000);
                 return { success: true, message: 'No valid tags to add', tags: [] };
             }
 
             const content = await app.vault.read(file);
-            const cache = app.metadataCache.getFileCache(file);
-            const existingTags = this.getExistingTags(cache?.frontmatter || null);
             
-            const allTags = this.mergeTags(existingTags, [...validNewTags, ...validMatchedTags])
-                .map(tag => tag.startsWith('#') ? tag.substring(1) : tag);
-
-            let newContent = content;
-            const frontmatterRegex = /^---\n([\s\S]*?)\n---/;
-            const yamlTags = allTags.map(tag => `  - ${tag}`).join('\n');
-
-            const processFrontMatter = (frontmatter: string) => {
-                // Remove empty object if present
-                frontmatter = frontmatter.replace(/^\s*{}\s*$/m, '').trim();
+            try {
+                const cache = app.metadataCache.getFileCache(file);
+                const existingFrontmatter = cache?.frontmatter;
                 
-                const yaml = frontmatter.split('\n');
-                // Filter out any existing tags and empty objects
-                const processed = yaml.filter(line => {
-                    const trimmed = line.trim();
-                    return !(
-                        trimmed.startsWith('tags:') || 
-                        trimmed.startsWith('- ') || 
-                        trimmed === '{}'
+                if (existingFrontmatter) {
+                    const existingTags = Array.isArray(existingFrontmatter.tags) ? 
+                        existingFrontmatter.tags.map(String) : 
+                        typeof existingFrontmatter.tags === 'string' ? 
+                            [existingFrontmatter.tags] : [];
+                    
+                    const existingSet = new Set(existingTags.map(t => t.toString().trim()));
+                    const newSet = new Set(yamlReadyTags.map(t => t.toString().trim()));
+                    
+                    if (existingSet.size === newSet.size && 
+                        [...existingSet].every(t => newSet.has(t))) {
+                        const successMessage = `Tags already up to date (${yamlReadyTags.length} tag${yamlReadyTags.length === 1 ? '' : 's'})`;
+                        !silent && new Notice(successMessage, 3000);
+                        
+                        return {
+                            success: true,
+                            message: successMessage,
+                            tags: yamlReadyTags.map(tag => `#${tag}`)
+                        };
+                    }
+                }
+            } catch (compareError) {
+                console.error('Error comparing tags:', compareError);
+            }
+            
+            try {
+                const processor = app.metadataCache.getFileCache(file);
+                const frontmatterPosition = processor?.frontmatterPosition;
+                let newContent: string;
+                
+                if (frontmatterPosition) {
+                    const frontmatterText = content.substring(
+                        frontmatterPosition.start.offset + 4, // Skip '---\n'
+                        frontmatterPosition.end.offset - 4    // Skip '\n---'
                     );
-                });
-                
-                // Add tags section
-                processed.push('tags:');
-                if (allTags.length > 0) {
-                    processed.push(...allTags.map(tag => `  - ${tag}`));
+                    
+                    let frontmatter: any;
+                    try {
+                        frontmatter = yaml.load(frontmatterText) || {};
+                    } catch (e) {
+                        console.error('Error parsing frontmatter:', e);
+                        frontmatter = {};
+                    }
+                    
+                    frontmatter.tags = yamlReadyTags;
+                    
+                    const newFrontmatter = yaml.dump(frontmatter).trim();
+                    
+                    newContent = 
+                        '---\n' + 
+                        newFrontmatter + 
+                        '\n---' + 
+                        content.substring(frontmatterPosition.end.offset);
+                } else {
+                    const frontmatter = { tags: yamlReadyTags };
+                    const newFrontmatter = yaml.dump(frontmatter).trim();
+                    
+                    newContent = '---\n' + newFrontmatter + '\n---\n\n' + content;
                 }
                 
-                return processed.join('\n');
-            };
+                if (newContent !== content) {
+                    await app.vault.modify(file, newContent);
+                    
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                }
+                
+            } catch (updateError) {
+                console.error('Error updating frontmatter:', updateError);
+                throw new Error(`Failed to update frontmatter: ${updateError instanceof Error ? updateError.message : String(updateError)}`);
+            }
 
-            const hasFrontmatter = frontmatterRegex.test(content);
-
-            newContent = hasFrontmatter
-                ? content.replace(frontmatterRegex, (_, frontmatter) => `---\n${processFrontMatter(frontmatter)}\n---`)
-                : `---\ntags:\n${yamlTags}\n---\n${content}`;
-
-            await app.vault.modify(file, newContent);
-            await this.waitForMetadataUpdate(app, file);
-            app.workspace.trigger('file-open', file);
-
-            const successMessage = `Added ${allTags.length} tag${allTags.length === 1 ? '' : 's'}`;
+            const successMessage = `Added ${yamlReadyTags.length} tag${yamlReadyTags.length === 1 ? '' : 's'}`;
             !silent && new Notice(successMessage, 3000);
 
             return {
                 success: true,
                 message: successMessage,
-                tags: allTags.map(tag => `#${tag}`)
+                tags: yamlReadyTags.map(tag => `#${tag}`)
             };
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Unknown error';
+            console.error('Error in updateNoteTags:', error);
             !silent && new Notice(`Error updating tags: ${message}`, 3000);
             return {
                 success: false,
@@ -296,17 +327,32 @@ export class TagUtils {
 
             // Define event handler with proper type annotation
             const eventHandler = (...args: unknown[]) => {
-                const changedFile = args[0] as TFile;
-                if (changedFile?.path === file.path) {
+                try {
+                    const changedFile = args[0] as TFile;
+                    if (changedFile?.path === file.path) {
+                        clearTimeout(timeout);
+                        app.metadataCache.off('changed', eventHandler);
+                        // Add small delay to ensure cache is fully updated
+                        setTimeout(resolve, 50);
+                    }
+                } catch (error) {
+                    console.warn('Error in metadata change handler:', error);
                     clearTimeout(timeout);
                     app.metadataCache.off('changed', eventHandler);
-                    // Add small delay to ensure cache is fully updated
-                    setTimeout(resolve, 50);
+                    // Resolve anyway to prevent hanging
+                    resolve();
                 }
             };
             
             app.metadataCache.on('changed', eventHandler);
-            app.metadataCache.trigger('changed', file);
+            
+            // Trigger the event if possible, but with a try/catch to handle any errors
+            try {
+                app.metadataCache.trigger('changed', file);
+            } catch (error) {
+                console.warn('Error triggering metadata change:', error);
+                setTimeout(resolve, 50);
+            }
         });
     }
     
@@ -481,7 +527,10 @@ export class TagUtils {
             if (replace) {
                 finalTags = formattedTags;
             } else {
-                const existingTags = this.getExistingTags(cache?.frontmatter || null);
+                // Safely get existing tags even if frontmatter is undefined
+                const existingTags = cache && cache.frontmatter 
+                    ? this.getExistingTags(cache.frontmatter) 
+                    : [];
                 finalTags = this.mergeTags(existingTags, formattedTags);
             }
             
@@ -490,32 +539,39 @@ export class TagUtils {
             const frontmatterPosition = cache?.frontmatterPosition;
             
             if (frontmatterPosition) {
-                // Extract and modify existing frontmatter
-                const frontmatterText = content.substring(
-                    frontmatterPosition.start.offset + 4, // Skip '---\n'
-                    frontmatterPosition.end.offset - 4    // Skip '\n---'
-                );
-                
-                let frontmatter: any;
                 try {
-                    frontmatter = yaml.load(frontmatterText) || {};
-                } catch (yamlError) {
-                    console.error('YAML parse error:', yamlError);
-                    throw new Error(`YAML parse error: ${yamlError instanceof Error ? yamlError.message : String(yamlError)}`);
+                    // Extract and modify existing frontmatter
+                    const frontmatterText = content.substring(
+                        frontmatterPosition.start.offset + 4, // Skip '---\n'
+                        frontmatterPosition.end.offset - 4    // Skip '\n---'
+                    );
+                    
+                    let frontmatter: any;
+                    try {
+                        frontmatter = yaml.load(frontmatterText) || {};
+                    } catch (yamlError) {
+                        console.error('YAML parse error:', yamlError);
+                        throw new Error(`YAML parse error: ${yamlError instanceof Error ? yamlError.message : String(yamlError)}`);
+                    }
+                    
+                    // Update tags in frontmatter
+                    frontmatter.tags = finalTags;
+                    
+                    // Convert back to YAML
+                    const newFrontmatter = yaml.dump(frontmatter).trim();
+                    
+                    // Reconstruct the file content
+                    newContent = 
+                        '---\n' + 
+                        newFrontmatter + 
+                        '\n---' + 
+                        content.substring(frontmatterPosition.end.offset);
+                } catch (error) {
+                    console.error('Error processing existing frontmatter:', error);
+                    // Fall back to creating new frontmatter
+                    const yamlTags = finalTags.map(tag => `  - ${tag}`).join('\n');
+                    newContent = `---\ntags:\n${yamlTags}\n---\n${content}`;
                 }
-                
-                // Update tags in frontmatter
-                frontmatter.tags = finalTags;
-                
-                // Convert back to YAML
-                const newFrontmatter = yaml.dump(frontmatter).trim();
-                
-                // Reconstruct the file content
-                newContent = 
-                    '---\n' + 
-                    newFrontmatter + 
-                    '\n---' + 
-                    content.substring(frontmatterPosition.end.offset);
             } else {
                 // Create new frontmatter
                 const yamlTags = finalTags.map(tag => `  - ${tag}`).join('\n');
@@ -525,7 +581,8 @@ export class TagUtils {
             // Write changes to file
             await app.vault.modify(file, newContent);
             
-            // Allow a short delay for the metadata cache to update
+            // Instead of waiting for metadata cache update which could fail,
+            // just add a simple delay to allow file system operations to complete
             await new Promise(resolve => setTimeout(resolve, 300));
             
             return {
