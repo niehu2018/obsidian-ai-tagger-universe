@@ -4,6 +4,7 @@ import { TaggingMode } from '../../services/prompts/types';
 import { BaseSettingSection } from './BaseSettingSection';
 import { LanguageCode } from '../../services/types';
 import { LanguageUtils } from '../../utils/languageUtils';
+import { ExcludedFilesModal } from './ExcludedFilesModal';
 
 export class TaggingSettingsSection extends BaseSettingSection {
     private tagSourceSetting: Setting | null = null;
@@ -299,7 +300,7 @@ export class TaggingSettingsSection extends BaseSettingSection {
         // Apply initial visibility
         this.updateVisibility();
 
-        // Excluded Files Setting
+        // File exclusion Setting
         this.containerEl.createEl('h3', { text: 'File exclusion' });
         
         const excludedFoldersSetting = new Setting(this.containerEl)
@@ -333,8 +334,17 @@ export class TaggingSettingsSection extends BaseSettingSection {
                 .setButtonText('Manage')
                 .setCta()
                 .onClick(() => {
-                    // Simple dialog to manage exclusions
-                    const modal = new ExcludedFoldersModal(this.plugin.app, this.plugin);
+                    // Use the new ExcludedFilesModal
+                    const modal = new ExcludedFilesModal(
+                        this.plugin.app, 
+                        this.plugin, 
+                        async (excludedFolders) => {
+                            this.plugin.settings.excludedFolders = excludedFolders;
+                            await this.plugin.saveSettings();
+                            new Notice(`Saved ${excludedFolders.length} exclusion patterns`);
+                            updateExcludedInfo();
+                        }
+                    );
                     modal.open();
                 })
         );
@@ -410,120 +420,5 @@ export class TaggingSettingsSection extends BaseSettingSection {
                         await this.plugin.saveSettings();
                     });
             });
-    }
-}
-
-// Simple modal to manage excluded folders
-class ExcludedFoldersModal extends Modal {
-    private plugin: AITaggerPlugin;
-    private excludedFolders: string[] = [];
-    
-    constructor(app: App, plugin: AITaggerPlugin) {
-        super(app);
-        this.plugin = plugin;
-        this.excludedFolders = [...plugin.settings.excludedFolders];
-    }
-    
-    onOpen() {
-        const { contentEl } = this;
-        
-        contentEl.createEl('h2', { text: 'Manage Excluded Files and Folders' });
-        
-        const descEl = contentEl.createEl('p', { 
-            text: 'Enter patterns to exclude files and folders from tagging operations. Use * for wildcards.',
-            cls: 'setting-item-description' 
-        });
-        
-        // Create list of current patterns
-        const listEl = contentEl.createDiv({ cls: 'excluded-patterns-list' });
-        
-        const updateList = () => {
-            listEl.empty();
-            
-            if (this.excludedFolders.length === 0) {
-                listEl.createEl('div', { 
-                    text: 'No exclusion patterns configured.',
-                    cls: 'no-patterns-message' 
-                });
-                return;
-            }
-            
-            this.excludedFolders.forEach((pattern, index) => {
-                const patternRow = listEl.createDiv({ cls: 'pattern-row' });
-                
-                patternRow.createSpan({ text: pattern, cls: 'pattern-text' });
-                
-                const deleteButton = patternRow.createEl('button', { 
-                    text: 'Delete',
-                    cls: 'pattern-delete-button' 
-                });
-                
-                deleteButton.addEventListener('click', () => {
-                    this.excludedFolders.splice(index, 1);
-                    updateList();
-                });
-            });
-        };
-        
-        updateList();
-        
-        // Add new pattern
-        const inputContainer = contentEl.createDiv({ cls: 'pattern-input-container' });
-        
-        const patternInput = inputContainer.createEl('input', {
-            type: 'text',
-            placeholder: 'Enter exclusion pattern (e.g., *.tmp, private/*, etc.)',
-            cls: 'pattern-input'
-        });
-        
-        const addButton = inputContainer.createEl('button', {
-            text: 'Add',
-            cls: 'pattern-add-button'
-        });
-        
-        const addPattern = () => {
-            const pattern = patternInput.value.trim();
-            if (pattern && !this.excludedFolders.includes(pattern)) {
-                this.excludedFolders.push(pattern);
-                patternInput.value = '';
-                updateList();
-            }
-        };
-        
-        addButton.addEventListener('click', addPattern);
-        
-        patternInput.addEventListener('keypress', (event: KeyboardEvent) => {
-            if (event.key === 'Enter') {
-                addPattern();
-            }
-        });
-        
-        // Create buttons
-        const buttonContainer = contentEl.createDiv({ cls: 'button-container' });
-        
-        const saveButton = buttonContainer.createEl('button', {
-            text: 'Save',
-            cls: 'mod-cta'
-        });
-        
-        const cancelButton = buttonContainer.createEl('button', {
-            text: 'Cancel'
-        });
-        
-        saveButton.addEventListener('click', async () => {
-            this.plugin.settings.excludedFolders = [...this.excludedFolders];
-            await this.plugin.saveSettings();
-            new Notice(`Saved ${this.excludedFolders.length} exclusion patterns`);
-            this.close();
-        });
-        
-        cancelButton.addEventListener('click', () => {
-            this.close();
-        });
-    }
-    
-    onClose() {
-        const { contentEl } = this;
-        contentEl.empty();
     }
 }
