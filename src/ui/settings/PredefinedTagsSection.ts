@@ -7,19 +7,6 @@ export class PredefinedTagsSection extends BaseSettingSection {
     display(): void {
         this.containerEl.createEl('h1', { text: 'Predefined tags' });
 
-        // Add note about Obsidian tag rules
-        const tagRulesInfo = this.containerEl.createDiv({ cls: 'tag-rules-info' });
-        tagRulesInfo.createEl('p', { 
-            text: 'Note: Obsidian tags must follow these rules:', 
-            cls: 'setting-item-description' 
-        });
-        const rulesList = tagRulesInfo.createEl('ul', { cls: 'setting-item-description' });
-        rulesList.createEl('li', { text: 'Must start with # symbol (the plugin will add it automatically if missing)' });
-        rulesList.createEl('li', { text: 'Can contain letters, numbers, hyphens, and underscores' });
-        rulesList.createEl('li', { text: 'No spaces allowed (use hyphens or underscores instead)' });
-        rulesList.createEl('li', { text: 'Supports international characters (e.g., #技术, #프로그래밍)' });
-        rulesList.createEl('li', { text: 'Example format in predefined tags file: technology, artificial_intelligence, coding-tips (with or without #)' });
-
         const predefinedTagsSetting = new Setting(this.containerEl)
             .setName('Predefined tags file')
             .setDesc('Path to a file containing predefined tags (one tag per line)');
