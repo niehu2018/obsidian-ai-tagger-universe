@@ -1,4 +1,4 @@
-import { TFile, Notice, App, TFolder } from 'obsidian';
+import { TFile, Notice, App, TFolder, TAbstractFile } from 'obsidian';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
 import { ConfirmationModal } from '../ui/modals/ConfirmationModal';
@@ -607,6 +607,88 @@ export class TagUtils {
                 success: false,
                 message: `Failed to update tags: ${message}`
             };
+        }
+    }
+
+    /**
+     * Checks if a file should be excluded based on patterns
+     * @param file - The file to check
+     * @param excludePatterns - Array of exclusion patterns
+     * @returns True if the file should be excluded, false otherwise
+     */
+    static isFileExcluded(file: TAbstractFile, excludePatterns: string[]): boolean {
+        if (!excludePatterns || excludePatterns.length === 0) {
+            return false;
+        }
+
+        const filePath = file.path;
+        
+        for (const pattern of excludePatterns) {
+            try {
+                // Simple wildcard pattern matching
+                if (this.matchesGlobPattern(filePath, pattern)) {
+                    return true;
+                }
+                
+                // Simple substring match
+                if (filePath.toLowerCase().includes(pattern.toLowerCase())) {
+                    return true;
+                }
+                
+                // Regex pattern (enclosed in slashes)
+                if (pattern.startsWith('/') && pattern.endsWith('/') && pattern.length > 2) {
+                    try {
+                        const regexPattern = pattern.slice(1, -1);
+                        const regex = new RegExp(regexPattern, 'i');
+                        if (regex.test(filePath)) {
+                            return true;
+                        }
+                    } catch (e) {
+                        // Invalid regex, ignore this pattern
+                        console.log(`Invalid regex pattern: ${pattern}`);
+                    }
+                }
+            } catch (error) {
+                // If any pattern fails, log it but continue with other patterns
+                console.error(`Error checking pattern "${pattern}":`, error);
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Simple glob pattern matching implementation
+     * Supports * (any characters) and ? (single character)
+     * @param str - String to test
+     * @param pattern - Glob pattern
+     * @returns True if the string matches the pattern
+     */
+    private static matchesGlobPattern(str: string, pattern: string): boolean {
+        // Convert glob pattern to regex
+        let regexPattern = pattern
+            .replace(/\./g, '\\.') // Escape dots
+            .replace(/\*\*/g, '###GLOBSTAR###') // Temporarily replace ** with placeholder
+            .replace(/\*/g, '[^/]*') // Replace * with regex that doesn't match path separator
+            .replace(/\?/g, '[^/]') // Replace ? with regex for any character except path separator
+            .replace(/###GLOBSTAR###/g, '.*'); // Replace placeholder with regex for any characters
+        
+        // If pattern doesn't start with *, add ^ to match start of string
+        if (!pattern.startsWith('*')) {
+            regexPattern = '^' + regexPattern;
+        }
+        
+        // If pattern doesn't end with *, add $ to match end of string
+        if (!pattern.endsWith('*')) {
+            regexPattern = regexPattern + '$';
+        }
+        
+        try {
+            const regex = new RegExp(regexPattern, 'i');
+            return regex.test(str);
+        } catch (e) {
+            console.error('Error creating regex from pattern:', pattern, e);
+            return false;
         }
     }
 }

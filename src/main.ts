@@ -198,8 +198,16 @@ export default class AITaggerPlugin extends Plugin {
         });
     }
 
+    /**
+     * Get all markdown files in the vault, excluding those that match exclusion patterns
+     */
+    public getNonExcludedMarkdownFiles(): TFile[] {
+        const allFiles = this.app.vault.getMarkdownFiles();
+        return allFiles.filter(file => !TagUtils.isFileExcluded(file, this.settings.excludedFolders));
+    }
+
     public async clearAllNotesTags(): Promise<void> {
-        const files = this.app.vault.getMarkdownFiles();
+        const files = this.getNonExcludedMarkdownFiles();
         if (await this.showConfirmationDialog(
             `Remove all tags from ${files.length} notes? This action cannot be undone.`
         )) {
