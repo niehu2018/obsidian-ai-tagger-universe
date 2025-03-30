@@ -64,27 +64,30 @@ export class TagUtils {
      * @param tag - Tag to format
      * @returns Properly formatted tag
      */
-    static formatTag(tag: string): string {
-        if (!tag || typeof tag !== 'string') {
+    static formatTag(tag: unknown): string {
+        // Handle non-string tags by converting to string
+        if (tag === null || tag === undefined) {
             return '';
         }
         
+        const tagStr = typeof tag === 'string' ? tag : String(tag);
+        
         // Remove leading # if present
-        tag = tag.trim();
-        if (tag.startsWith('#')) {
-            tag = tag.substring(1);
+        let formatted = tagStr.trim();
+        if (formatted.startsWith('#')) {
+            formatted = formatted.substring(1);
         }
         
         // Replace special characters with hyphens
-        tag = tag.replace(/[^\p{L}\p{N}]/gu, '-');
+        formatted = formatted.replace(/[^\p{L}\p{N}]/gu, '-');
         
         // Collapse multiple consecutive hyphens into a single one
-        tag = tag.replace(/-{2,}/g, '-');
+        formatted = formatted.replace(/-{2,}/g, '-');
         
         // Remove hyphens from start and end
-        tag = tag.replace(/^-+|-+$/g, '');
+        formatted = formatted.replace(/^-+|-+$/g, '');
         
-        return tag.length > 0 ? tag : '';
+        return formatted.length > 0 ? formatted : '';
     }
 
 /**
@@ -392,18 +395,27 @@ static async clearTags(app: App, file: TFile): Promise<TagOperationResult> {
     }
     
     /**
-     * Formats a collection of tags to ensure consistent formatting
+     * Formats an array of tags, filtering out invalid ones
      * @param tags - Array of tags to format
-     * @returns Array of properly formatted tags
+     * @param keepHashPrefix - Whether to keep # prefix in the returned tags
+     * @returns Array of formatted valid tags
      */
-    static formatTags(tags: string[]): string[] {
+    static formatTags(tags: unknown[], keepHashPrefix: boolean = false): string[] {
         if (!Array.isArray(tags)) {
             return [];
         }
         
         return tags
-            .map(tag => this.formatTag(tag))
-            .filter(Boolean);
+            .filter(tag => tag !== null && tag !== undefined)
+            .map(tag => {
+                try {
+                    const formatted = this.formatTag(tag);
+                    return keepHashPrefix ? `#${formatted}` : formatted;
+                } catch (error) {
+                    return null;
+                }
+            })
+            .filter((tag): tag is string => tag !== null);
     }
 
     /**
