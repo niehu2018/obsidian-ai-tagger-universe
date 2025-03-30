@@ -451,39 +451,44 @@ export default class AITaggerPlugin extends Plugin {
                 analysis = contentOrAnalysis;
             }
             
-            // Process tags from analysis result
-            const suggestedTags = analysis.suggestedTags || [];
-            const matchedTags = analysis.matchedExistingTags || [];
-            
-            // Merge tags
-            let allTags: string[] = [];
-            
-            if (this.settings.taggingMode === TaggingMode.PredefinedTags) {
-                allTags = matchedTags;
-            } else if (this.settings.taggingMode === TaggingMode.GenerateNew) {
-                allTags = suggestedTags;
-            } else {
-                // Hybrid mode, combine both types of tags
-                allTags = [...suggestedTags, ...matchedTags];
-            }
-            
-            // Filter empty tags and format
-            const formattedTags = TagUtils.formatTags(allTags);
-            
-            if (!formattedTags.length) {
+            // If no analysis results, return failure
+            if (!analysis) {
                 return {
                     success: false,
-                    message: 'No valid tags were found or generated'
+                    message: 'No analysis results available'
                 };
             }
             
-            // Apply tags to the note
-            return await TagUtils.writeTagsToFrontmatter(
-                this.app,
-                file,
-                formattedTags,
-                this.settings.replaceTags
-            );
+            // Process and combine tags based on tagging mode
+            let allTags: string[] = [];
+            
+            if (this.settings.taggingMode === TaggingMode.PredefinedTags) {
+                allTags = analysis.matchedExistingTags || [];
+            } else if (this.settings.taggingMode === TaggingMode.GenerateNew) {
+                allTags = analysis.suggestedTags || [];
+            } else {
+                // Hybrid mode, combine both types of tags
+                const suggestedTags = analysis.suggestedTags || [];
+                const matchedTags = analysis.matchedExistingTags || [];
+                allTags = [...suggestedTags, ...matchedTags];
+            }
+            
+            // If there are tags to add, update the note
+            if (allTags.length > 0) {
+                return await TagUtils.updateNoteTags(
+                    this.app, 
+                    file, 
+                    allTags, 
+                    [], // No matched tags since we've already combined them
+                    false // Show notifications
+                );
+            }
+            
+            // No tags found
+            return {
+                success: false,
+                message: 'No valid tags were found or generated'
+            };
         } catch (error) {
             console.error('Error tagging note:', error);
             return {
