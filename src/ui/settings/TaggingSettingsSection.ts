@@ -1,9 +1,9 @@
 import { Setting } from 'obsidian';
 import type AITaggerPlugin from '../../main';
-import { TaggingMode } from '../../services/prompts/tagPrompts';
+import { TaggingMode } from '../../services/prompts/types';
 import { BaseSettingSection } from './BaseSettingSection';
 import { LanguageCode } from '../../services/types';
-import { languageNames } from '../../services/languageUtils';
+import { LanguageUtils } from '../../utils/languageUtils';
 
 export class TaggingSettingsSection extends BaseSettingSection {
 
@@ -16,10 +16,8 @@ export class TaggingSettingsSection extends BaseSettingSection {
             .addDropdown(dropdown => dropdown
                 .addOptions({
                     [TaggingMode.PredefinedTags]: 'Use predefined tags only',
-                    [TaggingMode.ExistingTags]: 'Use existing tags only',
                     [TaggingMode.GenerateNew]: 'Generate new tags',
-                    [TaggingMode.HybridGenerateExisting]: 'Generate new + match existing tags',
-                    [TaggingMode.HybridGeneratePredefined]: 'Generate new + match predefined tags'
+                    [TaggingMode.Hybrid]: 'Generate new + match predefined tags'
                 })
                 .setValue(this.plugin.settings.taggingMode)
                 .onChange(async (value) => {
@@ -46,28 +44,6 @@ export class TaggingSettingsSection extends BaseSettingSection {
                         .onChange(async (value) => {
                             numberDisplay.setText(String(value));
                             this.plugin.settings.tagRangePredefinedMax = value;
-                            await this.plugin.saveSettings();
-                        });
-                }
-                return slider;
-            });
-
-        new Setting(this.containerEl)
-            .setName('Maximum existing tags')
-            .setDesc('Maximum number of existing tags to match (0-10)')
-            .addSlider(slider => {
-                const container = slider.sliderEl.parentElement;
-                if (container) {
-                    const numberDisplay = container.createSpan({ cls: 'value-display' });
-                    numberDisplay.style.marginLeft = '10px';
-                    numberDisplay.setText(String(this.plugin.settings.tagRangeMatchMax));
-                    
-                    slider.setLimits(0, 10, 1)
-                        .setValue(this.plugin.settings.tagRangeMatchMax)
-                        .setDynamicTooltip()
-                        .onChange(async (value) => {
-                            numberDisplay.setText(String(value));
-                            this.plugin.settings.tagRangeMatchMax = value;
                             await this.plugin.saveSettings();
                         });
                 }
@@ -104,8 +80,9 @@ export class TaggingSettingsSection extends BaseSettingSection {
                     'default': 'AI model default'
                 };
                 
-                // 添加所有支持的语言
-                Object.entries(languageNames).forEach(([code, name]) => {
+                // Add all supported languages
+                const languageOptions = LanguageUtils.getLanguageOptions();
+                Object.entries(languageOptions).forEach(([code, name]) => {
                     if (code !== 'default') {
                         options[code] = name;
                     }
@@ -119,5 +96,15 @@ export class TaggingSettingsSection extends BaseSettingSection {
                         await this.plugin.saveSettings();
                     });
             });
+            
+        new Setting(this.containerEl)
+            .setName('Replace existing tags')
+            .setDesc('Whether to replace existing tags instead of merging with them')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.replaceTags)
+                .onChange(async (value) => {
+                    this.plugin.settings.replaceTags = value;
+                    await this.plugin.saveSettings();
+                }));
     }
 }

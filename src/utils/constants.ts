@@ -29,7 +29,8 @@ export const TAG_PREDEFINED_RANGE = {
 
 /**
  * Maximum number of tags to generate for new tags
- * In hybrid mode, total tag count = TAG_GENERATE_RANGE.MAX + TAG_PREDEFINED_RANGE.MAX
+ * In hybrid mode, total tags are composed of up to TAG_PREDEFINED_RANGE.MAX tags from predefined source 
+ * and up to TAG_GENERATE_RANGE.MAX new generated tags
  */
 export const TAG_GENERATE_RANGE = {
     MIN: TAG_RANGE.MIN,
