@@ -1,30 +1,33 @@
-import { TAG_PREDEFINED_RANGE, TAG_MATCH_RANGE, TAG_GENERATE_RANGE } from '../../utils/tagUtils';
+import { TAG_PREDEFINED_RANGE, TAG_GENERATE_RANGE } from '../../utils/constants';
 import { LanguageCode } from '../types';
 import { languageNames, getLanguageName } from '../languageUtils';
+import { LanguageUtils } from '../../utils/languageUtils';
+import { SYSTEM_PROMPT } from '../../utils/constants';
+import { TaggingMode } from './types';
 
-export enum TaggingMode {
-    PredefinedTags = 'predefined',
-    GenerateNew = 'generate',
-    ExistingTags = 'existing',
-    HybridGenerateExisting = 'hybrid-generate-existing', // First GenerateNew, then ExistingTags
-    HybridGeneratePredefined = 'hybrid-generate-predefined' // First GenerateNew, then PredefinedTags
-}
+// Re-export TaggingMode for backward compatibility
+export { TaggingMode };
 
+/**
+ * Builds a prompt for tag analysis based on the specified mode
+ * @param content - Content to analyze
+ * @param candidateTags - Array of candidate tags
+ * @param mode - Tagging mode
+ * @param maxTags - Maximum number of tags to return
+ * @param language - Language for generated tags
+ * @returns Formatted prompt string
+ */
 export function buildTagPrompt(
     content: string, 
     candidateTags: string[], 
     mode: TaggingMode,
     maxTags: number = 5,
-    language?: LanguageCode
+    language?: LanguageCode | 'default'
 ): string {
-    // Language mapping now imported from languageUtils.ts
-    
-    let prompt = '';
-    
+    let prompt = '';    
     switch (mode) {
         case TaggingMode.PredefinedTags:
-            const predefinedLimit = TAG_PREDEFINED_RANGE.MAX;
-            prompt = `Analyze the following content and select up to ${predefinedLimit} most relevant tags from the provided tag list.
+            prompt += `Analyze the following content and select up to ${maxTags} most relevant tags from the provided tag list.
 Only use exact matches from the provided tags, do not modify or generate new tags.
 
 Available tags:
@@ -33,21 +36,16 @@ ${candidateTags.join(', ')}
 Content:
 ${content}
 
-Return only a JSON object in this exact format:
-{
-    "matchedTags": ["#tag1", "#tag2"]
-}`;
+Return only the selected tags as a comma-separated list without # symbol:
+hello, world, hello-world`;
             break;
 
         case TaggingMode.GenerateNew:
-            const generateOnlyLimit = TAG_GENERATE_RANGE.MAX;
-            // Use a standard example format for all languages
-            const tagExamples = `- Example format: #topic, #concept, #subject`;
             
             // Only consider language parameter for GenerateNew mode
             let genLangInstructions = '';
             if (language && language !== 'default') {
-                const languageName = getLanguageName(language);
+                const languageName = LanguageUtils.getLanguageDisplayName(language);
                 genLangInstructions = `IMPORTANT: Generate all tags in ${languageName} language only.
 Regardless of what language the content is in, all tags must be in ${languageName} only.
 First understand the content, then if needed translate concepts to ${languageName}, then generate tags in ${languageName}.
@@ -55,39 +53,18 @@ First understand the content, then if needed translate concepts to ${languageNam
 `;
             }
             
-            prompt = `${genLangInstructions}Analyze the following content and generate up to ${generateOnlyLimit} relevant tags.
-
-Requirements for tags:
-- Must start with # symbol
-- Can contain letters, numbers, and hyphens
-- No spaces allowed
-${tagExamples}
+            prompt += `${genLangInstructions}Analyze the following content and generate up to ${maxTags} relevant tags.
+Return tags without the # symbol.
 
 Content:
 ${content}
 
-Return only a JSON object in this exact format:
-{
-    "newTags": ["#tag1", "#tag2", "#tag3"]
-}`;
+Return the tags as a comma-separated list:
+hello, world, hello-world`;
             break;
 
-        case TaggingMode.ExistingTags:
-            const existingLimit = TAG_MATCH_RANGE.MAX;
-            prompt = `Analyze the following content and select up to ${existingLimit} most relevant tags from the existing tags in the vault.
-Only use exact matches from the provided tags, do not modify or generate new tags.
-
-Existing tags in vault:
-${candidateTags.join(', ')}
-
-Content:
-${content}
-
-Return only a JSON object in this exact format:
-{
-    "matchedTags": ["#tag1", "#tag2"]
-}`;
-            break;
+        default:
+            throw new Error(`Unsupported tagging mode: ${mode}`);
     }
 
     return prompt;

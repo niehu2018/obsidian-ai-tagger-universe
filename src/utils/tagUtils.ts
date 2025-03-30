@@ -2,27 +2,10 @@ import { TFile, Notice, App, TFolder } from 'obsidian';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
 import { ConfirmationModal } from '../ui/modals/ConfirmationModal';
+import { TAG_RANGE, TAG_PREDEFINED_RANGE, TAG_GENERATE_RANGE } from './constants';
 
-// Min and Max values for tag range settings
-export const TAG_RANGE = {
-    MIN: 0,
-    MAX: 10
-} as const;
-
-export const TAG_PREDEFINED_RANGE = {
-    MIN: TAG_RANGE.MIN,
-    MAX: 5
-} as const;
-
-export const TAG_MATCH_RANGE = {
-    MIN: TAG_RANGE.MIN,
-    MAX: 5
-} as const;
-
-export const TAG_GENERATE_RANGE = {
-    MIN: TAG_RANGE.MIN,
-    MAX: 5
-} as const;
+// Re-export constants for backward compatibility
+export { TAG_RANGE, TAG_PREDEFINED_RANGE, TAG_GENERATE_RANGE };
 
 /**
  * Custom error type for tag-related operations
@@ -77,14 +60,31 @@ export class TagUtils {
     }
 
     /**
-     * Formats a tag to ensure it starts with # and is properly formatted
+     * Formats a tag to ensure consistent formatting
      * @param tag - Tag to format
-     * @returns Formatted tag string
+     * @returns Properly formatted tag
      */
-    static formatTag(tag: unknown): string {
-        const tagStr = typeof tag === 'string' ? tag : String(tag);
-        const formattedTag = tagStr.trim().startsWith('#') ? tagStr.trim() : `#${tagStr.trim()}`;
-        return formattedTag;
+    static formatTag(tag: string): string {
+        if (!tag || typeof tag !== 'string') {
+            return '';
+        }
+        
+        // Remove leading # if present
+        tag = tag.trim();
+        if (tag.startsWith('#')) {
+            tag = tag.substring(1);
+        }
+        
+        // Replace special characters with hyphens
+        tag = tag.replace(/[^\p{L}\p{N}]/gu, '-');
+        
+        // Collapse multiple consecutive hyphens into a single one
+        tag = tag.replace(/-{2,}/g, '-');
+        
+        // Remove hyphens from start and end
+        tag = tag.replace(/^-+|-+$/g, '');
+        
+        return tag.length > 0 ? tag : '';
     }
 
 /**
@@ -360,5 +360,158 @@ static async clearTags(app: App, file: TFile): Promise<TagOperationResult> {
         );
         
         modal.open();
+    }
+
+    /**
+     * Gets tags from a specified file
+     * @param app - Obsidian App instance
+     * @param filePath - Path to the tags file
+     * @returns Promise resolving to an array of tags, or null if file not found
+     */
+    static async getTagsFromFile(app: App, filePath: string): Promise<string[] | null> {
+        try {
+            if (!filePath) {
+                return null;
+            }
+            
+            const file = app.vault.getAbstractFileByPath(filePath);
+            if (!file || !(file instanceof TFile)) {
+                return null;
+            }
+            
+            const content = await app.vault.read(file);
+            return content
+                .split('\n')
+                .map(line => line.trim())
+                .filter(Boolean)
+                .map(tag => this.formatTag(tag));
+        } catch (error) {
+            console.error('Error reading tags file:', error);
+            return null;
+        }
+    }
+    
+    /**
+     * Formats a collection of tags to ensure consistent formatting
+     * @param tags - Array of tags to format
+     * @returns Array of properly formatted tags
+     */
+    static formatTags(tags: string[]): string[] {
+        if (!Array.isArray(tags)) {
+            return [];
+        }
+        
+        return tags
+            .map(tag => this.formatTag(tag))
+            .filter(Boolean);
+    }
+
+    /**
+     * Writes tags to a note's frontmatter
+     * @param app - Obsidian App instance
+     * @param file - File to update
+     * @param tags - Array of tags to add
+     * @param replace - Whether to replace existing tags (default: false)
+     * @returns Promise resolving to operation result
+     */
+    static async writeTagsToFrontmatter(
+        app: App, 
+        file: TFile, 
+        tags: string[], 
+        replace: boolean = false
+    ): Promise<TagOperationResult> {
+        try {
+            if (!Array.isArray(tags)) {
+                throw new Error('Tags parameter must be an array');
+            }
+
+            // Format and sanitize tags
+            const formattedTags = this.formatTags(tags);
+            
+            if (formattedTags.length === 0) {
+                return { 
+                    success: true, 
+                    message: 'No valid tags to add', 
+                    tags: [] 
+                };
+            }
+
+            const content = await app.vault.read(file);
+            const cache = app.metadataCache.getFileCache(file);
+            
+            // Get existing tags if we're not replacing them
+            let finalTags: string[];
+            if (replace) {
+                finalTags = formattedTags;
+            } else {
+                const existingTags = this.getExistingTags(cache?.frontmatter || null);
+                finalTags = this.mergeTags(existingTags, formattedTags);
+            }
+            
+            // Create YAML frontmatter with tags
+            const yamlTags = finalTags.map(tag => `  - ${tag}`).join('\n');
+            let newContent: string;
+            
+            const frontmatterRegex = /^---\n([\s\S]*?)\n---/;
+            const hasFrontmatter = frontmatterRegex.test(content);
+            
+            if (hasFrontmatter) {
+                // Update existing frontmatter
+                newContent = content.replace(frontmatterRegex, (_, frontmatter) => {
+                    const processed = this.processFrontMatter(frontmatter);
+                    processed.push('tags:');
+                    if (finalTags.length > 0) {
+                        processed.push(...finalTags.map(tag => `  - ${tag}`));
+                    }
+                    return `---\n${processed.join('\n')}\n---`;
+                });
+            } else {
+                // Create new frontmatter
+                newContent = `---\ntags:\n${yamlTags}\n---\n${content}`;
+            }
+            
+            // Write changes to file
+            await app.vault.modify(file, newContent);
+            
+            // Wait for metadata cache to update
+            await this.waitForMetadataUpdate(app, file);
+            
+            // Trigger file reloading
+            app.workspace.trigger('file-open', file);
+            
+            return {
+                success: true,
+                message: `Added ${finalTags.length} tag${finalTags.length === 1 ? '' : 's'}`,
+                tags: finalTags.map(tag => `#${tag}`)
+            };
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            console.error('Error writing tags to frontmatter:', error);
+            return {
+                success: false,
+                message: `Failed to update tags: ${message}`
+            };
+        }
+    }
+    
+    /**
+     * Process frontmatter content to prepare for tag updates
+     * @param frontmatter - Frontmatter content as string
+     * @returns Array of processed lines
+     */
+    private static processFrontMatter(frontmatter: string): string[] {
+        // Remove empty object if present
+        frontmatter = frontmatter.replace(/^\s*{}\s*$/m, '').trim();
+        
+        const yaml = frontmatter.split('\n');
+        // Filter out any existing tags and empty objects
+        return yaml.filter(line => {
+            const trimmed = line.trim();
+            return !(
+                trimmed.startsWith('tags:') || 
+                trimmed.startsWith('- ') || 
+                trimmed === '{}'
+            );
+        });
     }
 }
