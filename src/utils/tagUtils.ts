@@ -637,15 +637,14 @@ export class TagUtils {
                 
                 // Regex pattern (enclosed in slashes)
                 if (pattern.startsWith('/') && pattern.endsWith('/') && pattern.length > 2) {
+                    const regexPattern = pattern.slice(1, -1);
                     try {
-                        const regexPattern = pattern.slice(1, -1);
                         const regex = new RegExp(regexPattern, 'i');
                         if (regex.test(filePath)) {
                             return true;
                         }
-                    } catch (e) {
-                        // Invalid regex, ignore this pattern
-                        console.log(`Invalid regex pattern: ${pattern}`);
+                    } catch {
+                        // Invalid regex pattern - silently ignore and continue to next pattern
                     }
                 }
             } catch (error) {
