@@ -53,7 +53,7 @@ export function registerGenerateCommands(plugin: AITaggerPlugin) {
                 }
                 plugin.handleTagUpdateResult(result);
             } catch (error) {
-                console.error('Error generating tags:', error);
+                // console.error('Error generating tags:', error);
                 new Notice('Failed to generate tags');
             }
         }

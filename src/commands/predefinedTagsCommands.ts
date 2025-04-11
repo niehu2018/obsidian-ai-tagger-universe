@@ -44,7 +44,7 @@ export function registerPredefinedTagsCommands(plugin: AITaggerPlugin) {
                 const result = await TagUtils.updateNoteTags(plugin.app, view.file, [], matchedTags, false, true);
                 plugin.handleTagUpdateResult(result);
             } catch (error) {
-                console.error('Error assigning predefined tags:', error);
+                // console.error('Error assigning predefined tags:', error);
                 new Notice('Assign failed');
             }
         }

@@ -165,7 +165,7 @@ export default class AITaggerPlugin extends Plugin {
             
             this.app.workspace.revealLeaf(leaf);
         } catch (error) {
-            console.error('Failed to show tag network:', error);
+            //console.error('Failed to show tag network:', error);
             new Notice('Failed to build tag network. Please check console for details.', 4000);
         }
     }
@@ -174,7 +174,7 @@ export default class AITaggerPlugin extends Plugin {
         try {
             return await this.llmService.testConnection();
         } catch (error) {
-            console.error('Connection test failed:', error);
+            //console.error('Connection test failed:', error);
             return {
                 result: ConnectionTestResult.Failed,
                 error: {
@@ -215,7 +215,7 @@ export default class AITaggerPlugin extends Plugin {
                 await this.tagOperations.clearVaultTags();
                 new Notice('Successfully cleared all tags from vault', 3000);
             } catch (error) {
-                console.error('Failed to clear vault tags:', error);
+                //console.error('Failed to clear vault tags:', error);
                 new Notice('Failed to clear tags from vault', 4000);
             }
         }
@@ -256,7 +256,7 @@ export default class AITaggerPlugin extends Plugin {
             !silent && new Notice(result.message, 3000);
         } else {
             !silent && new Notice(`Failed to update tags: ${result.message || 'Unknown error'}`, 4000);
-            console.error('Tag update failed:', result.message);
+            //console.error('Tag update failed:', result.message);
         }
     }
 
@@ -287,14 +287,14 @@ export default class AITaggerPlugin extends Plugin {
                         lastNotice = Date.now();
                     }
                 } catch (error) {
-                    console.error(`Error processing ${file.path}:`, error);
+                    //console.error(`Error processing ${file.path}:`, error);
                     new Notice(`Error processing ${file.path}`, 4000);
                 }
             }
 
             new Notice(`Successfully tagged ${successful} out of ${files.length} files`, 4000);
         } catch (error) {
-            console.error('Batch processing failed:', error);
+            // console.error('Batch processing failed:', error);
             new Notice('Failed to complete batch processing', 4000);
         } finally {
             statusNotice.hide();
@@ -337,7 +337,7 @@ export default class AITaggerPlugin extends Plugin {
             // Process the result
             this.handleTagUpdateResult(result);
         } catch (error) {
-            console.error('Failed to analyze note:', error);
+            // console.error('Failed to analyze note:', error);
             new Notice('Failed to analyze note. Please check console for details.', 4000);
         }
     }
@@ -499,7 +499,7 @@ export default class AITaggerPlugin extends Plugin {
                 message: 'No valid tags were found or generated'
             };
         } catch (error) {
-            console.error('Error tagging note:', error);
+            // console.error('Error tagging note:', error);
             return {
                 success: false,
                 message: error instanceof Error ? error.message : 'Unknown error occurred'
