@@ -123,7 +123,7 @@ export function isPathExcluded(path: string, excludedPatterns: string[]): boolea
             }
         } catch (error) {
             // Keep this error logging as it's important for debugging invalid patterns
-            console.error(`Invalid exclusion pattern: ${pattern}`, error);
+            //console.error(`Invalid exclusion pattern: ${pattern}`, error);
         }
     }
     

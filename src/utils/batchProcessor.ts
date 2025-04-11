@@ -62,7 +62,7 @@ export class BatchProcessor {
                         } catch (error) {
                             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                             errors.push({ file: file.path, error: errorMessage });
-                            console.error(`Error processing ${file.path}:`, errorMessage);
+                            //console.error(`Error processing ${file.path}:`, errorMessage);
                             return false;
                         }
                     })
@@ -81,7 +81,7 @@ export class BatchProcessor {
                 }
 
             } catch (error) {
-                console.error('Error processing batch:', error);
+                //console.error('Error processing batch:', error);
             }
         }
 

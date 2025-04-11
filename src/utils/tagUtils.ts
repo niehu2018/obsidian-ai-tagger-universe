@@ -49,7 +49,7 @@ export class TagUtils {
             return tags.filter(tag => tag !== null && tag !== undefined)
                 .map(tag => String(tag)); // Convert all tags to strings
         } catch (error) {
-            console.error('Error getting existing tags:', error);
+            //console.error('Error getting existing tags:', error);
             return [];
         }
     }
@@ -123,7 +123,7 @@ export class TagUtils {
             try {
                 frontmatter = yaml.load(frontmatterText) || {};
             } catch (yamlError) {
-                console.error('YAML parse error:', yamlError);
+                //console.error('YAML parse error:', yamlError);
                 return { 
                     success: false, 
                     message: "YAML parse error: " + (yamlError instanceof Error ? yamlError.message : String(yamlError)), 
@@ -161,7 +161,7 @@ export class TagUtils {
                     // Allow a short delay for the metadata cache to update
                     await new Promise(resolve => setTimeout(resolve, 300));
                 } catch (modifyError) {
-                    console.error('Error modifying file:', modifyError);
+                    //console.error('Error modifying file:', modifyError);
                     throw new Error(`Failed to modify file: ${modifyError instanceof Error ? modifyError.message : String(modifyError)}`);
                 }
             }
@@ -175,7 +175,7 @@ export class TagUtils {
             };
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Unknown error';
-            console.error('Error in clearTags:', error);
+            //console.error('Error in clearTags:', error);
             new Notice(`Error clearing tags: ${message}`, 3000);
             return {
                 success: false,
@@ -252,7 +252,7 @@ export class TagUtils {
                     }
                 }
             } catch (compareError) {
-                console.error('Error comparing tags:', compareError);
+                //console.error('Error comparing tags:', compareError);
             }
             
             try {
@@ -270,7 +270,7 @@ export class TagUtils {
                     try {
                         frontmatter = yaml.load(frontmatterText) || {};
                     } catch (e) {
-                        console.error('Error parsing frontmatter:', e);
+                        //console.error('Error parsing frontmatter:', e);
                         frontmatter = {};
                     }
                     
@@ -297,7 +297,7 @@ export class TagUtils {
                 }
                 
             } catch (updateError) {
-                console.error('Error updating frontmatter:', updateError);
+                //console.error('Error updating frontmatter:', updateError);
                 throw new Error(`Failed to update frontmatter: ${updateError instanceof Error ? updateError.message : String(updateError)}`);
             }
 
@@ -311,7 +311,7 @@ export class TagUtils {
             };
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Unknown error';
-            console.error('Error in updateNoteTags:', error);
+            //console.error('Error in updateNoteTags:', error);
             !silent && new Notice(`Error updating tags: ${message}`, 3000);
             return {
                 success: false,
@@ -470,7 +470,7 @@ export class TagUtils {
                 .filter(Boolean)
                 .map(tag => this.formatTag(tag));
         } catch (error) {
-            console.error('Error reading tags file:', error);
+            //console.error('Error reading tags file:', error);
             return null;
         }
     }
@@ -560,7 +560,7 @@ export class TagUtils {
                     try {
                         frontmatter = yaml.load(frontmatterText) || {};
                     } catch (yamlError) {
-                        console.error('YAML parse error:', yamlError);
+                        //console.error('YAML parse error:', yamlError);
                         throw new Error(`YAML parse error: ${yamlError instanceof Error ? yamlError.message : String(yamlError)}`);
                     }
                     
@@ -577,7 +577,7 @@ export class TagUtils {
                         '\n---' + 
                         content.substring(frontmatterPosition.end.offset);
                 } catch (error) {
-                    console.error('Error processing existing frontmatter:', error);
+                    //console.error('Error processing existing frontmatter:', error);
                     // Fall back to creating new frontmatter
                     const yamlTags = finalTags.map(tag => `  - ${tag}`).join('\n');
                     newContent = `---\ntags:\n${yamlTags}\n---\n${content}`;
@@ -602,7 +602,7 @@ export class TagUtils {
             };
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Unknown error';
-            console.error('Error writing tags to frontmatter:', error);
+            //console.error('Error writing tags to frontmatter:', error);
             return {
                 success: false,
                 message: `Failed to update tags: ${message}`
@@ -649,7 +649,7 @@ export class TagUtils {
                 }
             } catch (error) {
                 // If any pattern fails, log it but continue with other patterns
-                console.error(`Error checking pattern "${pattern}":`, error);
+                //console.error(`Error checking pattern "${pattern}":`, error);
             }
         }
         
