@@ -57,7 +57,7 @@ export abstract class BaseAdapter extends BaseLLMService {
                 try {
                     result = this.extractJsonFromContent(result);
                 } catch (error) {
-                    console.error('Failed to parse JSON from response:', error);
+                    //console.error('Failed to parse JSON from response:', error);
                     // If JSON parsing fails, try to extract tags directly
                     const tags = this.extractTagsFromText(result);
                     result = {
@@ -204,7 +204,7 @@ export abstract class BaseAdapter extends BaseLLMService {
             
             return typeof content === 'string' ? content : JSON.stringify(content);
         } catch (error) {
-            console.error('Failed to parse response content:', error);
+            //console.error('Failed to parse response content:', error);
             return '';
         }
     }

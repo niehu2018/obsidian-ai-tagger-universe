@@ -179,7 +179,7 @@ export abstract class BaseLLMService {
             }
         }
         
-        console.error('Failed to extract JSON from response:', response);
+        //console.error('Failed to extract JSON from response:', response);
         throw new Error('No valid JSON or tags found in response');
     }
 
@@ -319,7 +319,7 @@ export abstract class BaseLLMService {
                     };
             }
         } catch (error) {
-            console.error('Error parsing LLM response:', error);
+            //console.error('Error parsing LLM response:', error);
             throw new Error(`Invalid response format: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
@@ -473,7 +473,7 @@ export abstract class BaseLLMService {
             // console.log('Final extracted tags:', uniqueTags);
             return { tags: uniqueTags };
         } catch (error) {
-            console.error('Failed to process tags from response:', error);
+            //console.error('Failed to process tags from response:', error);
             return { tags: [] };
         }
     }

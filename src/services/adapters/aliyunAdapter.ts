@@ -35,7 +35,7 @@ export class AliyunAdapter extends BaseAdapter {
             try {
                 jsonContent = this.extractJsonFromContent(content);
             } catch (jsonError) {
-                console.error('JSON extraction error:', jsonError);
+                //console.error('JSON extraction error:', jsonError);
                 
                 // Fallback: Try to parse the content directly if it might be JSON already
                 try {
@@ -43,7 +43,7 @@ export class AliyunAdapter extends BaseAdapter {
                         jsonContent = JSON.parse(content);
                     }
                 } catch (directParseError) {
-                    console.error('Direct JSON parse error:', directParseError);
+                    //console.error('Direct JSON parse error:', directParseError);
                 }
                 
                 // If still no valid JSON, try to extract tags manually
