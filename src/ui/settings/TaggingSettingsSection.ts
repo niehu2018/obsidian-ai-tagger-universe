@@ -1,10 +1,9 @@
-import { Setting, Notice, Modal, App } from 'obsidian';
+import { Setting, Notice } from 'obsidian';
 import type AITaggerPlugin from '../../main';
 import { TaggingMode } from '../../services/prompts/types';
 import { BaseSettingSection } from './BaseSettingSection';
-import { LanguageCode } from '../../services/types';
 import { LanguageUtils } from '../../utils/languageUtils';
-import { ExcludedFilesModal } from './ExcludedFilesModal';
+import { ExcludedFilesModal } from '../modals/ExcludedFilesModal';
 
 export class TaggingSettingsSection extends BaseSettingSection {
     private tagSourceSetting: Setting | null = null;
@@ -81,8 +80,6 @@ export class TaggingSettingsSection extends BaseSettingSection {
             try {
                 const items: {path: string, isFolder: boolean, name: string}[] = [];
                 const lowerSearchTerm = searchTerm.toLowerCase().trim();
-                
-                console.log('Updating tags dropdown for search term:', lowerSearchTerm);
                 
                 // If search term is empty, show common tag-related files
                 if (!lowerSearchTerm) {
@@ -202,9 +199,6 @@ export class TaggingSettingsSection extends BaseSettingSection {
                     iconEl.style.marginRight = '6px';
                     iconEl.style.fontSize = '14px';
                     
-                    // Set folder/file icon
-                    iconEl.textContent = item.isFolder ? '📁 ' : '📄 ';
-                    
                     // Create path text element
                     const textEl = pathItem.createSpan({
                         cls: 'path-item-text'
@@ -305,7 +299,7 @@ export class TaggingSettingsSection extends BaseSettingSection {
         
         const excludedFoldersSetting = new Setting(this.containerEl)
             .setName('Excluded files and folders')
-            .setDesc('Files matching these patterns will be excluded from tagging operations.');
+            .setDesc('Files matching these patterns will be hidden in Search, Graph View, and Unlinked Mentions, less noticeable in Quick Switcher and link suggestions.');
 
         const excludedInfo = excludedFoldersSetting.descEl.createDiv({
             cls: 'excluded-info'
@@ -334,14 +328,12 @@ export class TaggingSettingsSection extends BaseSettingSection {
                 .setButtonText('Manage')
                 .setCta()
                 .onClick(() => {
-                    // Use the new ExcludedFilesModal
                     const modal = new ExcludedFilesModal(
                         this.plugin.app, 
                         this.plugin, 
-                        async (excludedFolders) => {
+                        async (excludedFolders: string[]) => {
                             this.plugin.settings.excludedFolders = excludedFolders;
                             await this.plugin.saveSettings();
-                            new Notice(`Saved ${excludedFolders.length} exclusion patterns`);
                             updateExcludedInfo();
                         }
                     );
@@ -400,17 +392,8 @@ export class TaggingSettingsSection extends BaseSettingSection {
             .setName('Output language')
             .setDesc('Language for generating tags')
             .addDropdown(dropdown => {
-                const options: Record<string, string> = { 
-                    'default': 'AI model default'
-                };
-                
-                // Add all supported languages
-                const languageOptions = LanguageUtils.getLanguageOptions();
-                Object.entries(languageOptions).forEach(([code, name]) => {
-                    if (code !== 'default') {
-                        options[code] = name;
-                    }
-                });
+                // Add language options
+                const options: Record<string, string> = LanguageUtils.getLanguageOptions();
                 
                 return dropdown
                     .addOptions(options)
