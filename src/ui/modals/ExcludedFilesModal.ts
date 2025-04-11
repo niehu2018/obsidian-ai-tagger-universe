@@ -406,7 +406,7 @@ export class ExcludedFilesModal extends Modal {
             // Display the dropdown
             this.pathDropdownContainer.style.display = 'block';
         } catch (error) {
-            console.error('Error updating path dropdown:', error);
+            //console.error('Error updating path dropdown:', error);
             
             // Show error state
             const errorEl = this.pathDropdownContainer.createDiv({

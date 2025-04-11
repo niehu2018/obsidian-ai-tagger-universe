@@ -245,7 +245,7 @@ export class TaggingSettingsSection extends BaseSettingSection {
                     });
                 });
             } catch (error) {
-                console.error('Error updating tags dropdown:', error);
+                //console.error('Error updating tags dropdown:', error);
                 tagsDropdownContainer.empty();
                 tagsDropdownContainer.createEl('div', {
                     text: 'Error loading files',

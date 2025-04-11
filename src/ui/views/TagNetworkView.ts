@@ -108,7 +108,7 @@ export class TagNetworkView extends ItemView {
             try {
                 await this.loadVisualizationLibrary(container, searchInput, tooltip, statusEl);
             } catch (error) {
-                console.error('Failed to resize visualization:', error);
+                // console.error('Failed to resize visualization:', error);
             }
         }
     }
