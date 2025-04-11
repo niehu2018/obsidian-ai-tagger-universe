@@ -11,13 +11,9 @@ export interface VaultItem {
  * Get vault items matching a search term
  */
 export function getVaultItems(app: App, searchTerm?: string): VaultItem[] {
-    console.log('getVaultItems called, retrieving paths...');
-    
     // First collect all paths
     const allItems: VaultItem[] = [];
     collectAllPaths(app, allItems);
-    
-    console.log(`getVaultItems collected ${allItems.length} total items`);
     
     // Filter by search term if provided
     if (searchTerm && searchTerm.trim()) {
@@ -26,7 +22,6 @@ export function getVaultItems(app: App, searchTerm?: string): VaultItem[] {
             item.path.toLowerCase().includes(term) || 
             item.name.toLowerCase().includes(term)
         );
-        console.log(`getVaultItems filtered to ${filteredItems.length} items matching "${term}"`);
         return filteredItems;
     }
     
@@ -37,16 +32,12 @@ export function getVaultItems(app: App, searchTerm?: string): VaultItem[] {
  * Collect all paths from the vault in a flattened structure
  */
 function collectAllPaths(app: App, result: VaultItem[]): void {
-    console.log('collectAllPaths: Starting path collection...');
-    
     // Get root folder
     const rootFolder = app.vault.getRoot();
     
     // Process root folder contents
     const files = app.vault.getFiles();
     const folders = getAllFolders(app);
-    
-    console.log(`collectAllPaths: Found ${folders.length} folders and ${files.length} files`);
     
     // Add all folders to the result
     for (const folder of folders) {
@@ -67,8 +58,6 @@ function collectAllPaths(app: App, result: VaultItem[]): void {
             name: file.name
         });
     }
-    
-    console.log(`collectAllPaths: Added ${result.length} total items to result`);
 }
 
 /**
@@ -133,6 +122,7 @@ export function isPathExcluded(path: string, excludedPatterns: string[]): boolea
                 return true;
             }
         } catch (error) {
+            // Keep this error logging as it's important for debugging invalid patterns
             console.error(`Invalid exclusion pattern: ${pattern}`, error);
         }
     }
