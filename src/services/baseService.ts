@@ -331,11 +331,11 @@ export abstract class BaseLLMService {
      */
     protected processTagsFromResponse(content: any): { tags: string[] } {
         try {
-            console.log('Processing tags from raw response:', JSON.stringify(content));
+            // console.log('Processing tags from raw response:', JSON.stringify(content));
             
             // If content is empty, return empty array
             if (!content) {
-                console.log('Content is empty, returning empty tags array');
+                // console.log('Content is empty, returning empty tags array');
                 return { tags: [] };
             }
             
@@ -345,15 +345,15 @@ export abstract class BaseLLMService {
             if (typeof content === 'string') {
                 // Use string content directly
                 textContent = content;
-                console.log('Response is string:', textContent);
+                //console.log('Response is string:', textContent);
             } else if (Array.isArray(content)) {
                 // Convert array to comma-separated string
                 textContent = content
                     .filter(item => item !== null && item !== undefined)
                     .join(', ');
-                console.log('Response is array, joined as:', textContent);
+                // console.log('Response is array, joined as:', textContent);
             } else if (typeof content === 'object' && content !== null) {
-                console.log('Response is object:', JSON.stringify(content));
+                //console.log('Response is object:', JSON.stringify(content));
                 // Try multiple ways to extract tags
                 // First check for standard tag fields
                 const candidateFields = ['tags', 'tag', 'matchedExistingTags', 'suggestedTags', 'matchedTags', 'newTags', 'content', 'results'];
@@ -364,12 +364,12 @@ export abstract class BaseLLMService {
                         textContent = content[field]
                             .filter((tag: any) => tag !== null && tag !== undefined)
                             .join(', ');
-                        console.log(`Found array field "${field}":`, textContent);
+                        //console.log(`Found array field "${field}":`, textContent);
                         break;
                     } else if (typeof content[field] === 'string' && content[field].trim()) {
                         // String fields can also be used
                         textContent = content[field].trim();
-                        console.log(`Found string field "${field}":`, textContent);
+                        //console.log(`Found string field "${field}":`, textContent);
                         break;
                     }
                 }
@@ -379,14 +379,14 @@ export abstract class BaseLLMService {
                     for (const [key, value] of Object.entries(content)) {
                         if (typeof value === 'string' && value.trim()) {
                             textContent = value.trim();
-                            console.log(`Using string value from field "${key}":`, textContent);
+                            //console.log(`Using string value from field "${key}":`, textContent);
                             break;
                         } else if (Array.isArray(value) && value.length > 0) {
                             // Try simple arrays
                             textContent = value
                                 .filter((item: any) => item !== null && item !== undefined)
                                 .join(', ');
-                            console.log(`Using array value from field "${key}":`, textContent);
+                            //console.log(`Using array value from field "${key}":`, textContent);
                             break;
                         }
                     }
@@ -395,7 +395,7 @@ export abstract class BaseLLMService {
             
             // Return empty array for empty content
             if (!textContent.trim()) {
-                console.log('No valid text content extracted, returning empty tags array');
+                //console.log('No valid text content extracted, returning empty tags array');
                 return { tags: [] };
             }
             
@@ -411,17 +411,17 @@ export abstract class BaseLLMService {
                         tags = jsonContent
                             .map(item => typeof item === 'string' ? item.trim() : String(item).trim())
                             .filter(tag => tag.length > 0);
-                        console.log('Parsed JSON array format:', tags);
+                        //console.log('Parsed JSON array format:', tags);
                     } else if (typeof jsonContent === 'object' && jsonContent !== null && Array.isArray(jsonContent.tags)) {
                         // Use JSON object with tags field
                         tags = jsonContent.tags
                             .map((tag: any) => typeof tag === 'string' ? tag.trim() : String(tag).trim())
                             .filter((tag: string) => tag.length > 0);
-                        console.log('Parsed JSON object with tags field:', tags);
+                        //console.log('Parsed JSON object with tags field:', tags);
                     }
                 } catch (jsonError) {
                     // Not valid JSON, continue with text parsing
-                    console.log('Failed to parse as JSON, continuing with text parsing:', jsonError);
+                    //console.log('Failed to parse as JSON, continuing with text parsing:', jsonError);
                 }
             }
             
@@ -432,7 +432,7 @@ export abstract class BaseLLMService {
                     tags = textContent.split(',')
                         .map(tag => tag.trim())
                         .filter(tag => tag.length > 0);
-                    console.log('Parsed comma-separated tags:', tags);
+                    //console.log('Parsed comma-separated tags:', tags);
                 } else {
                     // Try splitting by line
                     tags = textContent.split(/[\n\r]+/)
@@ -458,11 +458,11 @@ export abstract class BaseLLMService {
                         
                         if (potentialTags.length > 0) {
                             tags = potentialTags;
-                            console.log('Extracted potential tags from long lines:', tags);
+                            // console.log('Extracted potential tags from long lines:', tags);
                         }
                     }
                     
-                    console.log('Parsed line-separated tags:', tags);
+                    // console.log('Parsed line-separated tags:', tags);
                 }
             }
             
@@ -470,7 +470,7 @@ export abstract class BaseLLMService {
             const uniqueTags = [...new Set(tags.map(tag => tag.toString().trim()))]
                 .filter(tag => tag.length > 0);
             
-            console.log('Final extracted tags:', uniqueTags);
+            // console.log('Final extracted tags:', uniqueTags);
             return { tags: uniqueTags };
         } catch (error) {
             console.error('Failed to process tags from response:', error);
