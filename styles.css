@@ -436,6 +436,10 @@
     content: "📄";
 }
 
+.path-item-icon.search-icon::before {
+    content: "🔍";
+}
+
 .path-item-text {
     flex: 1;
     overflow: hidden;
