@@ -13,6 +13,11 @@ export class LLMSettingsSection extends BaseSettingSection {
         this.plugin.settings.serviceType === 'local' ? 
             this.displayLocalSettings() : 
             this.displayCloudSettings();
+            
+        // Check local service status when loading settings if local service is selected
+        if (this.plugin.settings.serviceType === 'local') {
+            this.checkLocalService(this.plugin.settings.localServiceType, this.plugin.settings.localEndpoint);
+        }
     }
 
     private createServiceTypeDropdown(): void {
@@ -146,13 +151,23 @@ export class LLMSettingsSection extends BaseSettingSection {
                     })
                     .setValue((this.plugin.settings.localServiceType as 'ollama' | 'lm_studio' | 'localai') || 'ollama')
                     .onChange(async (value) => {
+                        const previousType = this.plugin.settings.localServiceType;
                         this.plugin.settings.localServiceType = value as 'ollama' | 'lm_studio' | 'localai';
+                        
+                        // If switching to a different service, clear the current model
+                        if (previousType !== value) {
+                            this.plugin.settings.localModel = '';
+                        }
+                        
                         if (value === 'ollama') {
                             this.plugin.settings.localEndpoint = 'http://localhost:11434/v1/chat/completions';
+                            this.checkLocalService('ollama', this.plugin.settings.localEndpoint);
                         } else if (value === 'lm_studio') {
                             this.plugin.settings.localEndpoint = 'http://localhost:1234/v1/chat/completions';
+                            this.checkLocalService('lm_studio', this.plugin.settings.localEndpoint);
                         } else if (value === 'localai') {
                             this.plugin.settings.localEndpoint = 'http://localhost:8080/v1/chat/completions';
+                            this.checkLocalService('localai', this.plugin.settings.localEndpoint);
                         }
                         await this.plugin.saveSettings();
                         this.settingTab.display();
@@ -182,60 +197,133 @@ export class LLMSettingsSection extends BaseSettingSection {
                 dropdown.setDisabled(true);
                 
                 try {
-                    // Import and call the model fetcher
-                    const { fetchLocalModels } = await import('../../services/localModelFetcher');
-                    const allModels = await fetchLocalModels(this.plugin.settings.localEndpoint);
+                    // Check if service is running before attempting to fetch models
+                    const baseUrl = this.plugin.settings.localEndpoint.trim().replace(/\/$/, '').replace(/\/v1\/chat\/completions$/, '');
+                    let checkUrl = '';
+                    let serviceName = '';
                     
-                    // Filter out models containing "rank" or "embed" (case insensitive)
-                    const models = allModels.filter(model => {
-                        const lowerName = model.toLowerCase();
-                        return !lowerName.includes('rank') && !lowerName.includes('embed');
-                    });
+                    switch (this.plugin.settings.localServiceType) {
+                        case 'ollama':
+                            checkUrl = `${baseUrl}/api/tags`;
+                            serviceName = 'Ollama';
+                            break;
+                        case 'lm_studio':
+                            checkUrl = `${baseUrl}/v1/models`;
+                            serviceName = 'LM Studio';
+                            break;
+                        case 'localai':
+                            checkUrl = `${baseUrl}/v1/models`;
+                            serviceName = 'LocalAI';
+                            break;
+                        default:
+                            throw new Error('Unknown service type');
+                    }
                     
-                    // Re-enable and clear the dropdown
-                    dropdown.setDisabled(false);
+                    // Try to check if service is running
+                    let serviceRunning = false;
+                    try {
+                        const serviceCheck = await fetch(checkUrl, {
+                            method: 'GET',
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                        serviceRunning = serviceCheck.ok;
+                    } catch (error) {
+                        serviceRunning = false;
+                        new Notice(`${serviceName} service is not available. Please make sure it is installed and running.`, 10000);
+                    }
                     
-                    // Create options object
-                    const options: Record<string, string> = {};
-                    
-                    if (models.length === 0) {
-                        // If no models found, just add the current value or a placeholder
-                        if (this.plugin.settings.localModel) {
-                            options[this.plugin.settings.localModel] = `${this.plugin.settings.localModel}`;
-                        } else {
-                            options['custom'] = 'Enter a model name...';
-                        }
-                    } else {
-                        // Sort and add all the models
-                        models.sort((a, b) => a.localeCompare(b));
+                    // Only fetch models if service is running
+                    if (serviceRunning) {
+                        // Import and call the model fetcher
+                        const { fetchLocalModels } = await import('../../services/localModelFetcher');
+                        const allModels = await fetchLocalModels(this.plugin.settings.localEndpoint);
                         
-                        models.forEach(model => {
-                            options[model] = model;
+                        // Filter out models containing "rank" or "embed" (case insensitive)
+                        const models = allModels.filter(model => {
+                            const lowerName = model.toLowerCase();
+                            return !lowerName.includes('rank') && !lowerName.includes('embed');
                         });
                         
-                        // If the current model isn't in the list, add it
-                        if (this.plugin.settings.localModel && !models.includes(this.plugin.settings.localModel)) {
-                            options[this.plugin.settings.localModel] = `${this.plugin.settings.localModel} (custom)`;
+                        // Re-enable and clear the dropdown
+                        dropdown.setDisabled(false);
+                        
+                        // Create options object
+                        const options: Record<string, string> = {};
+                        
+                        if (models.length === 0) {
+                            // Show notice if no models found
+                            let noticeMessage = `No models found for ${serviceName}. `;
+                            
+                            switch (this.plugin.settings.localServiceType) {
+                                case 'ollama':
+                                    noticeMessage += 'Please run "ollama pull mistral" or another model name in your terminal.';
+                                    break;
+                                case 'lm_studio':
+                                    noticeMessage += 'Please download a model via the LM Studio application interface.';
+                                    break;
+                                case 'localai':
+                                    noticeMessage += 'Please download a model following the LocalAI documentation.';
+                                    break;
+                                default:
+                                    noticeMessage += 'Please download at least one model before using this service.';
+                            }
+                            
+                            new Notice(noticeMessage, 15000);
+                            
+                            // If no models found, just add the current value or a placeholder
+                            if (this.plugin.settings.localModel) {
+                                options[this.plugin.settings.localModel] = `${this.plugin.settings.localModel}`;
+                            } else {
+                                options['custom'] = 'Enter a model name...';
+                            }
+                        } else {
+                            // Sort and add all the models
+                            models.sort((a, b) => a.localeCompare(b));
+                            
+                            models.forEach(model => {
+                                options[model] = model;
+                            });
+                            
+                            // If the current model isn't in the list, add it
+                            if (this.plugin.settings.localModel && !models.includes(this.plugin.settings.localModel)) {
+                                options[this.plugin.settings.localModel] = `${this.plugin.settings.localModel} (custom)`;
+                            }
+                        }
+                        
+                        // Clear loading option
+                        dropdown.selectEl.empty();
+                        
+                        // Add all options
+                        dropdown.addOptions(options);
+                        
+                        // Select the current model
+                        if (this.plugin.settings.localModel && options[this.plugin.settings.localModel]) {
+                            dropdown.setValue(this.plugin.settings.localModel);
+                        } else if (models.length > 0) {
+                            // Default to first model if nothing is selected
+                            dropdown.setValue(models[0]);
+                            this.plugin.settings.localModel = models[0];
+                            await this.plugin.saveSettings();
+                        }
+                    } else {
+                        // Service not running, clear dropdown and add a message
+                        dropdown.setDisabled(false);
+                        dropdown.selectEl.empty();
+                        
+                        // Add placeholder option
+                        dropdown.addOption('service-not-running', `Start ${serviceName} service first`);
+                        
+                        // Only keep the current model if it's from the same service type
+                        const modelServiceType = this.getModelServiceType(this.plugin.settings.localModel);
+                        if (this.plugin.settings.localModel && modelServiceType === this.plugin.settings.localServiceType) {
+                            dropdown.addOption(this.plugin.settings.localModel, `${this.plugin.settings.localModel} (current)`);
+                            dropdown.setValue(this.plugin.settings.localModel);
+                        } else {
+                            dropdown.setValue('service-not-running');
                         }
                     }
-                    
-                    // Clear loading option
-                    dropdown.selectEl.empty();
-                    
-                    // Add all options
-                    dropdown.addOptions(options);
-                    
-                    // Select the current model
-                    if (this.plugin.settings.localModel && options[this.plugin.settings.localModel]) {
-                        dropdown.setValue(this.plugin.settings.localModel);
-                    } else if (models.length > 0) {
-                        // Default to first model if nothing is selected
-                        dropdown.setValue(models[0]);
-                        this.plugin.settings.localModel = models[0];
-                        await this.plugin.saveSettings();
-                    }
                 } catch (error) {
-                    console.error('Failed to load models:', error);
+                    //console.error('Error loading models:', error);
                     
                     dropdown.setDisabled(false);
                     dropdown.selectEl.empty();
@@ -243,8 +331,9 @@ export class LLMSettingsSection extends BaseSettingSection {
                     // Add error option
                     dropdown.addOption('error', 'Error loading models');
                     
-                    // Add current model if it exists
-                    if (this.plugin.settings.localModel) {
+                    // Add current model if it exists and matches the current service type
+                    const modelServiceType = this.getModelServiceType(this.plugin.settings.localModel);
+                    if (this.plugin.settings.localModel && modelServiceType === this.plugin.settings.localServiceType) {
                         dropdown.addOption(this.plugin.settings.localModel, `${this.plugin.settings.localModel} (current)`);
                         dropdown.setValue(this.plugin.settings.localModel);
                     } else {
@@ -387,5 +476,94 @@ export class LLMSettingsSection extends BaseSettingSection {
                 this.statusEl.setText(message || 'Error');
                 break;
         }
+    }
+
+    private async checkLocalService(serviceType: string, endpoint: string): Promise<void> {
+        const baseUrl = endpoint.trim().replace(/\/$/, '').replace(/\/v1\/chat\/completions$/, '');
+        let checkUrl = '';
+        let serviceName = '';
+        
+        switch (serviceType) {
+            case 'ollama':
+                checkUrl = `${baseUrl}/api/tags`;
+                serviceName = 'Ollama';
+                break;
+            case 'lm_studio':
+                checkUrl = `${baseUrl}/v1/models`;
+                serviceName = 'LM Studio';
+                break;
+            case 'localai':
+                checkUrl = `${baseUrl}/v1/models`;
+                serviceName = 'LocalAI';
+                break;
+            default:
+                return;
+        }
+        
+        try {
+            const response = await fetch(checkUrl, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            
+            if (!response.ok) {
+                new Notice(`${serviceName} service does not appear to be running. Please start the ${serviceName} service before using it.`, 10000);
+            }
+        } catch (error) {
+            new Notice(`${serviceName} service is not available. Please make sure it is installed and running on the correct port.`, 10000);
+        }
+    }
+
+    private async checkLocalAIService(): Promise<void> {
+        // Keeping this for backward compatibility
+        await this.checkLocalService('localai', 'http://localhost:8080/v1/chat/completions');
+    }
+
+    private getServiceName(serviceType: string): string {
+        switch (serviceType) {
+            case 'ollama':
+                return 'Ollama';
+            case 'lm_studio':
+                return 'LM Studio';
+            case 'localai':
+                return 'LocalAI';
+            default:
+                return 'Local service';
+        }
+    }
+
+    // Helper to determine which service a model likely belongs to
+    private getModelServiceType(modelName: string): string | null {
+        if (!modelName) return null;
+        
+        const lowerModelName = modelName.toLowerCase();
+        
+        // Common Ollama model prefixes/names
+        if (lowerModelName.startsWith('llama') || 
+            lowerModelName.startsWith('mistral') || 
+            lowerModelName.startsWith('phi') ||
+            lowerModelName.startsWith('gemma') ||
+            lowerModelName.startsWith('mixtral') ||
+            lowerModelName.startsWith('codellama') ||
+            lowerModelName.startsWith('vicuna') ||
+            lowerModelName.startsWith('dolphin') ||
+            lowerModelName.startsWith('wizardlm') ||
+            lowerModelName.startsWith('stable-') ||
+            lowerModelName.includes('-gguf')) {
+            return 'ollama';
+        }
+        
+        // Models in format of openai format are likely from LM Studio or LocalAI
+        // This is more of a guess, as both can use various model formats
+        if (lowerModelName.includes('gpt-') || lowerModelName.includes('/')) {
+            // More likely LocalAI format
+            if (lowerModelName.includes('/')) {
+                return 'localai';
+            }
+            // More likely LM Studio format
+            return 'lm_studio';
+        }
+        
+        return null; // We can't determine the service type
     }
 }
