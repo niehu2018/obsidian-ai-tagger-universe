@@ -686,7 +686,7 @@ export class TagUtils {
             const regex = new RegExp(regexPattern, 'i');
             return regex.test(str);
         } catch (e) {
-            console.error('Error creating regex from pattern:', pattern, e);
+            //console.error('Error creating regex from pattern:', pattern, e);
             return false;
         }
     }
