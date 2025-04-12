@@ -168,79 +168,98 @@ export class LLMSettingsSection extends BaseSettingSection {
                 .onChange(async (value) => {
                     this.plugin.settings.localEndpoint = value;
                     await this.plugin.saveSettings();
+                    
+                    // Refresh the settings to update the model dropdown
+                    this.settingTab.display();
                 }));
 
         const modelSetting = new Setting(this.containerEl)
             .setName('Model name')
-            .setDesc('Name of the model to use with your local service');
-            
-        const modelInputContainer = modelSetting.controlEl.createDiv('model-input-container');
-        const modelInput = modelInputContainer.createEl('input', {
-            type: 'text',
-            cls: 'model-input',
-            attr: {
-                placeholder: 'llama2',
-                value: this.plugin.settings.localModel
-            }
-        });
-        
-        const dropdownContainer = modelInputContainer.createDiv('model-dropdown-container');
-        dropdownContainer.style.display = 'none';
-        
-        modelInput.addEventListener('focus', async () => {
-            try {
-                dropdownContainer.empty();
-                dropdownContainer.createEl('div', {
-                    text: 'Loading models...',
-                    cls: 'model-dropdown-loading'
-                });
-                dropdownContainer.style.display = 'block';
+            .setDesc('Name of the model to use with your local service')
+            .addDropdown(async (dropdown) => {
+                // Set initial loading state
+                dropdown.addOption('loading', 'Loading models...');
+                dropdown.setDisabled(true);
                 
-                const { fetchLocalModels } = await import('../../services/localModelFetcher');
-                const models = await fetchLocalModels(this.plugin.settings.localEndpoint);
-                
-                dropdownContainer.empty();
-                
-                if (models.length === 0) {
-                    dropdownContainer.createEl('div', {
-                        text: 'No models found',
-                        cls: 'model-dropdown-empty'
-                    });
-                    return;
-                }
-                
-                models.forEach(model => {
-                    const modelItem = dropdownContainer.createEl('div', {
-                        text: model,
-                        cls: 'model-dropdown-item'
+                try {
+                    // Import and call the model fetcher
+                    const { fetchLocalModels } = await import('../../services/localModelFetcher');
+                    const allModels = await fetchLocalModels(this.plugin.settings.localEndpoint);
+                    
+                    // Filter out models containing "rank" or "embed" (case insensitive)
+                    const models = allModels.filter(model => {
+                        const lowerName = model.toLowerCase();
+                        return !lowerName.includes('rank') && !lowerName.includes('embed');
                     });
                     
-                    modelItem.addEventListener('click', async () => {
-                        modelInput.value = model;
-                        this.plugin.settings.localModel = model;
+                    // Re-enable and clear the dropdown
+                    dropdown.setDisabled(false);
+                    
+                    // Create options object
+                    const options: Record<string, string> = {};
+                    
+                    if (models.length === 0) {
+                        // If no models found, just add the current value or a placeholder
+                        if (this.plugin.settings.localModel) {
+                            options[this.plugin.settings.localModel] = `${this.plugin.settings.localModel}`;
+                        } else {
+                            options['custom'] = 'Enter a model name...';
+                        }
+                    } else {
+                        // Sort and add all the models
+                        models.sort((a, b) => a.localeCompare(b));
+                        
+                        models.forEach(model => {
+                            options[model] = model;
+                        });
+                        
+                        // If the current model isn't in the list, add it
+                        if (this.plugin.settings.localModel && !models.includes(this.plugin.settings.localModel)) {
+                            options[this.plugin.settings.localModel] = `${this.plugin.settings.localModel} (custom)`;
+                        }
+                    }
+                    
+                    // Clear loading option
+                    dropdown.selectEl.empty();
+                    
+                    // Add all options
+                    dropdown.addOptions(options);
+                    
+                    // Select the current model
+                    if (this.plugin.settings.localModel && options[this.plugin.settings.localModel]) {
+                        dropdown.setValue(this.plugin.settings.localModel);
+                    } else if (models.length > 0) {
+                        // Default to first model if nothing is selected
+                        dropdown.setValue(models[0]);
+                        this.plugin.settings.localModel = models[0];
                         await this.plugin.saveSettings();
-                        dropdownContainer.style.display = 'none';
-                    });
+                    }
+                } catch (error) {
+                    console.error('Failed to load models:', error);
+                    
+                    dropdown.setDisabled(false);
+                    dropdown.selectEl.empty();
+                    
+                    // Add error option
+                    dropdown.addOption('error', 'Error loading models');
+                    
+                    // Add current model if it exists
+                    if (this.plugin.settings.localModel) {
+                        dropdown.addOption(this.plugin.settings.localModel, `${this.plugin.settings.localModel} (current)`);
+                        dropdown.setValue(this.plugin.settings.localModel);
+                    } else {
+                        dropdown.setValue('error');
+                    }
+                }
+                
+                // Handle model selection change
+                dropdown.onChange(async (value) => {
+                    if (value !== 'loading' && value !== 'error') {
+                        this.plugin.settings.localModel = value;
+                        await this.plugin.saveSettings();
+                    }
                 });
-            } catch (error) {
-                dropdownContainer.empty();
-                dropdownContainer.createEl('div', {
-                    text: 'Failed to load models',
-                    cls: 'model-dropdown-error'
-                });
-            }
-        });
-        
-        modelInput.addEventListener('input', async () => {
-            this.plugin.settings.localModel = modelInput.value;
-            await this.plugin.saveSettings();
-        });
-        
-        document.addEventListener('click', (event) => {
-            if (!modelInputContainer.contains(event.target as Node)) {
-                dropdownContainer.style.display = 'none';
-            }
-        });
+            });
 
         this.createTestButton();
     }
