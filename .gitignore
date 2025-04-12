@@ -11,3 +11,4 @@ Library/
 *.js.map
 *.d.ts
 package-lock.json
+.roo/
