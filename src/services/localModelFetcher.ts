@@ -2,6 +2,8 @@ export async function fetchLocalModels(endpoint: string): Promise<string[]> {
     try {
         const baseUrl = normalizeEndpoint(endpoint);
         const isOllama = baseUrl.includes('localhost:11434') || baseUrl.includes('ollama');
+        const isLocalAI = baseUrl.includes('localhost:8080') || baseUrl.includes('localai');
+        const isLMStudio = baseUrl.includes('localhost:1234') || baseUrl.includes('lm_studio');
         
         // Special handling for Ollama
         if (isOllama) {
@@ -33,7 +35,7 @@ export async function fetchLocalModels(endpoint: string): Promise<string[]> {
                 }
             } catch (error) {
                 // Will fall back to standard endpoint
-                console.error('Failed to fetch Ollama models:', error);
+                //console.error('Failed to fetch Ollama models:', error);
             }
         }
         
@@ -47,25 +49,50 @@ export async function fetchLocalModels(endpoint: string): Promise<string[]> {
             });
     
             if (!response.ok) {
+                // if (isLocalAI) {
+                //     console.error('Failed to connect to LocalAI service. Please make sure it is running on the specified endpoint.');
+                // } else if (isOllama) {
+                //     console.error('Failed to connect to Ollama service. Please make sure it is running on the specified endpoint.');
+                // } else if (isLMStudio) {
+                //     console.error('Failed to connect to LM Studio service. Please make sure it is running on the specified endpoint.');
+                // } else {
+                //     console.error('Failed to connect to the specified API endpoint.');
+                // }
                 return []; // Return empty array if endpoint doesn't respond properly
             }
     
             const data = await response.json();
             
+            let models: string[] = [];
             if (Array.isArray(data)) {
-                return data.map(model => typeof model === 'string' ? model : model.id || model.name);
+                models = data.map(model => typeof model === 'string' ? model : model.id || model.name);
             } else if (data.data && Array.isArray(data.data)) {
-                return data.data.map((model: any) => model.id || model.name);
+                models = data.data.map((model: any) => model.id || model.name);
             } else if (data.models && Array.isArray(data.models)) {
-                return data.models.map((model: any) => model.id || model.name);
+                models = data.models.map((model: any) => model.id || model.name);
             }
+
+            if (models.length === 0) {
+                // Service is running but no models found
+                // if (isLocalAI) {
+                //     console.error('No models found for LocalAI. Please download at least one model before using this service.');
+                // } else if (isOllama) {
+                //     console.error('No models found for Ollama. Please pull at least one model using the command: ollama pull <model>');
+                // } else if (isLMStudio) {
+                //     console.error('No models found for LM Studio. Please download at least one model via the LM Studio interface.');
+                // } else {
+                //     console.error('No models found for the specified service.');
+                // }
+            }
+            
+            return models;
         } catch (error) {
-            console.error('Failed to fetch models from standard endpoint:', error);
+            //console.error('Failed to fetch models from standard endpoint:', error);
         }
         
         return []; // Return empty array if all attempts fail
     } catch (error) {
-        console.error('Error in fetchLocalModels:', error);
+        //console.error('Error in fetchLocalModels:', error);
         return [];
     }
 }
