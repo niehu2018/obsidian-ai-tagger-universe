@@ -316,22 +316,60 @@
     border-radius: var(--radius-s);
 }
 
-/* Model dropdown styles */
-.model-input-container {
-    position: relative;
+/* Model selection styles */
+.model-selection-container {
+    display: flex;
     width: 100%;
 }
 
-.model-input {
+.model-select {
     width: 100%;
-    padding: var(--size-4-1);
+    background-color: var(--background-primary);
     border: 1px solid var(--background-modifier-border);
     border-radius: var(--radius-s);
-    background-color: var(--background-primary);
     color: var(--text-normal);
+    cursor: pointer;
     font-size: var(--font-ui-small);
+    padding: var(--size-4-1);
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: var(--dropdown-arrow);
+    background-repeat: no-repeat;
+    background-position: right var(--size-4-1) center;
+    background-size: 16px;
 }
 
+.theme-light .model-select {
+    background-image: url("data:image/svg+xml;charset=utf-8,<svg viewBox='0 0 100 100' width='8' height='8' xmlns='http://www.w3.org/2000/svg'><path fill='black' d='M 50,75 95,30 85,20 50,55 15,20 5,30 z'/></svg>");
+}
+
+.theme-dark .model-select {
+    background-image: url("data:image/svg+xml;charset=utf-8,<svg viewBox='0 0 100 100' width='8' height='8' xmlns='http://www.w3.org/2000/svg'><path fill='white' d='M 50,75 95,30 85,20 50,55 15,20 5,30 z'/></svg>");
+}
+
+.model-select:focus {
+    box-shadow: 0 0 0 1px var(--interactive-accent);
+    border-color: var(--interactive-accent);
+    outline: none;
+}
+
+.model-select:hover {
+    border-color: var(--interactive-hover);
+}
+
+.model-select option {
+    background-color: var(--background-primary);
+    color: var(--text-normal);
+    padding: var(--size-4-1);
+}
+
+/* Loading and error states */
+.model-select[disabled] {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* Model dropdown styles */
 .model-dropdown-container {
     position: absolute;
     top: 100%;
