@@ -83,6 +83,7 @@ Return your response in this JSON format:
   "matchedExistingTags": ["tag1", "tag2"], 
   "suggestedTags": ["new-tag1", "new-tag2"]
 }
+note: don't add "matchedExistingTags" or "suggestedTags" to the tags themselves - only use each once as a json key to provide a valid response strictly following the schema above. 
 
 Do not include the # symbol in tags.`;
             break;
