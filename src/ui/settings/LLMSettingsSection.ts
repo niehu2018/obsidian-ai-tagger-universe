@@ -164,10 +164,6 @@ export class LLMSettingsSection extends BaseSettingSection {
                     await this.plugin.saveSettings();
                 }));
 
-        this.createTestButton();
-    }
-
-    private createTestButton(): void {
         // Add a tips section about common local LLM tools
         const tipsEl = this.containerEl.createEl('div', {
             cls: 'ai-tagger-tips-block'
@@ -189,6 +185,10 @@ export class LLMSettingsSection extends BaseSettingSection {
         tipsEl.style.marginBottom = '16px';
         tipsEl.style.fontSize = '0.9em';
 
+        this.createTestButton();
+    }
+
+    private createTestButton(): void {
         const testContainer = this.containerEl.createDiv('connection-test-container');
 
         const testSetting = new Setting(testContainer)
