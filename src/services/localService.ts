@@ -21,14 +21,16 @@ export class LocalLLMService extends BaseLLMService {
         endpoint = endpoint.trim();
         // Remove trailing slash if present
         endpoint = endpoint.replace(/\/$/, '');
-        // Convert Ollama format to standard format if needed
-        if (endpoint.endsWith('/api/generate')) {
-            endpoint = endpoint.replace('/api/generate', '/v1/chat/completions');
-        }
-        // Add standard path if not present
+        
+        // Handle common endpoint formats
+        // Standard OpenAI-compatible format
         if (!endpoint.endsWith('/v1/chat/completions')) {
-            endpoint = `${endpoint}/v1/chat/completions`;
+            // Check if we have a base URL only
+            if (!endpoint.includes('/v1/')) {
+                endpoint = `${endpoint}/v1/chat/completions`;
+            }
         }
+        
         return endpoint;
     }
 
@@ -37,10 +39,9 @@ export class LocalLLMService extends BaseLLMService {
         if (baseError) return baseError;
 
         try {
-            const url = new URL(this.endpoint);
-            if (!url.pathname.endsWith('/v1/chat/completions')) {
-                return "Invalid endpoint format. Should end with /v1/chat/completions";
-            }
+            new URL(this.endpoint);
+            // We're not enforcing a specific endpoint format anymore
+            // to support different API formats more flexibly
         } catch {
             return "Invalid endpoint URL format";
         }

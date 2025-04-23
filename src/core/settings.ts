@@ -6,7 +6,7 @@ export interface AITaggerSettings {
     serviceType: 'local' | 'cloud';
     localEndpoint: string;
     localModel: string;
-    localServiceType: 'ollama' | 'lm_studio' | 'localai' | 'openai_compatible';
+    localServiceType?: 'ollama' | 'lm_studio' | 'localai' | 'openai_compatible';
     cloudEndpoint: string;
     cloudApiKey: string;
     cloudModel: string;
@@ -26,9 +26,8 @@ export interface AITaggerSettings {
 
 export const DEFAULT_SETTINGS: AITaggerSettings = {
     serviceType: 'cloud',
-    localEndpoint: 'http://localhost:11434/api/chat',
-    localModel: 'llama',
-    localServiceType: 'ollama',
+    localEndpoint: 'http://localhost:11434/v1/chat/completions',
+    localModel: 'mistral',
     cloudEndpoint: 'https://api.openai.com/v1/chat/completions',
     cloudApiKey: '',
     cloudModel: 'gpt-4',

@@ -170,19 +170,11 @@ export default class AITaggerPlugin extends Plugin {
         }
     }
 
+    /**
+     * Test connection to the configured LLM service
+     */
     public async testConnection(): Promise<{ result: ConnectionTestResult; error?: ConnectionTestError }> {
-        try {
-            return await this.llmService.testConnection();
-        } catch (error) {
-            //console.error('Connection test failed:', error);
-            return {
-                result: ConnectionTestResult.Failed,
-                error: {
-                    type: 'unknown',
-                    message: error instanceof Error ? error.message : 'Unknown error occurred'
-                }
-            };
-        }
+        return await this.llmService.testConnection();
     }
 
     public async showConfirmationDialog(message: string): Promise<boolean> {
