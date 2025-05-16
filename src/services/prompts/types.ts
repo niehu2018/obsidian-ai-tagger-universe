@@ -18,5 +18,11 @@ export enum TaggingMode {
      * Combine predefined tags with newly generated ones.
      * The AI will both select from provided tags and suggest new ones.
      */
-    Hybrid = 'hybrid'
+    Hybrid = 'hybrid',
+
+    /**
+     * Use a custom prompt defined by the user.
+     * The AI will generate tags based on the custom prompt and note content.
+     */
+    Custom = 'custom'
 } 

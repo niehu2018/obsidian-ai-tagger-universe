@@ -7,6 +7,7 @@ import {
     CloudLLMService,
     LLMResponse
 } from './services';
+import { setSettings } from './services/prompts/tagPrompts';
 import { ConfirmationModal } from './ui/modals/ConfirmationModal';
 import { TagUtils, TagOperationResult } from './utils/tagUtils';
 import { TaggingMode } from './services/prompts/types';
@@ -79,6 +80,9 @@ export default class AITaggerPlugin extends Plugin {
         await this.loadSettings();
         await this.initializeLLMService();
         
+        // Set settings for prompt generation
+        setSettings(this.settings);
+
         // Register event handlers
         this.eventHandlers.registerEventHandlers();
         
@@ -435,6 +439,21 @@ export default class AITaggerPlugin extends Plugin {
                             content,
                             hybridPredefinedTags,
                             TaggingMode.Hybrid, 
+                            Math.max(this.settings.tagRangeGenerateMax, this.settings.tagRangePredefinedMax),
+                            this.settings.language
+                        );
+                        break;
+                    
+                    case TaggingMode.Custom:
+                        // Get candidate tags (from file or vault)
+                        const customPredefinedTags = this.settings.tagSourceType === 'file'
+                            ? await TagUtils.getTagsFromFile(this.app, this.settings.predefinedTagsPath) || []
+                            : TagUtils.getAllTags(this.app);
+                        
+                        analysis = await this.llmService.analyzeTags(
+                            content,
+                            customPredefinedTags,
+                            TaggingMode.Custom, 
                             Math.max(this.settings.tagRangeGenerateMax, this.settings.tagRangePredefinedMax),
                             this.settings.language
                         );

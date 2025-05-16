@@ -16,7 +16,7 @@ export class TaggingSettingsSection extends BaseSettingSection {
             const shouldShowTagSource = this.plugin.settings.taggingMode !== TaggingMode.GenerateNew;
             this.tagSourceSetting.settingEl.style.display = shouldShowTagSource ? 'flex' : 'none';
         }
-        
+
         // Determine whether to show predefined tags file setting
         if (this.predefinedTagsFileSetting) {
             const shouldShowTagsFile = this.plugin.settings.taggingMode !== TaggingMode.GenerateNew && 
@@ -35,7 +35,8 @@ export class TaggingSettingsSection extends BaseSettingSection {
                 .addOptions({
                     [TaggingMode.PredefinedTags]: 'Use predefined tags only',
                     [TaggingMode.GenerateNew]: 'Generate new tags',
-                    [TaggingMode.Hybrid]: 'Hybrid mode (Generate + Predefined)'
+                    [TaggingMode.Hybrid]: 'Hybrid mode (Generate + Predefined)',
+                    [TaggingMode.Custom]: 'Use custom prompt'
                 })
                 .setValue(this.plugin.settings.taggingMode)
                 .onChange(async (value) => {
@@ -403,5 +404,19 @@ export class TaggingSettingsSection extends BaseSettingSection {
                         await this.plugin.saveSettings();
                     });
             });
+        new Setting(this.containerEl)
+        .setName("Custom prompt")
+        .setDesc("Enter your custom prompt.")
+        .addTextArea(text => {
+            text
+            .setPlaceholder(`Example:\n Please actively use nested tags.\nTags can be nested using "/".\nFor example, you can do "AI/Gemini", "News/Politics".`)
+            .setValue(this.plugin.settings.customPrompt)
+            .onChange(async (value) => {
+                this.plugin.settings.customPrompt = value;
+                await this.plugin.saveSettings();
+            });
+            text.inputEl.rows = 8;
+            text.inputEl.cols = 50;
+        });
     }
 }

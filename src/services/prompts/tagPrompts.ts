@@ -8,6 +8,14 @@ import { TaggingMode } from './types';
 // Re-export TaggingMode for backward compatibility
 export { TaggingMode };
 
+import { AITaggerSettings } from '../../core/settings';
+
+let pluginSettings: AITaggerSettings | undefined;
+
+export function setSettings(settings: AITaggerSettings): void {
+    pluginSettings = settings;
+}
+
 /**
  * Builds a prompt for tag analysis based on the specified mode
  * @param content - Content to analyze
@@ -24,7 +32,7 @@ export function buildTagPrompt(
     maxTags: number = 5,
     language?: LanguageCode | 'default'
 ): string {
-    let prompt = '';    
+    let prompt = '';
     let langInstructions = '';
 
     // Prepare language instructions if needed
@@ -97,6 +105,28 @@ ${content}
 
 Return the tags as a comma-separated list:
 hello, world, hello world,hello-world`;
+            break;
+
+        case TaggingMode.Custom:
+            if (!pluginSettings?.customPrompt) {
+                throw new Error('Custom tagging mode requires a custom prompt to be configured in settings.');
+            }
+
+            prompt += `${langInstructions}Analyze the following content and generate up to ${maxTags} relevant tags.
+Consider the following existing tags if relevant:
+${candidateTags && candidateTags.length > 0 ? candidateTags.join(', ') : 'N/A'}
+
+Apply the following specific instructions if provided:
+${pluginSettings.customPrompt ? pluginSettings.customPrompt : 'No specific additional instructions.'}
+
+Return tags without the # symbol.
+
+Content:
+${content}
+
+Return the tags as a comma-separated list:
+hello, world, hello world,hello-world`;
+
             break;
 
         default:

@@ -87,7 +87,7 @@ export class TagUtils {
         
         // Replace spaces and special characters with hyphens
         formatted = formatted.replace(/\s+/g, '-'); // First replace spaces with hyphens
-        formatted = formatted.replace(/[^\p{L}\p{N}-]/gu, '-'); // Then replace other special chars
+        formatted = formatted.replace(/[^\p{L}\p{N}/-]/gu, '-'); // Then replace other special chars
         
         // Collapse multiple consecutive hyphens into a single one
         formatted = formatted.replace(/-{2,}/g, '-');
