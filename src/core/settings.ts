@@ -12,6 +12,7 @@ export interface AITaggerSettings {
     cloudModel: string;
     cloudServiceType: AdapterType;
     taggingMode: TaggingMode;
+    customPrompt: string;
     excludedFolders: string[];
     language: LanguageCode;
     predefinedTagsPath: string;
@@ -33,6 +34,7 @@ export const DEFAULT_SETTINGS: AITaggerSettings = {
     cloudModel: 'gpt-4',
     cloudServiceType: 'openai',
     taggingMode: TaggingMode.GenerateNew,
+    customPrompt: "",
     excludedFolders: [],
     language: 'default',
     predefinedTagsPath: '',

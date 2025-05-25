@@ -550,6 +550,11 @@ export abstract class BaseLLMService {
                     }
                     break;
                     
+                case TaggingMode.Custom:
+                    // For custom mode, build prompt using the custom prompt from settings
+                    // buildTagPrompt will access pluginSettings directly
+                    prompt = this.buildPrompt(content, candidateTags, mode, maxTags, language);
+                    break;
                 default:
                     // Default behavior for future or unknown modes
                     prompt = this.buildPrompt(content, candidateTags, mode, maxTags, language);
@@ -558,7 +563,7 @@ export abstract class BaseLLMService {
             if (!prompt.trim()) {
                 throw new Error('Failed to build analysis prompt');
             }
-            
+
             // Send request and get response
             const response = await this.sendRequest(prompt);
             
