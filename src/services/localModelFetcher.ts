@@ -97,6 +97,35 @@ export async function fetchLocalModels(endpoint: string): Promise<string[]> {
     }
 }
 
+// Extract authentication information from URL and return both clean URL and auth headers
+export function extractAuthFromUrl(url: string): { url: string; headers: Record<string, string> } {
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+    };
+    
+    try {
+        const urlObj = new URL(url);
+        
+        // Check if URL contains authentication information
+        if (urlObj.username && urlObj.password) {
+            // Create Basic Auth header
+            const authString = `${urlObj.username}:${urlObj.password}`;
+            const base64Auth = btoa(authString);
+            headers['Authorization'] = `Basic ${base64Auth}`;
+            
+            // Remove auth info from URL
+            urlObj.username = '';
+            urlObj.password = '';
+            return { url: urlObj.toString(), headers };
+        }
+    } catch (error) {
+        // If URL parsing fails, return original URL
+        console.error('Failed to parse URL:', error);
+    }
+    
+    return { url, headers };
+}
+
 function normalizeEndpoint(endpoint: string): string {
     endpoint = endpoint.trim();
     endpoint = endpoint.replace(/\/$/, '');
