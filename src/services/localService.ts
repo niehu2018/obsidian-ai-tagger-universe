@@ -4,6 +4,7 @@ import { BaseLLMService } from './baseService';
 import { TaggingMode } from './prompts/types';
 import { LanguageCode } from './types';
 import { App } from 'obsidian';
+import { extractAuthFromUrl } from './localModelFetcher';
 
 export class LocalLLMService extends BaseLLMService {
     private readonly MAX_CONTENT_LENGTH = 4000;
@@ -17,10 +18,18 @@ export class LocalLLMService extends BaseLLMService {
         this.validateLocalConfig(); // Validate on construction
     }
 
+    // Store auth headers separately for use in requests
+    private authHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+    
     private normalizeEndpoint(endpoint: string): string {
         endpoint = endpoint.trim();
         // Remove trailing slash if present
         endpoint = endpoint.replace(/\/$/, '');
+        
+        // Extract authentication if present in URL
+        const { url, headers } = extractAuthFromUrl(endpoint);
+        this.authHeaders = headers; // Store headers for later use
+        endpoint = url; // Use clean URL without auth info
         
         // Handle common endpoint formats
         // Standard OpenAI-compatible format
@@ -53,8 +62,15 @@ export class LocalLLMService extends BaseLLMService {
         try {
             const { controller, cleanup } = this.createRequestController(timeoutMs);
             try {
+                // Merge the stored authentication headers with the request headers
+                const mergedHeaders = {
+                    ...this.authHeaders,
+                    ...(options.headers as Record<string, string> || {})
+                };
+                
                 const response = await fetch(this.endpoint, {
                     ...options,
+                    headers: mergedHeaders,
                     signal: controller.signal
                 });
                 return response;
@@ -115,7 +131,7 @@ export class LocalLLMService extends BaseLLMService {
 
             const response = await this.makeRequestWithRetry({
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                // Don't specify headers here as they will be merged with auth headers in makeRequest
                 body: JSON.stringify({
                     model: this.modelName,
                     messages: [{
@@ -201,7 +217,7 @@ export class LocalLLMService extends BaseLLMService {
     protected async sendRequest(prompt: string): Promise<string> {
         const response = await this.makeRequestWithRetry({
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            // Don't specify headers here as they will be merged with auth headers in makeRequest
             body: JSON.stringify({
                 model: this.modelName,
                 messages: [
