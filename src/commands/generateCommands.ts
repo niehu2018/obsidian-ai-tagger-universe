@@ -77,8 +77,7 @@ export function registerGenerateCommands(plugin: AITaggerPlugin) {
                 return;
             }
 
-            const filesInFolder = parentFolder.children
-                .filter((file): file is TFile => file instanceof TFile && file.extension === 'md');
+            const filesInFolder = plugin.getNonExcludedMarkdownFilesFromFolder(parentFolder);
 
             if (filesInFolder.length === 0) {
                 new Notice('No md files');
@@ -104,7 +103,7 @@ export function registerGenerateCommands(plugin: AITaggerPlugin) {
         name: 'Generate tags for vault',
         icon: 'tag',
         callback: async () => {
-            const files = plugin.app.vault.getMarkdownFiles();
+            const files = plugin.getNonExcludedMarkdownFiles();
             if (files.length === 0) {
                 new Notice('No md files');
                 return;

@@ -1,4 +1,4 @@
-import { App, MarkdownView, Modal, Notice, Plugin, TFile, WorkspaceLeaf } from 'obsidian';
+import { App, MarkdownView, Modal, Notice, Plugin, TFile, TFolder, WorkspaceLeaf } from 'obsidian';
 import { 
     ConnectionTestError,
     ConnectionTestResult,
@@ -132,7 +132,8 @@ export default class AITaggerPlugin extends Plugin {
         try {
             const statusNotice = new Notice('Building tag network...', 0);
             
-            await this.tagNetworkManager.buildTagNetwork();
+            const files = this.getNonExcludedMarkdownFiles();
+            await this.tagNetworkManager.buildTagNetwork(files);
             const networkData = this.tagNetworkManager.getNetworkData();
             
             statusNotice.hide();
@@ -198,8 +199,16 @@ export default class AITaggerPlugin extends Plugin {
      * Get all markdown files in the vault, excluding those that match exclusion patterns
      */
     public getNonExcludedMarkdownFiles(): TFile[] {
-        const allFiles = this.app.vault.getMarkdownFiles();
-        return allFiles.filter(file => !TagUtils.isFileExcluded(file, this.settings.excludedFolders));
+        return TagUtils.getNonExcludedMarkdownFiles(this.app, this.settings.excludedFolders);
+    }
+
+    /**
+     * Get non-excluded markdown files from a specific folder (includes nested files)
+     * @param folder - The folder to search in
+     * @returns Array of TFile objects that are markdown files and not excluded
+     */
+    public getNonExcludedMarkdownFilesFromFolder(folder: TFolder): TFile[] {
+        return TagUtils.getNonExcludedMarkdownFiles(this.app, this.settings.excludedFolders, folder);
     }
 
     public async clearAllNotesTags(): Promise<void> {
@@ -208,7 +217,7 @@ export default class AITaggerPlugin extends Plugin {
             `Remove all tags from ${files.length} notes? This action cannot be undone.`
         )) {
             try {
-                await this.tagOperations.clearVaultTags();
+                await this.tagOperations.clearDirectoryTags(files);
                 new Notice('Successfully cleared all tags from vault', 3000);
             } catch (error) {
                 //console.error('Failed to clear vault tags:', error);

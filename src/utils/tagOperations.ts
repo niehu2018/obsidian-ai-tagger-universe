@@ -57,14 +57,6 @@ export class TagOperations {
     }
 
     /**
-     * Clear tags from all notes in the vault
-     */
-    public async clearVaultTags(): Promise<BatchProcessResult> {
-        const files = this.app.vault.getMarkdownFiles();
-        return this.clearDirectoryTags(files);
-    }
-
-    /**
      * Cancel any ongoing batch operations
      */
     public cancelOperations(): void {
