@@ -29,12 +29,13 @@ export function registerClearCommands(plugin: AITaggerPlugin) {
                 return;
             }
 
-            const parentPath = activeFile.parent?.path ?? "";
-            const allFiles = plugin.app.vault.getMarkdownFiles();
-            const filesInFolder = allFiles.filter(file => {
-                const filePath = file.parent?.path ?? "";
-                return filePath === parentPath;
-            });
+            const parentFolder = activeFile.parent;
+            if (!parentFolder) {
+                new Notice('No parent folder found');
+                return;
+            }
+
+            const filesInFolder = plugin.getNonExcludedMarkdownFilesFromFolder(parentFolder);
 
             if (filesInFolder.length === 0) {
                 new Notice('No markdown files found in current folder');

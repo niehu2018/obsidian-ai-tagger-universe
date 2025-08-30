@@ -630,8 +630,8 @@ export class TagUtils {
                     return true;
                 }
                 
-                // Simple substring match
-                if (filePath.toLowerCase().includes(pattern.toLowerCase())) {
+                // Path pattern matching - use startsWith for precise matching
+                if (filePath.toLowerCase().startsWith(pattern.toLowerCase())) {
                     return true;
                 }
                 
@@ -654,6 +654,52 @@ export class TagUtils {
         }
         
         return false;
+    }
+
+    /**
+     * Gets all markdown files from a folder recursively, including nested files
+     * @param folder - The folder to search in
+     * @returns Array of TFile objects that are markdown files
+     */
+    private static getMarkdownFilesFromFolder(folder: TFolder): TFile[] {
+        const markdownFiles: TFile[] = [];
+        
+        for (const child of folder.children) {
+            if (child instanceof TFile && child.extension === 'md') {
+                markdownFiles.push(child);
+            } else if (child instanceof TFolder) {
+                // Recursively get files from subfolders
+                markdownFiles.push(...this.getMarkdownFilesFromFolder(child));
+            }
+        }
+        
+        return markdownFiles;
+    }
+
+    /**
+     * Gets non-excluded markdown files from vault or specific folder
+     * @param app - Obsidian App instance
+     * @param excludePatterns - Array of exclusion patterns
+     * @param folder - Optional folder to limit search to (includes nested files)
+     * @returns Array of TFile objects that are markdown files and not excluded
+     */
+    static getNonExcludedMarkdownFiles(
+        app: App, 
+        excludePatterns: string[] = [], 
+        folder?: TFolder
+    ): TFile[] {
+        let allFiles: TFile[];
+        
+        if (folder) {
+            // Get all markdown files from the specified folder (including nested)
+            allFiles = this.getMarkdownFilesFromFolder(folder);
+        } else {
+            // Get all markdown files from the vault
+            allFiles = app.vault.getMarkdownFiles();
+        }
+        
+        // Filter out excluded files
+        return allFiles.filter(file => !this.isFileExcluded(file, excludePatterns));
     }
     
     /**
