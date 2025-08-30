@@ -108,7 +108,7 @@ export default class AITaggerPlugin extends Plugin {
         );
         
         this.addRibbonIcon(
-            'graph', 
+            'network', 
             'View tag relationships network', 
             (evt: MouseEvent) => {
                 this.showTagNetwork();
