@@ -85,6 +85,22 @@ export class TagUtils {
             formatted = formatted.substring(1);
         }
         
+        // Safety check: Remove problematic prefixes that shouldn't be in tag names
+        // This provides an additional layer of protection against the prefix issue
+        const problematicPrefixes = [
+            'matchedExistingTags-',
+            'suggestedTags-',
+            'matchedTags-',
+            'newTags-'
+        ];
+        
+        for (const prefix of problematicPrefixes) {
+            if (formatted.startsWith(prefix)) {
+                formatted = formatted.substring(prefix.length);
+                break;
+            }
+        }
+        
         // Replace spaces and special characters with hyphens
         formatted = formatted.replace(/\s+/g, '-'); // First replace spaces with hyphens
         formatted = formatted.replace(/[^\p{L}\p{N}/-]/gu, '-'); // Then replace other special chars

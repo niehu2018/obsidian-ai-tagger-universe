@@ -234,14 +234,43 @@ export abstract class BaseLLMService {
                         };
                     }
                     
-                    // If we have a tags array but no clear separation, try to extract both
-                    if (Array.isArray(jsonResponse.tags)) {
-                        // In this case, we don't know which are matched vs suggested
-                        // We'll use the whole list as suggested tags (better than nothing)
-                        const processedTags = this.processTagsFromResponse(jsonResponse);
+                    // Handle cases where only one type of tags is present
+                    if (Array.isArray(jsonResponse.matchedExistingTags) && !jsonResponse.suggestedTags) {
+                        return {
+                            matchedExistingTags: jsonResponse.matchedExistingTags.slice(0, maxTags),
+                            suggestedTags: []
+                        };
+                    }
+                    
+                    if (Array.isArray(jsonResponse.suggestedTags) && !jsonResponse.matchedExistingTags) {
                         return {
                             matchedExistingTags: [],
-                            suggestedTags: processedTags.tags.slice(0, maxTags)
+                            suggestedTags: jsonResponse.suggestedTags.slice(0, maxTags)
+                        };
+                    }
+                    
+                    // Handle alternative field names for single-type responses
+                    if (Array.isArray(jsonResponse.matchedTags) && !jsonResponse.newTags) {
+                        return {
+                            matchedExistingTags: jsonResponse.matchedTags.slice(0, maxTags),
+                            suggestedTags: []
+                        };
+                    }
+                    
+                    if (Array.isArray(jsonResponse.newTags) && !jsonResponse.matchedTags) {
+                        return {
+                            matchedExistingTags: [],
+                            suggestedTags: jsonResponse.newTags.slice(0, maxTags)
+                        };
+                    }
+                    
+                    // If we have a tags array but no clear separation, use safely
+                    if (Array.isArray(jsonResponse.tags)) {
+                        // For simple tags array in hybrid mode, treat as suggested tags
+                        // Avoid calling processTagsFromResponse on structured objects
+                        return {
+                            matchedExistingTags: [],
+                            suggestedTags: jsonResponse.tags.slice(0, maxTags)
                         };
                     }
                 }
@@ -354,9 +383,19 @@ export abstract class BaseLLMService {
                 // console.log('Response is array, joined as:', textContent);
             } else if (typeof content === 'object' && content !== null) {
                 //console.log('Response is object:', JSON.stringify(content));
+                
+                // First check if this is a structured response with specific tag fields
+                // that should not be processed by this method (to prevent prefix issues)
+                if (content.hasOwnProperty('matchedExistingTags') || content.hasOwnProperty('suggestedTags')) {
+                    // This object has structured tag fields that should be handled by parseResponse
+                    // Return empty to avoid processing field names as tag content
+                    //console.log('Object has structured tag fields, skipping processTagsFromResponse');
+                    return { tags: [] };
+                }
+                
                 // Try multiple ways to extract tags
-                // First check for standard tag fields
-                const candidateFields = ['tags', 'tag', 'matchedExistingTags', 'suggestedTags', 'matchedTags', 'newTags', 'content', 'results'];
+                // Only check for simple tag fields (not the structured response fields)
+                const candidateFields = ['tags', 'tag', 'content', 'results'];
                 
                 for (const field of candidateFields) {
                     if (Array.isArray(content[field])) {
@@ -374,15 +413,20 @@ export abstract class BaseLLMService {
                     }
                 }
                 
-                // If no standard fields, try to extract any possible string
+                // If no standard fields, try to extract any possible string (but be more careful)
                 if (!textContent) {
                     for (const [key, value] of Object.entries(content)) {
+                        // Skip known structured response field names to prevent prefix issues
+                        if (['matchedExistingTags', 'suggestedTags', 'matchedTags', 'newTags'].includes(key)) {
+                            continue;
+                        }
+                        
                         if (typeof value === 'string' && value.trim()) {
                             textContent = value.trim();
                             //console.log(`Using string value from field "${key}":`, textContent);
                             break;
                         } else if (Array.isArray(value) && value.length > 0) {
-                            // Try simple arrays
+                            // Try simple arrays, but avoid the structured response arrays
                             textContent = value
                                 .filter((item: any) => item !== null && item !== undefined)
                                 .join(', ');
