@@ -3,8 +3,10 @@
  */
 export const SYSTEM_PROMPT = 
     'You are a professional document tag analysis assistant. ' +
-    'Please return your response as a plain text string of comma-separated tags. ' +
-    'For example: "hello, world, hello world, hello-world"';
+    'Follow the user instructions exactly for output format (JSON vs comma-separated list). ' +
+    'Never include prefixes or labels inside tag values (e.g., not "matchedExistingTags-foo" or "suggestedTags-bar"). ' +
+    'Do not include the # symbol in any tag value. ' +
+    'When asked for a comma-separated list, a valid example is: "hello, world, hello world, hello-world".';
 
 /**
  * Maximum number of concurrent requests to external APIs

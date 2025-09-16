@@ -77,6 +77,28 @@ export abstract class BaseLLMService {
     }
 
     /**
+     * Remove common key-name prefixes some models mistakenly include in tag strings
+     * e.g. "matchedExistingTags-supply-chain" -> "supply-chain",
+     *      "suggestedTags: distribution" -> "distribution"
+     */
+    private sanitizeTagString(tag: string): string {
+        if (!tag) return '';
+        let t = String(tag).trim();
+        // Normalize leading hashtag away
+        if (t.startsWith('#')) t = t.slice(1);
+        // Strip known key prefixes with typical separators
+        t = t.replace(/^(matchedExistingTags|suggestedTags|matchedTags|newTags|existingTags|proposedTags)[\s:_-]+/i, '');
+        return t.trim();
+    }
+
+    /** Sanitize an array of tag strings and drop empties */
+    private sanitizeTags(tags: string[] = []): string[] {
+        return (Array.isArray(tags) ? tags : [])
+            .map(t => this.sanitizeTagString(t))
+            .filter(t => t.length > 0);
+    }
+
+    /**
      * Cleans up all active requests
      * Should be called when the service is no longer needed
      */
@@ -221,16 +243,16 @@ export abstract class BaseLLMService {
                     // Check if the response has the expected hybrid format
                     if (Array.isArray(jsonResponse.matchedExistingTags) && Array.isArray(jsonResponse.suggestedTags)) {
                         return {
-                            matchedExistingTags: jsonResponse.matchedExistingTags.slice(0, maxTags),
-                            suggestedTags: jsonResponse.suggestedTags.slice(0, maxTags)
+                            matchedExistingTags: this.sanitizeTags(jsonResponse.matchedExistingTags).slice(0, maxTags),
+                            suggestedTags: this.sanitizeTags(jsonResponse.suggestedTags).slice(0, maxTags)
                         };
                     }
                     
                     // Alternative fields that might be used
                     if (Array.isArray(jsonResponse.matchedTags) && Array.isArray(jsonResponse.newTags)) {
                         return {
-                            matchedExistingTags: jsonResponse.matchedTags.slice(0, maxTags),
-                            suggestedTags: jsonResponse.newTags.slice(0, maxTags)
+                            matchedExistingTags: this.sanitizeTags(jsonResponse.matchedTags).slice(0, maxTags),
+                            suggestedTags: this.sanitizeTags(jsonResponse.newTags).slice(0, maxTags)
                         };
                     }
                     
@@ -270,7 +292,7 @@ export abstract class BaseLLMService {
                 // Check for matchedTags or newTags fields (backward compatibility)
                 if (Array.isArray(jsonResponse.matchedTags) && mode === TaggingMode.PredefinedTags) {
                     return {
-                        matchedExistingTags: jsonResponse.matchedTags.slice(0, maxTags),
+                        matchedExistingTags: this.sanitizeTags(jsonResponse.matchedTags).slice(0, maxTags),
                         suggestedTags: []
                     };
                 }
@@ -278,7 +300,7 @@ export abstract class BaseLLMService {
                 if (Array.isArray(jsonResponse.newTags) && mode === TaggingMode.GenerateNew) {
                     return {
                         matchedExistingTags: [],
-                        suggestedTags: jsonResponse.newTags.slice(0, maxTags)
+                        suggestedTags: this.sanitizeTags(jsonResponse.newTags).slice(0, maxTags)
                     };
                 }
             } catch (e) {
@@ -469,9 +491,12 @@ export abstract class BaseLLMService {
             // Remove duplicates and ensure strings
             const uniqueTags = [...new Set(tags.map(tag => tag.toString().trim()))]
                 .filter(tag => tag.length > 0);
+
+            // Final sanitization to drop any accidental prefixes
+            const sanitized = this.sanitizeTags(uniqueTags);
             
-            // console.log('Final extracted tags:', uniqueTags);
-            return { tags: uniqueTags };
+            // console.log('Final extracted tags:', sanitized);
+            return { tags: sanitized };
         } catch (error) {
             //console.error('Failed to process tags from response:', error);
             return { tags: [] };

@@ -71,7 +71,7 @@ ${candidateTags.join(', ')}
 Content:
 ${content}
 
-Return only the selected tags as a comma-separated list without # symbol:
+Return only the selected tags as a comma-separated list without # symbol. Do not include any prefixes or labels within the tag values (e.g., not "matchedExistingTags-foo"): 
 hello, world, ,hello-world`;
             break;
 
@@ -91,19 +91,24 @@ Return your response in this JSON format:
   "matchedExistingTags": ["tag1", "tag2"], 
   "suggestedTags": ["new-tag1", "new-tag2"]
 }
-note: don't add "matchedExistingTags" or "suggestedTags" to the tags themselves - only use each once as a json key to provide a valid response strictly following the schema above. 
+STRICT RULES:
+- Output MUST be valid JSON only, no extra text.
+- Do NOT include the words "matchedExistingTags" or "suggestedTags" inside any tag values.
+    For example, never produce values like "matchedExistingTags-supply-chain" or "suggestedTags-distribution".
+- Use those words only as the JSON keys shown above, exactly once each.
+If a tag concept would be "supply chain", the correct value is "supply-chain".
 
 Do not include the # symbol in tags.`;
             break;
 
         case TaggingMode.GenerateNew:
             prompt += `${langInstructions}Analyze the following content and generate up to ${maxTags} relevant tags.
-Return tags without the # symbol.
+Return tags without the # symbol. Do not include any prefixes or labels within tag values (e.g., not "suggestedTags-foo").
 
 Content:
 ${content}
 
-Return the tags as a comma-separated list:
+Return the tags as a comma-separated list. Do not include any prefixes or labels within tag values:
 hello, world, hello world,hello-world`;
             break;
 
@@ -119,12 +124,12 @@ ${candidateTags && candidateTags.length > 0 ? candidateTags.join(', ') : 'N/A'}
 Apply the following specific instructions if provided:
 ${pluginSettings.customPrompt ? pluginSettings.customPrompt : 'No specific additional instructions.'}
 
-Return tags without the # symbol.
+Return tags without the # symbol. Do not include any prefixes or labels within tag values.
 
 Content:
 ${content}
 
-Return the tags as a comma-separated list:
+Return the tags as a comma-separated list. Do not include any prefixes or labels within tag values:
 hello, world, hello world,hello-world`;
 
             break;
