@@ -217,44 +217,68 @@ export abstract class BaseLLMService {
                 const jsonResponse = JSON.parse(response.trim());
                 
                 // For Hybrid mode, check for both matched and suggested tags
+                // Check if the response has the expected format with separate tag arrays
+                if (Array.isArray(jsonResponse.matchedExistingTags) && Array.isArray(jsonResponse.suggestedTags)) {
+                    // Use the arrays directly without processing through processTagsFromResponse
+                    return {
+                        matchedExistingTags: jsonResponse.matchedExistingTags
+                            .filter((tag: any) => tag !== null && tag !== undefined)
+                            .map((tag: any) => String(tag).trim())
+                            .filter((tag: string) => tag.length > 0)
+                            .slice(0, maxTags),
+                        suggestedTags: jsonResponse.suggestedTags
+                            .filter((tag: any) => tag !== null && tag !== undefined)
+                            .map((tag: any) => String(tag).trim())
+                            .filter((tag: string) => tag.length > 0)
+                            .slice(0, maxTags)
+                    };
+                }
+                
+                // Alternative fields that might be used for backward compatibility
+                if (Array.isArray(jsonResponse.matchedTags) && Array.isArray(jsonResponse.newTags)) {
+                    return {
+                        matchedExistingTags: jsonResponse.matchedTags
+                            .filter((tag: any) => tag !== null && tag !== undefined)
+                            .map((tag: any) => String(tag).trim())
+                            .filter((tag: string) => tag.length > 0)
+                            .slice(0, maxTags),
+                        suggestedTags: jsonResponse.newTags
+                            .filter((tag: any) => tag !== null && tag !== undefined)
+                            .map((tag: any) => String(tag).trim())
+                            .filter((tag: string) => tag.length > 0)
+                            .slice(0, maxTags)
+                    };
+                }
+                
                 if (mode === TaggingMode.Hybrid) {
-                    // Check if the response has the expected hybrid format
-                    if (Array.isArray(jsonResponse.matchedExistingTags) && Array.isArray(jsonResponse.suggestedTags)) {
-                        return {
-                            matchedExistingTags: jsonResponse.matchedExistingTags.slice(0, maxTags),
-                            suggestedTags: jsonResponse.suggestedTags.slice(0, maxTags)
-                        };
-                    }
-                    
-                    // Alternative fields that might be used
-                    if (Array.isArray(jsonResponse.matchedTags) && Array.isArray(jsonResponse.newTags)) {
-                        return {
-                            matchedExistingTags: jsonResponse.matchedTags.slice(0, maxTags),
-                            suggestedTags: jsonResponse.newTags.slice(0, maxTags)
-                        };
-                    }
-                    
                     // If we have a tags array but no clear separation, try to extract both
                     if (Array.isArray(jsonResponse.tags)) {
                         // In this case, we don't know which are matched vs suggested
                         // We'll use the whole list as suggested tags (better than nothing)
-                        const processedTags = this.processTagsFromResponse(jsonResponse);
+                        const cleanTags = jsonResponse.tags
+                            .filter((tag: any) => tag !== null && tag !== undefined)
+                            .map((tag: any) => String(tag).trim())
+                            .filter((tag: string) => tag.length > 0);
                         return {
                             matchedExistingTags: [],
-                            suggestedTags: processedTags.tags.slice(0, maxTags)
+                            suggestedTags: cleanTags.slice(0, maxTags)
                         };
                     }
                 }
                 
-                // If we have a valid JSON response with tags
+                // If we have a valid JSON response with tags array
                 if (Array.isArray(jsonResponse.tags)) {
-                    const processedTags = this.processTagsFromResponse(jsonResponse);
+                    // Process tags directly without going through processTagsFromResponse to avoid prefix issues
+                    const cleanTags = jsonResponse.tags
+                        .filter((tag: any) => tag !== null && tag !== undefined)
+                        .map((tag: any) => String(tag).trim())
+                        .filter((tag: string) => tag.length > 0);
                     
                     // Apply tags according to mode
                     switch (mode) {
                         case TaggingMode.PredefinedTags:
                             return {
-                                matchedExistingTags: processedTags.tags.slice(0, maxTags),
+                                matchedExistingTags: cleanTags.slice(0, maxTags),
                                 suggestedTags: []
                             };
                         
@@ -262,7 +286,7 @@ export abstract class BaseLLMService {
                         default:
                             return {
                                 matchedExistingTags: [],
-                                suggestedTags: processedTags.tags.slice(0, maxTags)
+                                suggestedTags: cleanTags.slice(0, maxTags)
                             };
                     }
                 }
@@ -270,7 +294,11 @@ export abstract class BaseLLMService {
                 // Check for matchedTags or newTags fields (backward compatibility)
                 if (Array.isArray(jsonResponse.matchedTags) && mode === TaggingMode.PredefinedTags) {
                     return {
-                        matchedExistingTags: jsonResponse.matchedTags.slice(0, maxTags),
+                        matchedExistingTags: jsonResponse.matchedTags
+                            .filter((tag: any) => tag !== null && tag !== undefined)
+                            .map((tag: any) => String(tag).trim())
+                            .filter((tag: string) => tag.length > 0)
+                            .slice(0, maxTags),
                         suggestedTags: []
                     };
                 }
@@ -278,7 +306,11 @@ export abstract class BaseLLMService {
                 if (Array.isArray(jsonResponse.newTags) && mode === TaggingMode.GenerateNew) {
                     return {
                         matchedExistingTags: [],
-                        suggestedTags: jsonResponse.newTags.slice(0, maxTags)
+                        suggestedTags: jsonResponse.newTags
+                            .filter((tag: any) => tag !== null && tag !== undefined)
+                            .map((tag: any) => String(tag).trim())
+                            .filter((tag: string) => tag.length > 0)
+                            .slice(0, maxTags)
                     };
                 }
             } catch (e) {
