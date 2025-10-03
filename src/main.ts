@@ -74,6 +74,9 @@ export default class AITaggerPlugin extends Plugin {
                 type: this.settings.cloudServiceType,
                 language: this.settings.language
             }, this.app);
+
+        // Set debug mode on the LLM service
+        this.llmService.setDebugMode(this.settings.debugMode);
     }
 
     public async onload(): Promise<void> {

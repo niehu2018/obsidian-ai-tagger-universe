@@ -15,6 +15,7 @@ export abstract class BaseLLMService {
     protected readonly TIMEOUT = 30000; // 30 seconds timeout
     private activeRequests = new Set<{ controller: AbortController; timeoutId?: NodeJS.Timeout }>();
     protected readonly app: App;
+    protected debugMode: boolean = false;
 
     /**
      * Creates a new LLM service instance
@@ -24,6 +25,29 @@ export abstract class BaseLLMService {
         this.endpoint = config.endpoint.trim();
         this.modelName = config.modelName.trim();
         this.app = app;
+    }
+
+    /**
+     * Sets debug mode for verbose logging
+     * @param enabled - Whether to enable debug logging
+     */
+    public setDebugMode(enabled: boolean): void {
+        this.debugMode = enabled;
+    }
+
+    /**
+     * Logs a debug message if debug mode is enabled
+     * @param message - Message to log
+     * @param data - Optional data to log
+     */
+    protected debugLog(message: string, data?: any): void {
+        if (this.debugMode) {
+            if (data !== undefined) {
+                console.log(`[AI Tagger Debug] ${message}`, data);
+            } else {
+                console.log(`[AI Tagger Debug] ${message}`);
+            }
+        }
     }
 
     /**
@@ -212,23 +236,37 @@ export abstract class BaseLLMService {
      */
     protected parseResponse(response: string, mode: TaggingMode, maxTags: number): LLMResponse {
         try {
+            this.debugLog(`Parsing LLM response for mode: ${mode}`);
+            this.debugLog(`Raw response:`, response.substring(0, 500));
+
             // First, check if the response is already in JSON format
             try {
                 const jsonResponse = JSON.parse(response.trim());
+                this.debugLog(`Parsed JSON response:`, JSON.stringify(jsonResponse, null, 2));
                 
                 // For Hybrid mode, check for both matched and suggested tags
                 if (mode === TaggingMode.Hybrid) {
                     // Check if the response has the expected hybrid format
                     if (Array.isArray(jsonResponse.matchedExistingTags) && Array.isArray(jsonResponse.suggestedTags)) {
+                        this.debugLog(`Found hybrid format - matchedExistingTags:`, jsonResponse.matchedExistingTags);
+                        this.debugLog(`Found hybrid format - suggestedTags:`, jsonResponse.suggestedTags);
+
+                        const sanitizedMatched = jsonResponse.matchedExistingTags
+                            .map((tag: any) => this.sanitizeTag(String(tag)))
+                            .filter((tag: string) => tag.length > 0)
+                            .slice(0, maxTags);
+
+                        const sanitizedSuggested = jsonResponse.suggestedTags
+                            .map((tag: any) => this.sanitizeTag(String(tag)))
+                            .filter((tag: string) => tag.length > 0)
+                            .slice(0, maxTags);
+
+                        this.debugLog(`After sanitization - matchedExistingTags:`, sanitizedMatched);
+                        this.debugLog(`After sanitization - suggestedTags:`, sanitizedSuggested);
+
                         return {
-                            matchedExistingTags: jsonResponse.matchedExistingTags
-                                .map((tag: any) => this.sanitizeTag(String(tag)))
-                                .filter((tag: string) => tag.length > 0)
-                                .slice(0, maxTags),
-                            suggestedTags: jsonResponse.suggestedTags
-                                .map((tag: any) => this.sanitizeTag(String(tag)))
-                                .filter((tag: string) => tag.length > 0)
-                                .slice(0, maxTags)
+                            matchedExistingTags: sanitizedMatched,
+                            suggestedTags: sanitizedSuggested
                         };
                     }
 
@@ -350,6 +388,7 @@ export abstract class BaseLLMService {
     protected sanitizeTag(tag: string): string {
         if (!tag || typeof tag !== 'string') return '';
 
+        const original = tag;
         let cleaned = tag.trim();
 
         // Remove common malformed prefixes that LLMs sometimes add
@@ -363,11 +402,19 @@ export abstract class BaseLLMService {
         ];
 
         for (const pattern of prefixPatterns) {
+            const beforeReplace = cleaned;
             cleaned = cleaned.replace(pattern, '');
+            if (beforeReplace !== cleaned) {
+                this.debugLog(`Sanitized tag: "${original}" -> "${cleaned}" (removed pattern: ${pattern})`);
+            }
         }
 
         // Remove # symbol if present
         cleaned = cleaned.replace(/^#/, '');
+
+        if (original !== cleaned) {
+            this.debugLog(`Tag sanitization: "${original}" -> "${cleaned}"`);
+        }
 
         return cleaned.trim();
     }
