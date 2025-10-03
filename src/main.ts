@@ -9,7 +9,7 @@ import {
 } from './services';
 import { setSettings } from './services/prompts/tagPrompts';
 import { ConfirmationModal } from './ui/modals/ConfirmationModal';
-import { TagUtils, TagOperationResult } from './utils/tagUtils';
+import { TagUtils, TagOperationResult, setGlobalDebugMode } from './utils/tagUtils';
 import { TaggingMode } from './services/prompts/types';
 import { registerCommands } from './commands/index';
 import { AITaggerSettings, DEFAULT_SETTINGS } from './core/settings';
@@ -75,8 +75,9 @@ export default class AITaggerPlugin extends Plugin {
                 language: this.settings.language
             }, this.app);
 
-        // Set debug mode on the LLM service
+        // Set debug mode on the LLM service and globally
         this.llmService.setDebugMode(this.settings.debugMode);
+        setGlobalDebugMode(this.settings.debugMode);
     }
 
     public async onload(): Promise<void> {
@@ -492,7 +493,7 @@ export default class AITaggerPlugin extends Plugin {
             
             // Process and combine tags based on tagging mode
             let allTags: string[] = [];
-            
+
             if (this.settings.taggingMode === TaggingMode.PredefinedTags) {
                 allTags = analysis.matchedExistingTags || [];
             } else if (this.settings.taggingMode === TaggingMode.GenerateNew) {
@@ -503,17 +504,27 @@ export default class AITaggerPlugin extends Plugin {
                 const matchedTags = analysis.matchedExistingTags || [];
                 allTags = [...suggestedTags, ...matchedTags];
             }
-            
+
+            if (this.settings.debugMode) {
+                console.log(`[AI Tagger Debug] Tags before updateNoteTags:`, allTags);
+            }
+
             // If there are tags to add, update the note
             if (allTags.length > 0) {
-                return await TagUtils.updateNoteTags(
-                    this.app, 
-                    file, 
-                    allTags, 
+                const result = await TagUtils.updateNoteTags(
+                    this.app,
+                    file,
+                    allTags,
                     [], // No matched tags since we've already combined them
                     false, // Show notifications
                     this.settings.replaceTags // Always use the setting value
                 );
+
+                if (this.settings.debugMode) {
+                    console.log(`[AI Tagger Debug] Result from updateNoteTags:`, result);
+                }
+
+                return result;
             }
             
             // No tags found
