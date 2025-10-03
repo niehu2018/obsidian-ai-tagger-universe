@@ -338,16 +338,75 @@ export abstract class BaseLLMService {
                     };
                 }
             } catch (e) {
-                // Not JSON, continue with text parsing
+                // Not JSON, might be wrapped in markdown code fences
+                this.debugLog(`Initial JSON parse failed, trying to extract from markdown`);
             }
-            
-            // Clean up the response
+
+            // Try to extract JSON from markdown code blocks
+            const codeBlockRegex = /```(?:json)?\s*\n?([\s\S]*?)\n?```/;
+            const codeBlockMatch = response.match(codeBlockRegex);
+
+            if (codeBlockMatch) {
+                this.debugLog(`Found markdown code block, extracting JSON`);
+                try {
+                    const jsonResponse = JSON.parse(codeBlockMatch[1].trim());
+                    this.debugLog(`Successfully parsed JSON from code block:`, JSON.stringify(jsonResponse, null, 2));
+
+                    // For Hybrid mode, check for both matched and suggested tags
+                    if (mode === TaggingMode.Hybrid) {
+                        if (Array.isArray(jsonResponse.matchedExistingTags) && Array.isArray(jsonResponse.suggestedTags)) {
+                            this.debugLog(`Found hybrid format in code block - matchedExistingTags:`, jsonResponse.matchedExistingTags);
+                            this.debugLog(`Found hybrid format in code block - suggestedTags:`, jsonResponse.suggestedTags);
+
+                            const sanitizedMatched = jsonResponse.matchedExistingTags
+                                .map((tag: any) => this.sanitizeTag(String(tag)))
+                                .filter((tag: string) => tag.length > 0)
+                                .slice(0, maxTags);
+
+                            const sanitizedSuggested = jsonResponse.suggestedTags
+                                .map((tag: any) => this.sanitizeTag(String(tag)))
+                                .filter((tag: string) => tag.length > 0)
+                                .slice(0, maxTags);
+
+                            this.debugLog(`After sanitization - matchedExistingTags:`, sanitizedMatched);
+                            this.debugLog(`After sanitization - suggestedTags:`, sanitizedSuggested);
+
+                            return {
+                                matchedExistingTags: sanitizedMatched,
+                                suggestedTags: sanitizedSuggested
+                            };
+                        }
+                    }
+
+                    // Handle other modes from code block
+                    if (Array.isArray(jsonResponse.tags)) {
+                        const processedTags = this.processTagsFromResponse(jsonResponse);
+                        switch (mode) {
+                            case TaggingMode.PredefinedTags:
+                                return {
+                                    matchedExistingTags: processedTags.tags.slice(0, maxTags),
+                                    suggestedTags: []
+                                };
+                            case TaggingMode.GenerateNew:
+                            default:
+                                return {
+                                    matchedExistingTags: [],
+                                    suggestedTags: processedTags.tags.slice(0, maxTags)
+                                };
+                        }
+                    }
+                } catch (jsonError) {
+                    this.debugLog(`Failed to parse JSON from code block:`, jsonError);
+                }
+            }
+
+            // Clean up the response for text parsing fallback
             let cleanedResponse = response
                 .replace(/^```.*$/gm, '') // Remove code blocks
                 .replace(/^\s*[\-\*]\s+/gm, '') // Remove list markers
                 .replace(/^\s*\d+\.\s+/gm, '') // Remove numbered list markers
                 .trim();
-            
+
             // Process the text response
             const processedResponse = this.processTagsFromResponse(cleanedResponse);
             
