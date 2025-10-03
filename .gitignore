@@ -12,3 +12,6 @@ Library/
 *.d.ts
 package-lock.json
 .roo/
+.claude/
+.env
+*.log

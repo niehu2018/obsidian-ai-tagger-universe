@@ -9,6 +9,7 @@ Automatically generate intelligent tags for your Obsidian notes using AI. This p
 ## 🔌 Installation
 
 This plugin can be installed directly from the Obsidian Community Plugins browser:
+
 1. Open Obsidian Settings
 2. Navigate to Community Plugins
 3. Disable Safe Mode (if enabled)
@@ -16,6 +17,7 @@ This plugin can be installed directly from the Obsidian Community Plugins browse
 5. Click Install, then Enable
 
 Alternatively, you can manually install the plugin:
+
 1. Download the latest release from this repository
 2. Extract the files to your Obsidian vault's `.obsidian/plugins/ai-tagger-universe` folder
 3. Reload Obsidian and enable the plugin in the Community Plugins settings
@@ -23,11 +25,13 @@ Alternatively, you can manually install the plugin:
 ## ✨ Key Features
 
 ### 🤖 Flexible AI Integration
+
 - **Use your preferred AI service**:
   - **Local LLMs**: Ollama, LM Studio, LocalAI, or any OpenAI-compatible endpoint
   - **Cloud Services**: OpenAI, Claude, Gemini, Groq, Grok, Mistral, DeepSeek, Cohere, SiliconFlow, Aliyun, Bedrock, Vertex AI, OpenRouter, and more
 
 ### 🏷️ Smart Tagging System
+
 - **Multiple tagging modes**:
   - Generate completely new tags based on content
   - Match against your existing vault tags
@@ -37,12 +41,14 @@ Alternatively, you can manually install the plugin:
 - **Multilingual support** for generating tags in your preferred language
 
 ### 📊 Tag Network Visualization
+
 - Interactive graph showing relationships between tags
 - Discover connections and patterns in your knowledge base
 - Search functionality to find specific tags
 - Node size indicates tag frequency
 
 ### 🛠️ Advanced Management
+
 - Generate tags from selected text portions
 - Batch tag entire folders or your whole vault
 - Clear tags while preserving other frontmatter
@@ -77,8 +83,33 @@ Alternatively, you can manually install the plugin:
 
 Generate tags in multiple languages including English, Chinese, Japanese, German, French, Spanish, Russian, and many more.
 
-## 💖 Support Development
+## 🔄 Fork Improvements
 
-If you find this plugin useful, please consider [buying me a coffee](https://buymeacoffee.com/niehu2015o) to support ongoing development.
+This fork includes several enhancements over the original plugin:
 
-[MIT License](LICENSE)
+### Bug Fixes
+
+- **Fixed malformed tag prefixes**: Resolved issue where some LLMs would generate tags like `tag:matchedExistingTags-medical-research` instead of clean tags like `medical-research`
+  - Added robust tag sanitization that strips malformed prefixes (`tag:`, `matchedExistingTags-`, `suggestedTags-`, etc.)
+  - Enhanced prompts with explicit examples of correct vs. incorrect tag formats
+
+### Prompt Engineering Improvements
+
+- **Claude-optimized prompts**: Restructured all prompts using XML-style tags (`<task>`, `<requirements>`, `<output_format>`) for better LLM comprehension
+- **Enforced kebab-case formatting**: All tagging modes now consistently generate tags in kebab-case format (e.g., `machine-learning`, `data-science`)
+- **Improved tag quality guidelines**: Added explicit requirements for concise (1-3 words), specific, and descriptive tags
+- **Real-world examples**: Replaced placeholder examples with actual domain-appropriate tag examples
+- **Consistent structure**: Unified prompt structure across all tagging modes (GenerateNew, PredefinedTags, Hybrid, Custom)
+
+### Code Quality
+
+- **Enhanced error handling**: Better validation and sanitization of LLM responses
+- **Comprehensive documentation**: Improved inline code comments and type definitions
+
+### Testing
+
+- Included test script (`test-sanitization.js`) for verifying tag generation with your actual LLM endpoint
+- See `TEST_INSTRUCTIONS.md` for testing guidance
+
+These improvements result in more reliable tag generation, better formatting consistency, and improved compatibility with various LLM providers including Claude, GPT-4, and local models.
+

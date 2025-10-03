@@ -221,16 +221,28 @@ export abstract class BaseLLMService {
                     // Check if the response has the expected hybrid format
                     if (Array.isArray(jsonResponse.matchedExistingTags) && Array.isArray(jsonResponse.suggestedTags)) {
                         return {
-                            matchedExistingTags: jsonResponse.matchedExistingTags.slice(0, maxTags),
-                            suggestedTags: jsonResponse.suggestedTags.slice(0, maxTags)
+                            matchedExistingTags: jsonResponse.matchedExistingTags
+                                .map((tag: any) => this.sanitizeTag(String(tag)))
+                                .filter((tag: string) => tag.length > 0)
+                                .slice(0, maxTags),
+                            suggestedTags: jsonResponse.suggestedTags
+                                .map((tag: any) => this.sanitizeTag(String(tag)))
+                                .filter((tag: string) => tag.length > 0)
+                                .slice(0, maxTags)
                         };
                     }
-                    
+
                     // Alternative fields that might be used
                     if (Array.isArray(jsonResponse.matchedTags) && Array.isArray(jsonResponse.newTags)) {
                         return {
-                            matchedExistingTags: jsonResponse.matchedTags.slice(0, maxTags),
-                            suggestedTags: jsonResponse.newTags.slice(0, maxTags)
+                            matchedExistingTags: jsonResponse.matchedTags
+                                .map((tag: any) => this.sanitizeTag(String(tag)))
+                                .filter((tag: string) => tag.length > 0)
+                                .slice(0, maxTags),
+                            suggestedTags: jsonResponse.newTags
+                                .map((tag: any) => this.sanitizeTag(String(tag)))
+                                .filter((tag: string) => tag.length > 0)
+                                .slice(0, maxTags)
                         };
                     }
                     
@@ -270,15 +282,21 @@ export abstract class BaseLLMService {
                 // Check for matchedTags or newTags fields (backward compatibility)
                 if (Array.isArray(jsonResponse.matchedTags) && mode === TaggingMode.PredefinedTags) {
                     return {
-                        matchedExistingTags: jsonResponse.matchedTags.slice(0, maxTags),
+                        matchedExistingTags: jsonResponse.matchedTags
+                            .map((tag: any) => this.sanitizeTag(String(tag)))
+                            .filter((tag: string) => tag.length > 0)
+                            .slice(0, maxTags),
                         suggestedTags: []
                     };
                 }
-                
+
                 if (Array.isArray(jsonResponse.newTags) && mode === TaggingMode.GenerateNew) {
                     return {
                         matchedExistingTags: [],
-                        suggestedTags: jsonResponse.newTags.slice(0, maxTags)
+                        suggestedTags: jsonResponse.newTags
+                            .map((tag: any) => this.sanitizeTag(String(tag)))
+                            .filter((tag: string) => tag.length > 0)
+                            .slice(0, maxTags)
                     };
                 }
             } catch (e) {
@@ -322,6 +340,36 @@ export abstract class BaseLLMService {
             //console.error('Error parsing LLM response:', error);
             throw new Error(`Invalid response format: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
+    }
+
+    /**
+     * Sanitizes a tag by removing common malformed prefixes
+     * @param tag - Tag to sanitize
+     * @returns Cleaned tag
+     */
+    protected sanitizeTag(tag: string): string {
+        if (!tag || typeof tag !== 'string') return '';
+
+        let cleaned = tag.trim();
+
+        // Remove common malformed prefixes that LLMs sometimes add
+        const prefixPatterns = [
+            /^tag:/i,
+            /^matchedExistingTags-/i,
+            /^suggestedTags-/i,
+            /^matchedTags-/i,
+            /^newTags-/i,
+            /^tags-/i
+        ];
+
+        for (const pattern of prefixPatterns) {
+            cleaned = cleaned.replace(pattern, '');
+        }
+
+        // Remove # symbol if present
+        cleaned = cleaned.replace(/^#/, '');
+
+        return cleaned.trim();
     }
 
     /**
@@ -466,10 +514,10 @@ export abstract class BaseLLMService {
                 }
             }
             
-            // Remove duplicates and ensure strings
-            const uniqueTags = [...new Set(tags.map(tag => tag.toString().trim()))]
+            // Remove duplicates, sanitize, and ensure strings
+            const uniqueTags = [...new Set(tags.map(tag => this.sanitizeTag(tag.toString())))]
                 .filter(tag => tag.length > 0);
-            
+
             // console.log('Final extracted tags:', uniqueTags);
             return { tags: uniqueTags };
         } catch (error) {
