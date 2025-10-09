@@ -42,18 +42,20 @@ export interface LLMServiceConfig {
 
 export interface LLMService {
     analyzeTags(
-        content: string, 
-        candidateTags: string[], 
+        content: string,
+        candidateTags: string[],
         mode: TaggingMode,
         maxTags: number,
         language?: LanguageCode
     ): Promise<LLMResponse>;
-    
+
     testConnection(): Promise<{ result: ConnectionTestResult; error?: ConnectionTestError }>;
-    
+
     formatRequest(prompt: string, language?: string): any;
-    
+
     dispose(): Promise<void>;
+
+    setDebugMode(enabled: boolean): void;
 }
 
 export interface ConnectionTestError {

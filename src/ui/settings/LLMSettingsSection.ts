@@ -10,14 +10,28 @@ export class LLMSettingsSection extends BaseSettingSection {
     display(): void {
         this.containerEl.createEl('h1', { text: 'LLM settings' });
         this.createServiceTypeDropdown();
-        this.plugin.settings.serviceType === 'local' ? 
-            this.displayLocalSettings() : 
+        this.plugin.settings.serviceType === 'local' ?
+            this.displayLocalSettings() :
             this.displayCloudSettings();
-            
+
         // Check local service status when loading settings if local service is selected
         if (this.plugin.settings.serviceType === 'local') {
             this.checkLocalService(this.plugin.settings.localEndpoint);
         }
+
+        // Debug mode toggle
+        new Setting(this.containerEl)
+            .setName('Debug mode')
+            .setDesc('Enable verbose console logging for troubleshooting tag generation issues')
+            .addToggle(toggle =>
+                toggle
+                    .setValue(this.plugin.settings.debugMode)
+                    .onChange(async (value) => {
+                        this.plugin.settings.debugMode = value;
+                        await this.plugin.saveSettings();
+                        new Notice(`Debug mode ${value ? 'enabled' : 'disabled'}. Check developer console for logs.`);
+                    })
+            );
     }
 
     private createServiceTypeDropdown(): void {

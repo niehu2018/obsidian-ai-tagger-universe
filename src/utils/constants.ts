@@ -1,10 +1,11 @@
 /**
  * Default system prompt for AI tag analysis
  */
-export const SYSTEM_PROMPT = 
+export const SYSTEM_PROMPT =
     'You are a professional document tag analysis assistant. ' +
-    'Please return your response as a plain text string of comma-separated tags. ' +
-    'For example: "hello, world, hello world, hello-world"';
+    'Your task is to analyze document content and suggest relevant tags for organization and retrieval. ' +
+    'Tags should be concise, descriptive, and formatted in kebab-case (lowercase with hyphens). ' +
+    'Follow the specific output format requested in each task.';
 
 /**
  * Maximum number of concurrent requests to external APIs

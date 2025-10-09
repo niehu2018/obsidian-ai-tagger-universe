@@ -62,49 +62,107 @@ First understand the content, then if needed translate concepts to ${languageNam
     
     switch (mode) {
         case TaggingMode.PredefinedTags:
-            prompt += `Analyze the following content and select up to ${maxTags} most relevant tags from the provided tag list.
-Only use exact matches from the provided tags, do not modify or generate new tags.
+            prompt += `<task>
+Analyze the document content and select up to ${maxTags} most relevant tags from the available tag list.
+</task>
 
-Available tags:
+<available_tags>
 ${candidateTags.join(', ')}
+</available_tags>
 
-Content:
+<document_content>
 ${content}
+</document_content>
 
-Return only the selected tags as a comma-separated list without # symbol:
-hello, world, ,hello-world`;
+<requirements>
+- Select ONLY from the available tags listed above
+- Do NOT modify existing tags or create new ones
+- Do NOT include the # symbol
+- Choose the most relevant and specific tags that match the content
+- Return up to ${maxTags} tags maximum
+</requirements>
+
+<output_format>
+Return the selected tags as a comma-separated list in kebab-case format.
+
+Example: machine-learning, data-science, neural-networks
+
+Do NOT include explanations, just the comma-separated tag list.
+</output_format>`;
             break;
 
         case TaggingMode.Hybrid:
-            prompt += `${langInstructions}Analyze the following content and:
-1. Select relevant tags from the provided tag list (up to ${Math.ceil(maxTags/2)} tags)
-2. Generate additional new tags not in the list (up to ${Math.ceil(maxTags/2)} tags)
+            prompt += `${langInstructions}<task>
+Analyze the document content and provide relevant tags using a two-part approach:
+1. Select existing tags from the available tag list that match the content (up to ${Math.ceil(maxTags/2)} tags)
+2. Generate new tags for concepts not covered by existing tags (up to ${Math.ceil(maxTags/2)} tags)
+</task>
 
-Available tags to select from:
+<available_tags>
 ${candidateTags.join(', ')}
+</available_tags>
 
-Content:
+<document_content>
 ${content}
+</document_content>
 
-Return your response in this JSON format:
+<tag_requirements>
+- Use kebab-case formatting (lowercase with hyphens): "machine-learning" not "Machine Learning"
+- Keep tags concise (1-3 words maximum)
+- Be specific and descriptive
+- Match existing tags exactly when selecting from available tags
+- Generate new tags only for important concepts not covered by existing tags
+- Do NOT include the # symbol
+- Do NOT prefix tags with field names or "tag:"
+</tag_requirements>
+
+<output_format>
+Return ONLY a valid JSON object with this exact structure:
 {
-  "matchedExistingTags": ["tag1", "tag2"], 
-  "suggestedTags": ["new-tag1", "new-tag2"]
+  "matchedExistingTags": ["existing-tag-1", "existing-tag-2"],
+  "suggestedTags": ["new-tag-1", "new-tag-2"]
 }
-note: don't add "matchedExistingTags" or "suggestedTags" to the tags themselves - only use each once as a json key to provide a valid response strictly following the schema above. 
 
-Do not include the # symbol in tags.`;
+Example of CORRECT output:
+{
+  "matchedExistingTags": ["medical-research", "healthcare"],
+  "suggestedTags": ["clinical-trials", "patient-outcomes"]
+}
+
+Example of WRONG output (DO NOT DO THIS):
+{
+  "matchedExistingTags": ["tag:matchedExistingTags-medical-research"],
+  "suggestedTags": ["suggestedTags-healthcare"]
+}
+</output_format>`;
             break;
 
         case TaggingMode.GenerateNew:
-            prompt += `${langInstructions}Analyze the following content and generate up to ${maxTags} relevant tags.
-Return tags without the # symbol.
+            prompt += `${langInstructions}<task>
+Analyze the document content and generate up to ${maxTags} relevant tags that best describe the key topics, themes, and concepts.
+</task>
 
-Content:
+<document_content>
 ${content}
+</document_content>
 
-Return the tags as a comma-separated list:
-hello, world, hello world,hello-world`;
+<tag_requirements>
+- Use kebab-case formatting (lowercase with hyphens): "machine-learning" not "Machine Learning" or "machine_learning"
+- Keep tags concise (1-3 words maximum)
+- Be specific and descriptive
+- Focus on main topics, key concepts, and important themes
+- Avoid overly generic tags unless highly relevant
+- Do NOT include the # symbol
+- Do NOT prefix tags with "tag:" or any other prefix
+</tag_requirements>
+
+<output_format>
+Return the tags as a comma-separated list.
+
+Example: machine-learning, deep-learning, neural-networks, python, data-preprocessing
+
+Do NOT include explanations or additional text, just the comma-separated tag list.
+</output_format>`;
             break;
 
         case TaggingMode.Custom:
@@ -112,20 +170,37 @@ hello, world, hello world,hello-world`;
                 throw new Error('Custom tagging mode requires a custom prompt to be configured in settings.');
             }
 
-            prompt += `${langInstructions}Analyze the following content and generate up to ${maxTags} relevant tags.
-Consider the following existing tags if relevant:
-${candidateTags && candidateTags.length > 0 ? candidateTags.join(', ') : 'N/A'}
+            prompt += `${langInstructions}<task>
+Analyze the document content and generate up to ${maxTags} relevant tags based on the custom instructions provided below.
+</task>
 
-Apply the following specific instructions if provided:
-${pluginSettings.customPrompt ? pluginSettings.customPrompt : 'No specific additional instructions.'}
+<existing_tags_reference>
+${candidateTags && candidateTags.length > 0 ? candidateTags.join(', ') : 'No existing tags available'}
+</existing_tags_reference>
 
-Return tags without the # symbol.
-
-Content:
+<document_content>
 ${content}
+</document_content>
 
-Return the tags as a comma-separated list:
-hello, world, hello world,hello-world`;
+<custom_instructions>
+${pluginSettings.customPrompt}
+</custom_instructions>
+
+<tag_requirements>
+- Use kebab-case formatting (lowercase with hyphens)
+- Keep tags concise (1-3 words maximum)
+- Follow the custom instructions above
+- Do NOT include the # symbol
+- Do NOT prefix tags with "tag:" or any other prefix
+</tag_requirements>
+
+<output_format>
+Return the tags as a comma-separated list.
+
+Example: custom-tag-1, custom-tag-2, specific-concept
+
+Do NOT include explanations or additional text, just the comma-separated tag list.
+</output_format>`;
 
             break;
 

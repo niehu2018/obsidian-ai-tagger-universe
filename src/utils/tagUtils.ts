@@ -7,6 +7,23 @@ import { TAG_RANGE, TAG_PREDEFINED_RANGE, TAG_GENERATE_RANGE } from './constants
 // Re-export constants for backward compatibility
 export { TAG_RANGE, TAG_PREDEFINED_RANGE, TAG_GENERATE_RANGE };
 
+// Global debug mode flag (set by plugin)
+let globalDebugMode = false;
+
+export function setGlobalDebugMode(enabled: boolean): void {
+    globalDebugMode = enabled;
+}
+
+function debugLog(message: string, data?: any): void {
+    if (globalDebugMode) {
+        if (data !== undefined) {
+            console.log(`[AI Tagger Debug] ${message}`, data);
+        } else {
+            console.log(`[AI Tagger Debug] ${message}`);
+        }
+    }
+}
+
 /**
  * Custom error type for tag-related operations
  */
@@ -203,14 +220,20 @@ export class TagUtils {
         replaceTags: boolean = true
     ): Promise<TagOperationResult> {
         try {
+            debugLog(`updateNoteTags called with newTags:`, newTags);
+            debugLog(`updateNoteTags called with matchedTags:`, matchedTags);
+
             if (!Array.isArray(newTags) || !Array.isArray(matchedTags)) {
                 throw new TagError('Tags parameter must be an array');
             }
 
             // Combine and format all tags
             const allTags = [...newTags, ...matchedTags];
+            debugLog(`Combined tags before formatting:`, allTags);
+
             const yamlReadyTags = this.formatTags(allTags);
-            
+            debugLog(`YAML-ready tags after formatting:`, yamlReadyTags);
+
             if (yamlReadyTags.length === 0) {
                 !silent && new Notice('No valid tags to add', 3000);
                 return { success: true, message: 'No valid tags to add', tags: [] };
@@ -485,18 +508,26 @@ export class TagUtils {
         if (!Array.isArray(tags)) {
             return [];
         }
-        
-        return tags
+
+        debugLog(`formatTags called with:`, tags);
+
+        const result = tags
             .filter(tag => tag !== null && tag !== undefined)
             .map(tag => {
                 try {
                     const formatted = this.formatTag(tag);
+                    if (formatted !== tag) {
+                        debugLog(`formatTag transformed: "${tag}" -> "${formatted}"`);
+                    }
                     return keepHashPrefix ? `#${formatted}` : formatted;
                 } catch (error) {
                     return null;
                 }
             })
             .filter((tag): tag is string => tag !== null);
+
+        debugLog(`formatTags result:`, result);
+        return result;
     }
 
     /**

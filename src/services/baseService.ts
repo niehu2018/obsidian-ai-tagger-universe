@@ -15,6 +15,7 @@ export abstract class BaseLLMService {
     protected readonly TIMEOUT = 30000; // 30 seconds timeout
     private activeRequests = new Set<{ controller: AbortController; timeoutId?: NodeJS.Timeout }>();
     protected readonly app: App;
+    protected debugMode: boolean = false;
 
     /**
      * Creates a new LLM service instance
@@ -24,6 +25,29 @@ export abstract class BaseLLMService {
         this.endpoint = config.endpoint.trim();
         this.modelName = config.modelName.trim();
         this.app = app;
+    }
+
+    /**
+     * Sets debug mode for verbose logging
+     * @param enabled - Whether to enable debug logging
+     */
+    public setDebugMode(enabled: boolean): void {
+        this.debugMode = enabled;
+    }
+
+    /**
+     * Logs a debug message if debug mode is enabled
+     * @param message - Message to log
+     * @param data - Optional data to log
+     */
+    protected debugLog(message: string, data?: any): void {
+        if (this.debugMode) {
+            if (data !== undefined) {
+                console.log(`[AI Tagger Debug] ${message}`, data);
+            } else {
+                console.log(`[AI Tagger Debug] ${message}`);
+            }
+        }
     }
 
     /**
@@ -212,25 +236,51 @@ export abstract class BaseLLMService {
      */
     protected parseResponse(response: string, mode: TaggingMode, maxTags: number): LLMResponse {
         try {
+            this.debugLog(`Parsing LLM response for mode: ${mode}`);
+            this.debugLog(`Raw response:`, response.substring(0, 500));
+
             // First, check if the response is already in JSON format
             try {
                 const jsonResponse = JSON.parse(response.trim());
+                this.debugLog(`Parsed JSON response:`, JSON.stringify(jsonResponse, null, 2));
                 
                 // For Hybrid mode, check for both matched and suggested tags
                 if (mode === TaggingMode.Hybrid) {
                     // Check if the response has the expected hybrid format
                     if (Array.isArray(jsonResponse.matchedExistingTags) && Array.isArray(jsonResponse.suggestedTags)) {
+                        this.debugLog(`Found hybrid format - matchedExistingTags:`, jsonResponse.matchedExistingTags);
+                        this.debugLog(`Found hybrid format - suggestedTags:`, jsonResponse.suggestedTags);
+
+                        const sanitizedMatched = jsonResponse.matchedExistingTags
+                            .map((tag: any) => this.sanitizeTag(String(tag)))
+                            .filter((tag: string) => tag.length > 0)
+                            .slice(0, maxTags);
+
+                        const sanitizedSuggested = jsonResponse.suggestedTags
+                            .map((tag: any) => this.sanitizeTag(String(tag)))
+                            .filter((tag: string) => tag.length > 0)
+                            .slice(0, maxTags);
+
+                        this.debugLog(`After sanitization - matchedExistingTags:`, sanitizedMatched);
+                        this.debugLog(`After sanitization - suggestedTags:`, sanitizedSuggested);
+
                         return {
-                            matchedExistingTags: jsonResponse.matchedExistingTags.slice(0, maxTags),
-                            suggestedTags: jsonResponse.suggestedTags.slice(0, maxTags)
+                            matchedExistingTags: sanitizedMatched,
+                            suggestedTags: sanitizedSuggested
                         };
                     }
-                    
+
                     // Alternative fields that might be used
                     if (Array.isArray(jsonResponse.matchedTags) && Array.isArray(jsonResponse.newTags)) {
                         return {
-                            matchedExistingTags: jsonResponse.matchedTags.slice(0, maxTags),
-                            suggestedTags: jsonResponse.newTags.slice(0, maxTags)
+                            matchedExistingTags: jsonResponse.matchedTags
+                                .map((tag: any) => this.sanitizeTag(String(tag)))
+                                .filter((tag: string) => tag.length > 0)
+                                .slice(0, maxTags),
+                            suggestedTags: jsonResponse.newTags
+                                .map((tag: any) => this.sanitizeTag(String(tag)))
+                                .filter((tag: string) => tag.length > 0)
+                                .slice(0, maxTags)
                         };
                     }
                     
@@ -270,28 +320,93 @@ export abstract class BaseLLMService {
                 // Check for matchedTags or newTags fields (backward compatibility)
                 if (Array.isArray(jsonResponse.matchedTags) && mode === TaggingMode.PredefinedTags) {
                     return {
-                        matchedExistingTags: jsonResponse.matchedTags.slice(0, maxTags),
+                        matchedExistingTags: jsonResponse.matchedTags
+                            .map((tag: any) => this.sanitizeTag(String(tag)))
+                            .filter((tag: string) => tag.length > 0)
+                            .slice(0, maxTags),
                         suggestedTags: []
                     };
                 }
-                
+
                 if (Array.isArray(jsonResponse.newTags) && mode === TaggingMode.GenerateNew) {
                     return {
                         matchedExistingTags: [],
-                        suggestedTags: jsonResponse.newTags.slice(0, maxTags)
+                        suggestedTags: jsonResponse.newTags
+                            .map((tag: any) => this.sanitizeTag(String(tag)))
+                            .filter((tag: string) => tag.length > 0)
+                            .slice(0, maxTags)
                     };
                 }
             } catch (e) {
-                // Not JSON, continue with text parsing
+                // Not JSON, might be wrapped in markdown code fences
+                this.debugLog(`Initial JSON parse failed, trying to extract from markdown`);
             }
-            
-            // Clean up the response
+
+            // Try to extract JSON from markdown code blocks
+            const codeBlockRegex = /```(?:json)?\s*\n?([\s\S]*?)\n?```/;
+            const codeBlockMatch = response.match(codeBlockRegex);
+
+            if (codeBlockMatch) {
+                this.debugLog(`Found markdown code block, extracting JSON`);
+                try {
+                    const jsonResponse = JSON.parse(codeBlockMatch[1].trim());
+                    this.debugLog(`Successfully parsed JSON from code block:`, JSON.stringify(jsonResponse, null, 2));
+
+                    // For Hybrid mode, check for both matched and suggested tags
+                    if (mode === TaggingMode.Hybrid) {
+                        if (Array.isArray(jsonResponse.matchedExistingTags) && Array.isArray(jsonResponse.suggestedTags)) {
+                            this.debugLog(`Found hybrid format in code block - matchedExistingTags:`, jsonResponse.matchedExistingTags);
+                            this.debugLog(`Found hybrid format in code block - suggestedTags:`, jsonResponse.suggestedTags);
+
+                            const sanitizedMatched = jsonResponse.matchedExistingTags
+                                .map((tag: any) => this.sanitizeTag(String(tag)))
+                                .filter((tag: string) => tag.length > 0)
+                                .slice(0, maxTags);
+
+                            const sanitizedSuggested = jsonResponse.suggestedTags
+                                .map((tag: any) => this.sanitizeTag(String(tag)))
+                                .filter((tag: string) => tag.length > 0)
+                                .slice(0, maxTags);
+
+                            this.debugLog(`After sanitization - matchedExistingTags:`, sanitizedMatched);
+                            this.debugLog(`After sanitization - suggestedTags:`, sanitizedSuggested);
+
+                            return {
+                                matchedExistingTags: sanitizedMatched,
+                                suggestedTags: sanitizedSuggested
+                            };
+                        }
+                    }
+
+                    // Handle other modes from code block
+                    if (Array.isArray(jsonResponse.tags)) {
+                        const processedTags = this.processTagsFromResponse(jsonResponse);
+                        switch (mode) {
+                            case TaggingMode.PredefinedTags:
+                                return {
+                                    matchedExistingTags: processedTags.tags.slice(0, maxTags),
+                                    suggestedTags: []
+                                };
+                            case TaggingMode.GenerateNew:
+                            default:
+                                return {
+                                    matchedExistingTags: [],
+                                    suggestedTags: processedTags.tags.slice(0, maxTags)
+                                };
+                        }
+                    }
+                } catch (jsonError) {
+                    this.debugLog(`Failed to parse JSON from code block:`, jsonError);
+                }
+            }
+
+            // Clean up the response for text parsing fallback
             let cleanedResponse = response
                 .replace(/^```.*$/gm, '') // Remove code blocks
                 .replace(/^\s*[\-\*]\s+/gm, '') // Remove list markers
                 .replace(/^\s*\d+\.\s+/gm, '') // Remove numbered list markers
                 .trim();
-            
+
             // Process the text response
             const processedResponse = this.processTagsFromResponse(cleanedResponse);
             
@@ -322,6 +437,45 @@ export abstract class BaseLLMService {
             //console.error('Error parsing LLM response:', error);
             throw new Error(`Invalid response format: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
+    }
+
+    /**
+     * Sanitizes a tag by removing common malformed prefixes
+     * @param tag - Tag to sanitize
+     * @returns Cleaned tag
+     */
+    protected sanitizeTag(tag: string): string {
+        if (!tag || typeof tag !== 'string') return '';
+
+        const original = tag;
+        let cleaned = tag.trim();
+
+        // Remove common malformed prefixes that LLMs sometimes add
+        const prefixPatterns = [
+            /^tag:/i,
+            /^matchedExistingTags-/i,
+            /^suggestedTags-/i,
+            /^matchedTags-/i,
+            /^newTags-/i,
+            /^tags-/i
+        ];
+
+        for (const pattern of prefixPatterns) {
+            const beforeReplace = cleaned;
+            cleaned = cleaned.replace(pattern, '');
+            if (beforeReplace !== cleaned) {
+                this.debugLog(`Sanitized tag: "${original}" -> "${cleaned}" (removed pattern: ${pattern})`);
+            }
+        }
+
+        // Remove # symbol if present
+        cleaned = cleaned.replace(/^#/, '');
+
+        if (original !== cleaned) {
+            this.debugLog(`Tag sanitization: "${original}" -> "${cleaned}"`);
+        }
+
+        return cleaned.trim();
     }
 
     /**
@@ -466,10 +620,10 @@ export abstract class BaseLLMService {
                 }
             }
             
-            // Remove duplicates and ensure strings
-            const uniqueTags = [...new Set(tags.map(tag => tag.toString().trim()))]
+            // Remove duplicates, sanitize, and ensure strings
+            const uniqueTags = [...new Set(tags.map(tag => this.sanitizeTag(tag.toString())))]
                 .filter(tag => tag.length > 0);
-            
+
             // console.log('Final extracted tags:', uniqueTags);
             return { tags: uniqueTags };
         } catch (error) {
