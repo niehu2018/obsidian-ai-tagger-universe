@@ -52,8 +52,8 @@ export class ExcludedFilesModal extends Modal {
         contentEl.style.margin = '0 auto';
         
         // Set modal title with improved styling
-        const titleEl = contentEl.createEl('h2', { 
-            text: 'Excluded files',
+        const titleEl = contentEl.createEl('h2', {
+            text: this.plugin.t.modals.excludedFilesTitle,
             cls: 'excluded-files-title'
         });
         titleEl.style.marginTop = '0';
@@ -62,8 +62,8 @@ export class ExcludedFilesModal extends Modal {
         titleEl.style.borderBottom = '1px solid var(--background-modifier-border)';
         titleEl.style.paddingBottom = '10px';
         
-        const subtitleEl = contentEl.createEl('p', { 
-            text: 'Files matching the following filters are currently excluded:',
+        const subtitleEl = contentEl.createEl('p', {
+            text: this.plugin.t.modals.excludedFilesSubtitle,
             cls: 'excluded-files-subtitle'
         });
         subtitleEl.style.margin = '10px 0 15px';
@@ -89,9 +89,9 @@ export class ExcludedFilesModal extends Modal {
         filterContainer.style.marginBottom = '20px';
 
         // Add filter label
-        const filterLabel = filterContainer.createEl('div', { 
-            text: 'Filter', 
-            cls: 'filter-label' 
+        const filterLabel = filterContainer.createEl('div', {
+            text: this.plugin.t.modals.filterLabel,
+            cls: 'filter-label'
         });
         filterLabel.style.fontWeight = 'bold';
         filterLabel.style.marginBottom = '8px';
@@ -107,7 +107,7 @@ export class ExcludedFilesModal extends Modal {
         // Add input field with improved styling
         this.filterInput = inputContainer.createEl('input', {
             type: 'text',
-            placeholder: 'Enter path or "/regex/"',
+            placeholder: this.plugin.t.modals.pathPlaceholder,
             cls: 'filter-input',
             value: ''
         });
@@ -149,7 +149,7 @@ export class ExcludedFilesModal extends Modal {
         addButtonContainer.style.marginLeft = '8px';
         
         const addButtonEl = new ButtonComponent(addButtonContainer)
-            .setButtonText('Add')
+            .setButtonText(this.plugin.t.modals.addButton)
             .onClick(() => {
                 const value = this.filterInput.value.trim();
                 if (value && !this.excludedFolders.includes(value)) {
@@ -212,10 +212,10 @@ export class ExcludedFilesModal extends Modal {
         
         // Add Clear All button
         const clearAllButtonEl = new ButtonComponent(leftButtonContainer)
-            .setButtonText('Clear All')
+            .setButtonText(this.plugin.t.modals.clearAllButton)
             .onClick(() => {
                 // Confirmation dialog to prevent accidental deletion
-                if (this.excludedFolders.length > 0 && confirm('Are you sure you want to remove all excluded paths?')) {
+                if (this.excludedFolders.length > 0 && confirm(this.plugin.t.modals.clearAllConfirm)) {
                     this.excludedFolders = [];
                     this.renderExcludedList(excludedListContainer);
                 }
@@ -238,7 +238,7 @@ export class ExcludedFilesModal extends Modal {
         
         // Add cancel button
         const cancelButtonEl = new ButtonComponent(rightButtonContainer)
-            .setButtonText('Cancel')
+            .setButtonText(this.plugin.t.modals.cancelButton)
             .onClick(() => {
                 this.close();
             });
@@ -247,7 +247,7 @@ export class ExcludedFilesModal extends Modal {
         
         // Add save button
         const saveButtonEl = new ButtonComponent(rightButtonContainer)
-            .setButtonText('Save')
+            .setButtonText(this.plugin.t.modals.saveButton)
             .setCta()
             .onClick(() => {
                 this.onSave(this.excludedFolders);
@@ -344,7 +344,7 @@ export class ExcludedFilesModal extends Modal {
                 noItemsEl.style.color = 'var(--text-muted)';
                 noItemsEl.style.fontSize = '14px';
                 
-                noItemsEl.textContent = 'No matching paths found';
+                noItemsEl.textContent = this.plugin.t.modals.noMatchingPaths;
                 
                 // Add option to use current text as a pattern
                 if (lowerSearchTerm) {
@@ -368,7 +368,7 @@ export class ExcludedFilesModal extends Modal {
                         useCurrentTextEl.style.backgroundColor = 'var(--background-secondary)';
                     });
                     
-                    useCurrentTextEl.textContent = `Use "${searchTerm}" as pattern`;
+                    useCurrentTextEl.textContent = this.plugin.t.modals.useAsPattern.replace('{searchTerm}', searchTerm);
                     
                     useCurrentTextEl.addEventListener('click', () => {
                         // Add current text as an exclusion pattern
@@ -399,7 +399,7 @@ export class ExcludedFilesModal extends Modal {
                     moreItemsEl.style.color = 'var(--text-muted)';
                     moreItemsEl.style.borderTop = '1px solid var(--background-modifier-border)';
                     
-                    moreItemsEl.textContent = `${matchedItems.length - limitedItems.length} more results...`;
+                    moreItemsEl.textContent = `${matchedItems.length - limitedItems.length} ${this.plugin.t.modals.moreResults}`;
                 }
             }
             
@@ -414,7 +414,7 @@ export class ExcludedFilesModal extends Modal {
             });
             errorEl.style.padding = '10px';
             errorEl.style.color = 'var(--text-error)';
-            errorEl.textContent = 'Error loading paths';
+            errorEl.textContent = this.plugin.t.modals.errorLoadingPaths;
         }
     }
 
@@ -518,7 +518,7 @@ export class ExcludedFilesModal extends Modal {
         
         if (this.excludedFolders.length === 0) {
             const emptyEl = container.createEl('div', {
-                text: 'No exclusions defined yet.',
+                text: this.plugin.t.modals.noExclusionsDefined,
                 cls: 'excluded-empty-message'
             });
             

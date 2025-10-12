@@ -1,8 +1,8 @@
 import { App, MarkdownView, Modal, Notice, Plugin, TFile, TFolder, WorkspaceLeaf } from 'obsidian';
-import { 
+import {
     ConnectionTestError,
     ConnectionTestResult,
-    LLMService, 
+    LLMService,
     LocalLLMService,
     CloudLLMService,
     LLMResponse
@@ -19,6 +19,7 @@ import { TagNetworkManager } from './utils/tagNetworkUtils';
 import { TagNetworkView, TAG_NETWORK_VIEW_TYPE } from './ui/views/TagNetworkView';
 import { TagOperations } from './utils/tagOperations';
 import { BatchProcessResult } from './utils/batchProcessor';
+import { getTranslations, SupportedLanguage } from './i18n';
 
 export default class AITaggerPlugin extends Plugin {
     public settings = {...DEFAULT_SETTINGS};
@@ -26,6 +27,7 @@ export default class AITaggerPlugin extends Plugin {
     private eventHandlers: EventHandlers;
     private tagNetworkManager: TagNetworkManager;
     private tagOperations: TagOperations;
+    public t = getTranslations(this.settings.interfaceLanguage);
 
     constructor(app: App, manifest: any) {
         super(app, manifest);
@@ -41,7 +43,7 @@ export default class AITaggerPlugin extends Plugin {
 
     public async loadSettings(): Promise<void> {
         const oldSettings = await this.loadData();
-        
+
         if (oldSettings?.serviceType === 'ollama') {
             oldSettings.serviceType = 'local';
             oldSettings.localEndpoint = oldSettings.ollamaEndpoint;
@@ -51,11 +53,17 @@ export default class AITaggerPlugin extends Plugin {
         }
 
         this.settings = Object.assign({}, DEFAULT_SETTINGS, oldSettings);
+
+        // 初始化翻译
+        this.t = getTranslations(this.settings.interfaceLanguage);
     }
 
     public async saveSettings(): Promise<void> {
         await this.saveData(this.settings);
         await this.initializeLLMService();
+
+        // 更新翻译
+        this.t = getTranslations(this.settings.interfaceLanguage);
     }
 
     private async initializeLLMService(): Promise<void> {
@@ -104,16 +112,16 @@ export default class AITaggerPlugin extends Plugin {
 
         // Add ribbon icons with descriptive tooltips
         this.addRibbonIcon(
-            'tags', 
-            'Analyze and tag current note', 
+            'tags',
+            this.t.messages.analyzeTagCurrentNote,
             (evt: MouseEvent) => {
                 this.analyzeAndTagCurrentNote();
             }
         );
-        
+
         this.addRibbonIcon(
-            'network', 
-            'View tag relationships network', 
+            'network',
+            this.t.messages.viewTagNetwork,
             (evt: MouseEvent) => {
                 this.showTagNetwork();
             }
@@ -134,21 +142,21 @@ export default class AITaggerPlugin extends Plugin {
     
     public async showTagNetwork(): Promise<void> {
         try {
-            const statusNotice = new Notice('Building tag network...', 0);
-            
+            const statusNotice = new Notice(this.t.messages.buildingTagNetwork, 0);
+
             const files = this.getNonExcludedMarkdownFiles();
             await this.tagNetworkManager.buildTagNetwork(files);
             const networkData = this.tagNetworkManager.getNetworkData();
-            
+
             statusNotice.hide();
-            
+
             if (!networkData.nodes.length) {
-                new Notice('No tags were found in your vault', 3000);
+                new Notice(this.t.messages.noTagsInVault, 3000);
                 return;
             }
-            
+
             if (!networkData.edges.length) {
-                new Notice('Tags were found, but there are no connections between them', 4000);
+                new Notice(this.t.messages.noTagConnections, 4000);
             }
 
             // Try to find existing network view
@@ -175,7 +183,7 @@ export default class AITaggerPlugin extends Plugin {
             this.app.workspace.revealLeaf(leaf);
         } catch (error) {
             //console.error('Failed to show tag network:', error);
-            new Notice('Failed to build tag network. Please check console for details.', 4000);
+            new Notice(this.t.messages.failedToBuildNetwork, 4000);
         }
     }
 
@@ -190,9 +198,10 @@ export default class AITaggerPlugin extends Plugin {
         return new Promise((resolve) => {
             const modal = new ConfirmationModal(
                 this.app,
-                'Warning',
+                this.t.modals.warning,
                 message,
-                () => resolve(true)
+                () => resolve(true),
+                this
             );
             modal.onClose = () => resolve(false);
             modal.open();
@@ -222,10 +231,10 @@ export default class AITaggerPlugin extends Plugin {
         )) {
             try {
                 await this.tagOperations.clearDirectoryTags(files);
-                new Notice('Successfully cleared all tags from vault', 3000);
+                new Notice(this.t.messages.successfullyClearedAllVault, 3000);
             } catch (error) {
                 //console.error('Failed to clear vault tags:', error);
-                new Notice('Failed to clear tags from vault', 4000);
+                new Notice(this.t.messages.failedToClearVaultTags, 4000);
             }
         }
     }

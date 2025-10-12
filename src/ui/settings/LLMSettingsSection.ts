@@ -8,7 +8,7 @@ export class LLMSettingsSection extends BaseSettingSection {
     private statusEl: HTMLElement = null!;
 
     display(): void {
-        this.containerEl.createEl('h1', { text: 'LLM settings' });
+        this.containerEl.createEl('h1', { text: this.plugin.t.settings.llm.title });
         this.createServiceTypeDropdown();
         this.plugin.settings.serviceType === 'local' ?
             this.displayLocalSettings() :
@@ -21,15 +21,15 @@ export class LLMSettingsSection extends BaseSettingSection {
 
         // Debug mode toggle
         new Setting(this.containerEl)
-            .setName('Debug mode')
-            .setDesc('Enable verbose console logging for troubleshooting tag generation issues')
+            .setName(this.plugin.t.settings.llm.debugMode)
+            .setDesc(this.plugin.t.settings.llm.debugModeDesc)
             .addToggle(toggle =>
                 toggle
                     .setValue(this.plugin.settings.debugMode)
                     .onChange(async (value) => {
                         this.plugin.settings.debugMode = value;
                         await this.plugin.saveSettings();
-                        new Notice(`Debug mode ${value ? 'enabled' : 'disabled'}. Check developer console for logs.`);
+                        new Notice(value ? this.plugin.t.settings.llm.debugEnabled : this.plugin.t.settings.llm.debugDisabled);
                     })
             );
     }
@@ -39,13 +39,13 @@ export class LLMSettingsSection extends BaseSettingSection {
             this.plugin.settings.serviceType = 'cloud';
         }
         new Setting(this.containerEl)
-            .setName('Service type')
-            .setDesc('Choose the AI service provider to use')
-            .addDropdown(dropdown => 
+            .setName(this.plugin.t.settings.llm.serviceType)
+            .setDesc(this.plugin.t.settings.llm.serviceTypeDesc)
+            .addDropdown(dropdown =>
                 dropdown
                     .addOptions({
-                        'local': 'Local LLM',
-                        'cloud': 'Cloud service'
+                        'local': this.plugin.t.dropdowns.localLLM,
+                        'cloud': this.plugin.t.dropdowns.cloudService
                     })
                     .setValue(this.plugin.settings.serviceType)
                     .onChange(async (value) => {
@@ -57,31 +57,31 @@ export class LLMSettingsSection extends BaseSettingSection {
 
         if (this.plugin.settings.serviceType === 'cloud') {
             new Setting(this.containerEl)
-                .setName('Cloud provider')
-                .setDesc('Select the cloud service provider')
-                .addDropdown(dropdown => 
+                .setName(this.plugin.t.settings.llm.cloudProvider)
+                .setDesc(this.plugin.t.settings.llm.cloudProviderDesc)
+                .addDropdown(dropdown =>
                     dropdown
                         .addOptions({
-                            'openai': 'OpenAI',
-                            'gemini': 'Google Gemini',
-                            'deepseek': 'DeepSeek',
-                            'aliyun': 'Aliyun',
-                            'claude': 'Anthropic Claude',
-                            'groq': 'Groq LLM',
-                            'vertex': 'Google Vertex AI',
-                            'openrouter': 'OpenRouter',
-                            'bedrock': 'AWS Bedrock',
-                            'requesty': 'Requesty',
-                            'cohere': 'Cohere',
-                            'grok': 'Grok',
-                            'mistral': 'Mistral AI',
-                            'openai-compatible': 'OpenAI Compatible'
+                            'openai': this.plugin.t.dropdowns.openai,
+                            'gemini': this.plugin.t.dropdowns.gemini,
+                            'deepseek': this.plugin.t.dropdowns.deepseek,
+                            'aliyun': this.plugin.t.dropdowns.aliyun,
+                            'claude': this.plugin.t.dropdowns.claude,
+                            'groq': this.plugin.t.dropdowns.groq,
+                            'vertex': this.plugin.t.dropdowns.vertex,
+                            'openrouter': this.plugin.t.dropdowns.openrouter,
+                            'bedrock': this.plugin.t.dropdowns.bedrock,
+                            'requesty': this.plugin.t.dropdowns.requesty,
+                            'cohere': this.plugin.t.dropdowns.cohere,
+                            'grok': this.plugin.t.dropdowns.grok,
+                            'mistral': this.plugin.t.dropdowns.mistral,
+                            'openai-compatible': this.plugin.t.dropdowns.openaiCompatible
                         })
                         .setValue(this.plugin.settings.cloudServiceType)
                         .onChange(async (value) => {
                             const type = value as 'openai' | 'gemini' | 'deepseek' | 'aliyun' | 'claude' | 'groq' | 'vertex' | 'openrouter' | 'bedrock' | 'requesty' | 'cohere' | 'grok' | 'mistral' | 'openai-compatible';
                             this.plugin.settings.cloudServiceType = type;
-                            
+
                             try {
                                 const endpoints = await import('../../services/adapters/cloudEndpoints.json');
                                 switch (type) {
@@ -145,7 +145,7 @@ export class LLMSettingsSection extends BaseSettingSection {
                                 await this.plugin.saveSettings();
                                 this.settingTab.display();
                             } catch (error) {
-                                new Notice('Failed to load cloud endpoints');
+                                new Notice(this.plugin.t.messages.failedToLoadEndpoints);
                             }
                         })
                 );
@@ -154,22 +154,22 @@ export class LLMSettingsSection extends BaseSettingSection {
 
     private displayLocalSettings(): void {
         new Setting(this.containerEl)
-            .setName('Local llm endpoint')
-            .setDesc('Enter the base URL for your local service')
+            .setName(this.plugin.t.settings.llm.localEndpoint)
+            .setDesc(this.plugin.t.settings.llm.localEndpointDesc)
             .addText(text => text
                 .setPlaceholder('http://localhost:11434/v1/chat/completions')
                 .setValue(this.plugin.settings.localEndpoint)
                 .onChange(async (value) => {
                     this.plugin.settings.localEndpoint = value;
                     await this.plugin.saveSettings();
-                    
+
                     // Refresh the settings to update the model dropdown
                     this.settingTab.display();
                 }));
 
         new Setting(this.containerEl)
-            .setName('Model name')
-            .setDesc('Name of the model to use with your local service')
+            .setName(this.plugin.t.settings.llm.modelName)
+            .setDesc(this.plugin.t.settings.llm.modelNameDesc)
             .addText(text => text
                 .setPlaceholder('Model name (e.g., mistral, llama2, gpt-3.5-turbo)')
                 .setValue(this.plugin.settings.localModel)
@@ -182,16 +182,16 @@ export class LLMSettingsSection extends BaseSettingSection {
         const tipsEl = this.containerEl.createEl('div', {
             cls: 'ai-tagger-tips-block'
         });
-        
-        tipsEl.createEl('h3', { text: 'Tips: Popular Local LLM Tools' });
-        
+
+        tipsEl.createEl('h3', { text: this.plugin.t.settings.llm.tipsPopularTools });
+
         const tipsList = tipsEl.createEl('ul');
-        tipsList.createEl('li', { text: 'Ollama: http://localhost:11434/v1/chat/completions' });
-        tipsList.createEl('li', { text: 'LocalAI: http://localhost:8080/v1/chat/completions' });
-        tipsList.createEl('li', { text: 'LM Studio: http://localhost:1234/v1/chat/completions' });
-        tipsList.createEl('li', { text: 'Jan: http://localhost:1337/v1/chat/completions' });
-        tipsList.createEl('li', { text: 'KoboldCPP: http://localhost:5001/v1/chat/completions' });
-        
+        tipsList.createEl('li', { text: `${this.plugin.t.dropdowns.openai}: http://localhost:11434/v1/chat/completions` });
+        tipsList.createEl('li', { text: `${this.plugin.t.dropdowns.localai}: http://localhost:8080/v1/chat/completions` });
+        tipsList.createEl('li', { text: `${this.plugin.t.dropdowns.lmStudio}: http://localhost:1234/v1/chat/completions` });
+        tipsList.createEl('li', { text: `${this.plugin.t.dropdowns.jan}: http://localhost:1337/v1/chat/completions` });
+        tipsList.createEl('li', { text: `${this.plugin.t.dropdowns.koboldcpp}: http://localhost:5001/v1/chat/completions` });
+
         // Style the tips block
         tipsEl.style.backgroundColor = 'rgba(100, 100, 100, 0.1)';
         tipsEl.style.padding = '8px 12px';
@@ -206,44 +206,44 @@ export class LLMSettingsSection extends BaseSettingSection {
         const testContainer = this.containerEl.createDiv('connection-test-container');
 
         const testSetting = new Setting(testContainer)
-            .setName('Connection test')
-            .setDesc('Test connection to AI service');
+            .setName(this.plugin.t.settings.llm.connectionTest)
+            .setDesc(this.plugin.t.settings.llm.connectionTestDesc);
 
         const buttonContainer = testSetting.settingEl.createDiv('setting-item-control');
         const button = new ButtonComponent(buttonContainer)
-            .setButtonText('Test connection')
+            .setButtonText(this.plugin.t.settings.llm.testConnection)
             .onClick(async () => {
                 // Disable button during test
-                button.setButtonText('Testing...');
+                button.setButtonText(this.plugin.t.settings.llm.testing);
                 button.setDisabled(true);
-                
+
                 // Clear previous status
                 if (this.statusContainer) {
                     this.statusContainer.style.display = 'block';
                     this.statusEl.textContent = '';
                     this.statusEl.className = '';
                 }
-                
+
                 try {
                     const testResult = await this.plugin.llmService.testConnection();
-                    
+
                     if (testResult.result === ConnectionTestResult.Success) {
-                        this.setStatusMessage('Connection successful!', 'success');
+                        this.setStatusMessage(this.plugin.t.settings.llm.connectionSuccessful, 'success');
                     } else {
-                        this.setStatusMessage(`Connection failed: ${testResult.error?.message || 'Unknown error'}`, 'error');
+                        this.setStatusMessage(`${this.plugin.t.settings.llm.connectionFailed}: ${testResult.error?.message || 'Unknown error'}`, 'error');
                     }
                 } catch (error) {
                     this.setStatusMessage(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
                 } finally {
                     // Re-enable button
-                    button.setButtonText('Test connection');
+                    button.setButtonText(this.plugin.t.settings.llm.testConnection);
                     button.setDisabled(false);
                 }
             });
 
         this.statusContainer = testContainer.createDiv('connection-test-status');
         this.statusEl = this.statusContainer.createSpan();
-        
+
         // Hide status container initially
         if (this.statusContainer) {
             this.statusContainer.style.display = 'none';
@@ -252,26 +252,26 @@ export class LLMSettingsSection extends BaseSettingSection {
 
     private displayCloudSettings(): void {
         new Setting(this.containerEl)
-            .setName('API endpoint')
-            .setDesc('Enter the complete chat completions API endpoint URL')
+            .setName(this.plugin.t.settings.llm.apiEndpoint)
+            .setDesc(this.plugin.t.settings.llm.apiEndpointDesc)
             .addText(text => {
-                const placeholder = this.plugin.settings.cloudEndpoint || 
+                const placeholder = this.plugin.settings.cloudEndpoint ||
                     (this.plugin.settings.cloudServiceType === 'openai-compatible' ? 'http://your-api-endpoint/v1/chat/completions' : '');
-                
+
                 text.setPlaceholder(placeholder)
                     .setValue(this.plugin.settings.cloudEndpoint);
-                
+
                 text.onChange(async (value) => {
                     this.plugin.settings.cloudEndpoint = value;
                     await this.plugin.saveSettings();
                 });
-                
+
                 return text;
             });
 
         new Setting(this.containerEl)
-            .setName('API key')
-            .setDesc('Cloud service API key')
+            .setName(this.plugin.t.settings.llm.apiKey)
+            .setDesc(this.plugin.t.settings.llm.apiKeyDesc)
             .addText(text => text
                 .setPlaceholder(
                     this.plugin.settings.cloudServiceType === 'openai' ? 'sk-...' :
@@ -296,8 +296,8 @@ export class LLMSettingsSection extends BaseSettingSection {
                 }));
 
         new Setting(this.containerEl)
-            .setName('Model name')
-            .setDesc('Name of model to use')
+            .setName(this.plugin.t.settings.llm.modelName)
+            .setDesc(this.plugin.t.settings.llm.modelNameDesc)
             .addText(text => text
                 .setPlaceholder(
                     this.plugin.settings.cloudServiceType === 'openai' ? 'gpt-3.5-turbo' :
@@ -341,12 +341,12 @@ export class LLMSettingsSection extends BaseSettingSection {
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json' }
             });
-            
+
             if (!response.ok) {
-                new Notice(`Local LLM service does not appear to be running. Please check your endpoint URL.`, 10000);
+                new Notice(this.plugin.t.messages.localServiceNotRunning, 10000);
             }
         } catch (error) {
-            new Notice(`Local LLM service is not available. Please make sure it is installed and running on the correct port.`, 10000);
+            new Notice(this.plugin.t.messages.localServiceNotAvailable, 10000);
         }
     }
 }

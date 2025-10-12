@@ -7,17 +7,17 @@ export function registerPredefinedTagsCommands(plugin: AITaggerPlugin) {
     // Command to assign predefined tags for current note
     plugin.addCommand({
         id: 'assign-predefined-tags-for-current-note',
-        name: 'Assign predefined tags for current note',
+        name: plugin.t.commands.assignPredefinedTagsForCurrentNote,
         icon: 'tag',
         editorCallback: async (editor: Editor, ctx: MarkdownView | MarkdownFileInfo) => {
             const view = ctx instanceof MarkdownView ? ctx : null;
             if (!view?.file) {
-                new Notice('No active file');
+                new Notice(plugin.t.messages.noActiveFile);
                 return;
             }
 
             if (!plugin.settings.predefinedTagsPath) {
-                new Notice('Set tags file');
+                new Notice(plugin.t.messages.setTagsFile);
                 return;
             }
 
@@ -28,16 +28,16 @@ export function registerPredefinedTagsCommands(plugin: AITaggerPlugin) {
                     .filter((line: string) => line.length > 0);
 
                 if (predefinedTags.length === 0) {
-                    new Notice('No tags in file');
+                    new Notice(plugin.t.messages.noTagsInFile);
                     return;
                 }
 
                 const content = await plugin.app.vault.read(view?.file);
                 const analysis = await plugin.llmService.analyzeTags(content, predefinedTags, TaggingMode.PredefinedTags, plugin.settings.tagRangePredefinedMax);
                 const matchedTags = analysis.matchedExistingTags || [];
-                
+
                 if (matchedTags.length === 0) {
-                    new Notice('No matching tags');
+                    new Notice(plugin.t.messages.noMatchingTags);
                     return;
                 }
 
@@ -45,7 +45,7 @@ export function registerPredefinedTagsCommands(plugin: AITaggerPlugin) {
                 plugin.handleTagUpdateResult(result);
             } catch (error) {
                 // console.error('Error assigning predefined tags:', error);
-                new Notice('Assign failed');
+                new Notice(plugin.t.messages.assignFailed);
             }
         }
     });
@@ -53,30 +53,30 @@ export function registerPredefinedTagsCommands(plugin: AITaggerPlugin) {
     // Command to assign predefined tags for current folder
     plugin.addCommand({
         id: 'assign-predefined-tags-for-current-folder',
-        name: 'Assign predefined tags for current folder',
+        name: plugin.t.commands.assignPredefinedTagsForCurrentFolder,
         icon: 'tag',
         callback: async () => {
             const activeFile = plugin.app.workspace.getActiveFile();
             if (!activeFile) {
-                new Notice('Open a note');
+                new Notice(plugin.t.messages.openNote);
                 return;
             }
 
             const parentFolder = activeFile.parent;
             if (!parentFolder) {
-                new Notice('No parent folder');
+                new Notice(plugin.t.messages.noParentFolder);
                 return;
             }
 
             if (!plugin.settings.predefinedTagsPath) {
-                new Notice('Set tags file');
+                new Notice(plugin.t.messages.setTagsFile);
                 return;
             }
 
             const filesInFolder = plugin.getNonExcludedMarkdownFilesFromFolder(parentFolder);
 
             if (filesInFolder.length === 0) {
-                new Notice('No md files');
+                new Notice(plugin.t.messages.noMdFiles);
                 return;
             }
 
@@ -87,21 +87,21 @@ export function registerPredefinedTagsCommands(plugin: AITaggerPlugin) {
                     .filter((line: string) => line.length > 0);
 
                 if (predefinedTags.length === 0) {
-                    new Notice('No predefined tags found in the file');
-                    return;
-                }
-                
-                const confirmed = await plugin.showConfirmationDialog(
-                    `This will assign predefined tags to ${filesInFolder.length} notes in the current folder. This may take some time.`
-                );
-                
-                if (!confirmed) {
-                    new Notice('Operation cancelled');
+                    new Notice(plugin.t.messages.noPredefinedTagsFound);
                     return;
                 }
 
-                new Notice(`Assigning predefined tags to ${filesInFolder.length} notes in the current folder...`);
-                
+                const confirmed = await plugin.showConfirmationDialog(
+                    `${plugin.t.messages.assignPredefinedTagsForFolderConfirm.replace('{count}', String(filesInFolder.length))}`
+                );
+
+                if (!confirmed) {
+                    new Notice(plugin.t.messages.operationCancelled);
+                    return;
+                }
+
+                new Notice(`${plugin.t.messages.assigningPredefinedTagsToFolder.replace('{count}', String(filesInFolder.length))}`);
+
                 let processedCount = 0;
                 let successCount = 0;
                 let lastNoticeTime = Date.now();
@@ -113,25 +113,25 @@ export function registerPredefinedTagsCommands(plugin: AITaggerPlugin) {
 
                         const analysis = await plugin.llmService.analyzeTags(content, predefinedTags, TaggingMode.PredefinedTags, plugin.settings.tagRangePredefinedMax);
                         const matchedTags = analysis.matchedExistingTags || [];
-                        
+
                         const result = await TagUtils.updateNoteTags(plugin.app, file, [], matchedTags, false, true);
                         if (result.success) {
                             successCount++;
                         }
-                        
+
                         processedCount++;
                         const currentTime = Date.now();
                         if (currentTime - lastNoticeTime >= 15000 || processedCount === filesInFolder.length) {
-                            new Notice(`Progress: ${processedCount}/${filesInFolder.length}`);
+                            new Notice(`${plugin.t.messages.progressPrefix.replace('{current}', String(processedCount)).replace('{total}', String(filesInFolder.length))}`);
                             lastNoticeTime = currentTime;
                         }
                     } catch (error) {
                         // Silent fail for batch processing
                     }
                 }
-                new Notice(`Completed: ${successCount}/${filesInFolder.length}`);
+                new Notice(`${plugin.t.messages.completedPrefix.replace('{success}', String(successCount)).replace('{total}', String(filesInFolder.length))}`);
             } catch (error) {
-                new Notice('Failed to assign predefined tags to notes in current folder');
+                new Notice(plugin.t.messages.failedToAssignPredefinedTagsFolder);
             }
         }
     });
@@ -139,17 +139,17 @@ export function registerPredefinedTagsCommands(plugin: AITaggerPlugin) {
     // Command to assign predefined tags for vault
     plugin.addCommand({
         id: 'assign-predefined-tags-for-vault',
-        name: 'Assign predefined tags for vault',
+        name: plugin.t.commands.assignPredefinedTagsForVault,
         icon: 'tag',
         callback: async () => {
             if (!plugin.settings.predefinedTagsPath) {
-                new Notice('Set tags file');
+                new Notice(plugin.t.messages.setTagsFile);
                 return;
             }
 
             const files = plugin.getNonExcludedMarkdownFiles();
             if (files.length === 0) {
-                new Notice('No md files');
+                new Notice(plugin.t.messages.noMdFiles);
                 return;
             }
 
@@ -160,21 +160,21 @@ export function registerPredefinedTagsCommands(plugin: AITaggerPlugin) {
                     .filter((line: string) => line.length > 0);
 
                 if (predefinedTags.length === 0) {
-                    new Notice('No predefined tags found in the file');
-                    return;
-                }
-                
-                const confirmed = await plugin.showConfirmationDialog(
-                    `This will assign predefined tags to ${files.length} notes in your vault. This may take a long time.`
-                );
-                
-                if (!confirmed) {
-                    new Notice('Operation cancelled');
+                    new Notice(plugin.t.messages.noPredefinedTagsFound);
                     return;
                 }
 
-                new Notice(`Assigning predefined tags to ${files.length} notes in your vault...`);
-                
+                const confirmed = await plugin.showConfirmationDialog(
+                    `${plugin.t.messages.assignPredefinedTagsForVaultConfirm.replace('{count}', String(files.length))}`
+                );
+
+                if (!confirmed) {
+                    new Notice(plugin.t.messages.operationCancelled);
+                    return;
+                }
+
+                new Notice(`${plugin.t.messages.assigningPredefinedTagsToVault.replace('{count}', String(files.length))}`);
+
                 let processedCount = 0;
                 let successCount = 0;
                 let lastNoticeTime = Date.now();
@@ -186,25 +186,25 @@ export function registerPredefinedTagsCommands(plugin: AITaggerPlugin) {
 
                         const analysis = await plugin.llmService.analyzeTags(content, predefinedTags, TaggingMode.PredefinedTags, plugin.settings.tagRangePredefinedMax);
                         const matchedTags = analysis.matchedExistingTags || [];
-                        
+
                         const result = await TagUtils.updateNoteTags(plugin.app, file, [], matchedTags, false, true);
                         if (result.success) {
                             successCount++;
                         }
-                        
+
                         processedCount++;
                         const currentTime = Date.now();
                         if (currentTime - lastNoticeTime >= 15000 || processedCount === files.length) {
-                            new Notice(`Progress: ${processedCount}/${files.length}`);
+                            new Notice(`${plugin.t.messages.progressPrefix.replace('{current}', String(processedCount)).replace('{total}', String(files.length))}`);
                             lastNoticeTime = currentTime;
                         }
                     } catch (error) {
                         // Silent fail for batch processing
                     }
                 }
-                new Notice(`Completed: ${successCount}/${files.length}`);
+                new Notice(`${plugin.t.messages.completedPrefix.replace('{success}', String(successCount)).replace('{total}', String(files.length))}`);
             } catch (error) {
-                new Notice('Failed to assign predefined tags to notes');
+                new Notice(plugin.t.messages.failedToAssignPredefinedTags);
             }
         }
     });

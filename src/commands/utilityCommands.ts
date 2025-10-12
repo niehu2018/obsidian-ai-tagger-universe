@@ -5,17 +5,17 @@ export function registerUtilityCommands(plugin: AITaggerPlugin) {
     // Command to collect all tags from vault
     plugin.addCommand({
         id: 'collect-all-tags',
-        name: 'Collect all tags from vault',
+        name: plugin.t.commands.collectAllTags,
         icon: 'tags',
         callback: async () => {
             await TagUtils.saveAllTags(plugin.app, plugin.settings.tagDir);
         }
     });
-    
+
     // Command to show tag network visualization
     plugin.addCommand({
         id: 'show-tag-network',
-        name: 'Show tag network visualization',
+        name: plugin.t.commands.showTagNetwork,
         icon: 'network',
         callback: async () => {
             await plugin.showTagNetwork();

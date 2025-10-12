@@ -26,17 +26,17 @@ export class TaggingSettingsSection extends BaseSettingSection {
     }
 
     display(): void {
-        this.containerEl.createEl('h1', { text: 'Tagging settings' });
+        this.containerEl.createEl('h1', { text: this.plugin.t.settings.tagging.title });
 
         new Setting(this.containerEl)
-            .setName('Tagging mode')
-            .setDesc('Choose how tags should be generated')
+            .setName(this.plugin.t.settings.tagging.mode)
+            .setDesc(this.plugin.t.settings.tagging.modeDesc)
             .addDropdown(dropdown => dropdown
                 .addOptions({
-                    [TaggingMode.PredefinedTags]: 'Use predefined tags only',
-                    [TaggingMode.GenerateNew]: 'Generate new tags',
-                    [TaggingMode.Hybrid]: 'Hybrid mode (Generate + Predefined)',
-                    [TaggingMode.Custom]: 'Use custom prompt'
+                    [TaggingMode.PredefinedTags]: this.plugin.t.settings.tagging.modePredefined,
+                    [TaggingMode.GenerateNew]: this.plugin.t.settings.tagging.modeGenerate,
+                    [TaggingMode.Hybrid]: this.plugin.t.settings.tagging.modeHybrid,
+                    [TaggingMode.Custom]: this.plugin.t.settings.tagging.modeCustom
                 })
                 .setValue(this.plugin.settings.taggingMode)
                 .onChange(async (value) => {
@@ -47,12 +47,12 @@ export class TaggingSettingsSection extends BaseSettingSection {
 
         // Tag Source Setting (for PredefinedTags and Hybrid modes)
         this.tagSourceSetting = new Setting(this.containerEl)
-            .setName('Tag source')
-            .setDesc('Choose where to get the predefined tags from')
+            .setName(this.plugin.t.settings.tagging.tagSource)
+            .setDesc(this.plugin.t.settings.tagging.tagSourceDesc)
             .addDropdown(dropdown => dropdown
                 .addOptions({
-                    'file': 'From predefined tags file',
-                    'vault': 'From all existing tags in vault'
+                    'file': this.plugin.t.settings.tagging.sourceFile,
+                    'vault': this.plugin.t.settings.tagging.sourceVault
                 })
                 .setValue(this.plugin.settings.tagSourceType)
                 .onChange(async (value) => {
@@ -60,16 +60,16 @@ export class TaggingSettingsSection extends BaseSettingSection {
                     await this.plugin.saveSettings();
                     this.updateVisibility();
                 }));
-                
+
         // Predefined tags file setting
         this.predefinedTagsFileSetting = new Setting(this.containerEl)
-            .setName('Predefined tags file')
-            .setDesc('Path to a file containing predefined tags (one tag per line)');
+            .setName(this.plugin.t.settings.tagging.predefinedTagsFile)
+            .setDesc(this.plugin.t.settings.tagging.predefinedTagsFileDesc);
         
         const tagsFileInputContainer = this.predefinedTagsFileSetting.controlEl.createDiv('path-input-container');
-        const tagsFileInput = tagsFileInputContainer.createEl('input', { 
-            type: 'text', 
-            placeholder: 'path/to/your/tags.txt',
+        const tagsFileInput = tagsFileInputContainer.createEl('input', {
+            type: 'text',
+            placeholder: this.plugin.t.settings.tagging.pathPlaceholder,
             cls: 'path-input',
             value: this.plugin.settings.predefinedTagsPath || ''
         });
@@ -151,7 +151,7 @@ export class TaggingSettingsSection extends BaseSettingSection {
                 
                 if (limitedItems.length === 0) {
                     tagsDropdownContainer.createEl('div', {
-                        text: 'No matching files',
+                        text: this.plugin.t.messages.noMatchingFiles,
                         cls: 'path-dropdown-empty'
                     });
                     return;
@@ -249,7 +249,7 @@ export class TaggingSettingsSection extends BaseSettingSection {
                 //console.error('Error updating tags dropdown:', error);
                 tagsDropdownContainer.empty();
                 tagsDropdownContainer.createEl('div', {
-                    text: 'Error loading files',
+                    text: this.plugin.t.messages.errorLoadingFiles,
                     cls: 'path-dropdown-error'
                 });
             }
@@ -296,11 +296,11 @@ export class TaggingSettingsSection extends BaseSettingSection {
         this.updateVisibility();
 
         // File exclusion Setting
-        this.containerEl.createEl('h3', { text: 'File exclusion' });
-        
+        this.containerEl.createEl('h3', { text: this.plugin.t.settings.tagging.fileExclusion });
+
         const excludedFoldersSetting = new Setting(this.containerEl)
-            .setName('Excluded files and folders')
-            .setDesc('Files matching these patterns will be hidden in Search, Graph View, and Unlinked Mentions, less noticeable in Quick Switcher and link suggestions.');
+            .setName(this.plugin.t.settings.tagging.excludedFiles)
+            .setDesc(this.plugin.t.settings.tagging.excludedFilesDesc);
 
         const excludedInfo = excludedFoldersSetting.descEl.createDiv({
             cls: 'excluded-info'
@@ -308,15 +308,15 @@ export class TaggingSettingsSection extends BaseSettingSection {
 
         const updateExcludedInfo = () => {
             excludedInfo.empty();
-            
+
             if (this.plugin.settings.excludedFolders.length === 0) {
                 excludedInfo.createSpan({
-                    text: 'No exclusions configured',
+                    text: this.plugin.t.settings.tagging.noExclusions,
                     cls: 'excluded-info-text muted'
                 });
             } else {
                 excludedInfo.createSpan({
-                    text: `${this.plugin.settings.excludedFolders.length} pattern${this.plugin.settings.excludedFolders.length === 1 ? '' : 's'} configured`,
+                    text: `${this.plugin.settings.excludedFolders.length} ${this.plugin.t.settings.tagging.patternsConfigured}`,
                     cls: 'excluded-info-text'
                 });
             }
@@ -324,14 +324,14 @@ export class TaggingSettingsSection extends BaseSettingSection {
         
         updateExcludedInfo();
 
-        excludedFoldersSetting.addButton(button => 
+        excludedFoldersSetting.addButton(button =>
             button
-                .setButtonText('Manage')
+                .setButtonText(this.plugin.t.settings.tagging.manage)
                 .setCta()
                 .onClick(() => {
                     const modal = new ExcludedFilesModal(
-                        this.plugin.app, 
-                        this.plugin, 
+                        this.plugin.app,
+                        this.plugin,
                         async (excludedFolders: string[]) => {
                             this.plugin.settings.excludedFolders = excludedFolders;
                             await this.plugin.saveSettings();
@@ -343,18 +343,18 @@ export class TaggingSettingsSection extends BaseSettingSection {
         );
 
         // Tag Range Settings
-        this.containerEl.createEl('h3', { text: 'Tag range settings' });
+        this.containerEl.createEl('h3', { text: this.plugin.t.settings.tagging.tagRangeSettings });
 
         new Setting(this.containerEl)
-            .setName('Maximum predefined tags')
-            .setDesc('Maximum number of predefined tags to use (0-10). Used in Predefined and Hybrid modes.')
+            .setName(this.plugin.t.settings.tagging.maxPredefinedTags)
+            .setDesc(this.plugin.t.settings.tagging.maxPredefinedTagsDesc)
             .addSlider(slider => {
                 const container = slider.sliderEl.parentElement;
                 if (container) {
                     const numberDisplay = container.createSpan({ cls: 'value-display' });
                     numberDisplay.style.marginLeft = '10px';
                     numberDisplay.setText(String(this.plugin.settings.tagRangePredefinedMax));
-                    
+
                     slider.setLimits(0, 10, 1)
                         .setValue(this.plugin.settings.tagRangePredefinedMax)
                         .setDynamicTooltip()
@@ -368,15 +368,15 @@ export class TaggingSettingsSection extends BaseSettingSection {
             });
 
         new Setting(this.containerEl)
-            .setName('Maximum generated tags')
-            .setDesc('Maximum number of new tags to generate (0-10). Used in Generate and Hybrid modes.')
+            .setName(this.plugin.t.settings.tagging.maxGeneratedTags)
+            .setDesc(this.plugin.t.settings.tagging.maxGeneratedTagsDesc)
             .addSlider(slider => {
                 const container = slider.sliderEl.parentElement;
                 if (container) {
                     const numberDisplay = container.createSpan({ cls: 'value-display' });
                     numberDisplay.style.marginLeft = '10px';
                     numberDisplay.setText(String(this.plugin.settings.tagRangeGenerateMax));
-                    
+
                     slider.setLimits(0, 10, 1)
                         .setValue(this.plugin.settings.tagRangeGenerateMax)
                         .setDynamicTooltip()
@@ -390,12 +390,12 @@ export class TaggingSettingsSection extends BaseSettingSection {
             });
 
         new Setting(this.containerEl)
-            .setName('Output language')
-            .setDesc('Language for generating tags')
+            .setName(this.plugin.t.settings.tagging.outputLanguage)
+            .setDesc(this.plugin.t.settings.tagging.outputLanguageDesc)
             .addDropdown(dropdown => {
                 // Add language options
                 const options: Record<string, string> = LanguageUtils.getLanguageOptions();
-                
+
                 return dropdown
                     .addOptions(options)
                     .setValue(this.plugin.settings.language)
@@ -405,11 +405,11 @@ export class TaggingSettingsSection extends BaseSettingSection {
                     });
             });
         new Setting(this.containerEl)
-        .setName("Custom prompt")
-        .setDesc("Enter your custom prompt.")
+        .setName(this.plugin.t.settings.tagging.customPrompt)
+        .setDesc(this.plugin.t.settings.tagging.customPromptDesc)
         .addTextArea(text => {
             text
-            .setPlaceholder(`Example:\n Please actively use nested tags.\nTags can be nested using "/".\nFor example, you can do "AI/Gemini", "News/Politics".`)
+            .setPlaceholder(this.plugin.t.settings.tagging.customPromptPlaceholder)
             .setValue(this.plugin.settings.customPrompt)
             .onChange(async (value) => {
                 this.plugin.settings.customPrompt = value;

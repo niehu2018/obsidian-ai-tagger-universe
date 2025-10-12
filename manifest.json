@@ -1,9 +1,9 @@
 {
   "id": "ai-tagger-universe",
   "name": "AI Tagger Universe",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "minAppVersion": "1.4.0",
-  "description": "Automatically analyze note content and add relevant tags using AI",
+  "description": "Automatically analyze note content and add relevant tags using AI (with Chinese interface support)",
   "author": "Nie Hu",
   "authorUrl": "https://github.com/niehu2018",
   "isDesktopOnly": false,
