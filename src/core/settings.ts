@@ -1,6 +1,7 @@
 import { TaggingMode } from '../services/prompts/types';
 import { LanguageCode } from '../services/types';
 import { AdapterType } from '../services/adapters';
+import { SupportedLanguage, DEFAULT_LANGUAGE } from '../i18n';
 
 export interface AITaggerSettings {
     serviceType: 'local' | 'cloud';
@@ -15,6 +16,7 @@ export interface AITaggerSettings {
     customPrompt: string;
     excludedFolders: string[];
     language: LanguageCode;
+    interfaceLanguage: SupportedLanguage;
     predefinedTagsPath: string;
     tagSourceType: 'file' | 'vault';
     replaceTags: boolean;
@@ -38,6 +40,7 @@ export const DEFAULT_SETTINGS: AITaggerSettings = {
     customPrompt: "",
     excludedFolders: [],
     language: 'default',
+    interfaceLanguage: DEFAULT_LANGUAGE,
     predefinedTagsPath: '',
     tagSourceType: 'vault',
     tagDir: '',

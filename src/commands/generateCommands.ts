@@ -7,26 +7,26 @@ export function registerGenerateCommands(plugin: AITaggerPlugin) {
     // Command to generate tags for current note (with selection support)
     plugin.addCommand({
         id: 'generate-tags-for-current-note',
-        name: 'Generate tags for current note',
+        name: plugin.t.commands.generateTagsForCurrentNote,
         icon: 'tag',
         editorCallback: async (editor: Editor, ctx: MarkdownView | MarkdownFileInfo) => {
             const view = ctx instanceof MarkdownView ? ctx : null;
             if (!view?.file) {
-                new Notice('Open a note');
+                new Notice(plugin.t.messages.openNote);
                 return;
             }
 
             const selectedText = editor.getSelection();
             const content = selectedText || await plugin.app.vault.read(view.file);
-            
+
             if (!content.trim()) {
-                new Notice('No content to analyze');
+                new Notice(plugin.t.messages.noContentToAnalyze);
                 return;
             }
 
             const existingTags = TagUtils.getAllTags(plugin.app);
-            new Notice('Analyzing...');
-            
+            new Notice(plugin.t.messages.analyzing);
+
             try {
                 let maxTags = plugin.settings.tagRangeGenerateMax;
                 if (plugin.settings.taggingMode === TaggingMode.PredefinedTags) {
@@ -36,25 +36,25 @@ export function registerGenerateCommands(plugin: AITaggerPlugin) {
                 }
 
                 const analysis = await plugin.llmService.analyzeTags(
-                    content, 
-                    existingTags, 
-                    plugin.settings.taggingMode, 
-                    maxTags, 
+                    content,
+                    existingTags,
+                    plugin.settings.taggingMode,
+                    maxTags,
                     plugin.settings.language
                 );
-                
+
                 const suggestedTags = analysis.suggestedTags;
                 const matchedTags = analysis.matchedExistingTags || [];
-                
+
                 const result = await TagUtils.updateNoteTags(plugin.app, view.file, suggestedTags, matchedTags, true, true);
-                
+
                 if (selectedText && result.success) {
                     editor.replaceSelection(selectedText);
                 }
                 plugin.handleTagUpdateResult(result);
             } catch (error) {
                 // console.error('Error generating tags:', error);
-                new Notice('Failed to generate tags');
+                new Notice(plugin.t.messages.failedToGenerateTags);
             }
         }
     });
@@ -62,34 +62,34 @@ export function registerGenerateCommands(plugin: AITaggerPlugin) {
     // Command to generate tags for current folder
     plugin.addCommand({
         id: 'generate-tags-for-current-folder',
-        name: 'Generate tags for current folder',
+        name: plugin.t.commands.generateTagsForCurrentFolder,
         icon: 'tag',
         callback: async () => {
             const activeFile = plugin.app.workspace.getActiveFile();
             if (!activeFile) {
-                new Notice('Open a note');
+                new Notice(plugin.t.messages.openNote);
                 return;
             }
 
             const parentFolder = activeFile.parent;
             if (!parentFolder) {
-                new Notice('No parent folder');
+                new Notice(plugin.t.messages.noParentFolder);
                 return;
             }
 
             const filesInFolder = plugin.getNonExcludedMarkdownFilesFromFolder(parentFolder);
 
             if (filesInFolder.length === 0) {
-                new Notice('No md files');
+                new Notice(plugin.t.messages.noMdFiles);
                 return;
             }
 
             const confirmed = await plugin.showConfirmationDialog(
-                `This will generate tags for ${filesInFolder.length} notes in the current folder. This may take some time.`
+                `${plugin.t.messages.generateTagsForFolderConfirm.replace('{count}', String(filesInFolder.length))}`
             );
-            
+
             if (!confirmed) {
-                new Notice('Operation cancelled');
+                new Notice(plugin.t.messages.operationCancelled);
                 return;
             }
 
@@ -100,24 +100,24 @@ export function registerGenerateCommands(plugin: AITaggerPlugin) {
     // Command to generate tags for vault
     plugin.addCommand({
         id: 'generate-tags-for-vault',
-        name: 'Generate tags for vault',
+        name: plugin.t.commands.generateTagsForVault,
         icon: 'tag',
         callback: async () => {
             const files = plugin.getNonExcludedMarkdownFiles();
             if (files.length === 0) {
-                new Notice('No md files');
+                new Notice(plugin.t.messages.noMdFiles);
                 return;
             }
-            
+
             const confirmed = await plugin.showConfirmationDialog(
-                `This will generate tags for ${files.length} notes in your vault. This may take a long time.`
+                `${plugin.t.messages.generateTagsForVaultConfirm.replace('{count}', String(files.length))}`
             );
-            
+
             if (!confirmed) {
-                new Notice('Operation cancelled');
+                new Notice(plugin.t.messages.operationCancelled);
                 return;
             }
-            
+
             await plugin.analyzeAndTagFiles(files);
         }
     });
@@ -132,18 +132,18 @@ export function registerGenerateCommands(plugin: AITaggerPlugin) {
                 if (markdownFiles.length > 0) {
                     menu.addItem((item) => {
                         item
-                            .setTitle(`AI tag ${markdownFiles.length} selected notes`)
+                            .setTitle(`${plugin.t.commands.aiTagSelectedNotes.replace('{count}', String(markdownFiles.length))}`)
                             .setIcon('tag')
                             .onClick(async () => {
                                 const confirmed = await plugin.showConfirmationDialog(
-                                    `This will generate tags for ${markdownFiles.length} selected notes. This may take some time.`
+                                    `${plugin.t.messages.generateTagsForSelectedConfirm.replace('{count}', String(markdownFiles.length))}`
                                 );
-                                
+
                                 if (!confirmed) {
-                                    new Notice('Operation cancelled');
+                                    new Notice(plugin.t.messages.operationCancelled);
                                     return;
                                 }
-                                
+
                                 await plugin.analyzeAndTagFiles(markdownFiles);
                             });
                     });
@@ -152,7 +152,7 @@ export function registerGenerateCommands(plugin: AITaggerPlugin) {
                 // Single file selected
                 menu.addItem((item) => {
                     item
-                        .setTitle('AI tag this note')
+                        .setTitle(plugin.t.commands.aiTagThisNote)
                         .setIcon('tag')
                         .onClick(() => plugin.analyzeAndTagFiles([file]));
                 });

@@ -53,6 +53,22 @@ Alternatively, you can manually install the plugin:
 - Batch tag entire folders or your whole vault
 - Clear tags while preserving other frontmatter
 - Collect and export all tags from your vault
+- **Debug Mode**: Enhanced logging for troubleshooting tag generation (NEW!)
+- **Popular Tools Tips**: Built-in guidance for common LLM setup configurations (NEW!)
+
+## 🆕 What's New in Version 1.0.14
+
+### Major Features
+- **🎉 Full Chinese Interface Support**: Complete localization for Chinese-speaking users
+- **🌍 Bilingual Interface**: Easy language switching between English and Chinese
+- **🔧 Enhanced Debug Mode**: Better logging and troubleshooting capabilities
+- **📋 Improved User Guidance**: Tips for popular AI tools and services
+
+### Improvements
+- Updated all UI elements to support internationalization
+- Enhanced error messages and notifications
+- Better translation management system
+- Improved user experience for non-English users
 
 ## 🚀 Quick Start
 
@@ -60,8 +76,22 @@ Alternatively, you can manually install the plugin:
 2. **Configure your AI provider**:
    - Choose between Local LLM or Cloud Service
    - Enter your endpoint URL and API key (if needed)
-3. **Select your tagging mode** and adjust tag generation limits
-4. **Generate tags** for your current note using the ribbon icon or command palette
+3. **Select your interface language** (NEW!):
+   - Go to Settings → AI Tagger Universe → Interface
+   - Choose between English or 中文 (Chinese)
+   - Restart Obsidian for the language change to take effect
+4. **Select your tagging mode** and adjust tag generation limits
+5. **Generate tags** for your current note using the ribbon icon or command palette
+
+### Quick Setup for Chinese Users
+
+对于中文用户，插件现在提供完整的中文界面：
+
+1. **安装插件** - 从 Obsidian 社区插件浏览器安装
+2. **设置语言** - 设置 → AI Tagger Universe → 界面 → 选择"中文"
+3. **重启 Obsidian** - 语言更改需要重启生效
+4. **配置 AI 服务** - 选择您偏好的本地或云端 AI 服务
+5. **开始使用** - 享受完整的中文界面体验！
 
 ## 🔧 Configuration Options
 
@@ -70,6 +100,18 @@ Alternatively, you can manually install the plugin:
 - **Tag Limits**: Set maximum numbers for generated/matched tags (0-10)
 - **Excluded Paths**: Skip specific folders during batch operations
 - **Language**: Generate tags in your preferred language
+- **Interface Language**: Choose between English and Chinese interfaces (NEW!)
+- **Debug Mode**: Enable detailed logging for troubleshooting (NEW!)
+
+### Configuration for Chinese Users
+
+中文用户可以享受以下配置选项：
+
+- **界面语言**：英文/中文切换
+- **LLM 设置**：本地模型或云端服务
+- **标签模式**：生成新标签、使用预定义标签或混合模式
+- **调试模式**：详细的日志信息，便于问题排查
+- **热门工具提示**：常见 AI 工具的配置指导
 
 ## 📖 Usage Examples
 
@@ -81,7 +123,21 @@ Alternatively, you can manually install the plugin:
 
 ## 🌐 Language Support
 
+### Tag Generation
 Generate tags in multiple languages including English, Chinese, Japanese, German, French, Spanish, Russian, and many more.
+
+### Interface Localization (NEW!)
+- **Full Chinese Interface**: Complete Chinese language support for the plugin interface
+- **Bilingual Support**: Seamlessly switch between English and Chinese interfaces
+- **Localized Settings**: All configuration panels and options available in Chinese
+- **Translated Commands**: Command palette and ribbon actions fully localized
+- **Multilingual Messages**: All notifications, prompts, and feedback in your preferred language
+
+To change the interface language:
+1. Go to AI Tagger Universe Settings
+2. Navigate to the "Interface" section
+3. Select your preferred language (English/中文)
+4. Restart Obsidian for the change to take effect
 
 ## 🔄 Fork Improvements
 
