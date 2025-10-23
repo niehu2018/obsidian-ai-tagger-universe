@@ -120,7 +120,7 @@ export default class AITaggerPlugin extends Plugin {
         );
 
         this.addRibbonIcon(
-            'network',
+            'git-graph',
             this.t.messages.viewTagNetwork,
             (evt: MouseEvent) => {
                 this.showTagNetwork();

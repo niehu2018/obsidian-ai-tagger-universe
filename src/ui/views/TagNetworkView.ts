@@ -28,7 +28,7 @@ export class TagNetworkView extends ItemView {
     }
 
     getIcon(): string {
-        return 'network';
+        return 'git-graph';
     }
 
     async onOpen(): Promise<void> {

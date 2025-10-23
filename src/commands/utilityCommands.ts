@@ -16,7 +16,7 @@ export function registerUtilityCommands(plugin: AITaggerPlugin) {
     plugin.addCommand({
         id: 'show-tag-network',
         name: plugin.t.commands.showTagNetwork,
-        icon: 'network',
+        icon: 'git-graph',
         callback: async () => {
             await plugin.showTagNetwork();
         }
