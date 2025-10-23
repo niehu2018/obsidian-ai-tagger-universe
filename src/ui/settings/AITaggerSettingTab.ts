@@ -30,7 +30,7 @@ export class AITaggerSettingTab extends PluginSettingTab {
         // Display all sections
         this.llmSection.display();
         this.taggingSection.display();
-        this.supportSection.display();
         this.interfaceSection.display();
+        this.supportSection.display();
     }
 }
