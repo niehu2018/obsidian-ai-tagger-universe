@@ -54,6 +54,11 @@ export default class AITaggerPlugin extends Plugin {
 
         this.settings = Object.assign({}, DEFAULT_SETTINGS, oldSettings);
 
+        // Migrate empty customPrompt to default template
+        if (!this.settings.customPrompt || this.settings.customPrompt.trim() === '') {
+            this.settings.customPrompt = DEFAULT_SETTINGS.customPrompt;
+        }
+
         // 初始化翻译
         this.t = getTranslations(this.settings.interfaceLanguage);
     }
