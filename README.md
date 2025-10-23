@@ -39,6 +39,11 @@ Alternatively, you can manually install the plugin:
   - Match against your existing vault tags
   - Use predefined tags from a custom list
   - Hybrid modes combining generation with existing/predefined tags
+- **Nested/Hierarchical tags** (NEW!):
+  - Generate hierarchical tags like `science/biology/genetics`
+  - User-configurable max depth (1-3 levels)
+  - Smart prompting for category-based organization
+  - Backward compatible (disabled by default)
 - **Batch operations** for tagging multiple notes at once
 - **Multilingual support** for generating tags in your preferred language
 
@@ -58,19 +63,31 @@ Alternatively, you can manually install the plugin:
 - **Debug Mode**: Enhanced logging for troubleshooting tag generation (NEW!)
 - **Popular Tools Tips**: Built-in guidance for common LLM setup configurations (NEW!)
 
-## 🆕 What's New in Version 1.0.14
+## 🆕 What's New in Version 1.0.15
 
 ### Major Features
+- **🌳 Nested Tags Support**: Generate hierarchical tags with parent/child relationships
+  - Create tags like `technology/artificial-intelligence/machine-learning`
+  - Configurable max nesting depth (1-3 levels)
+  - Smart LLM prompting for hierarchical structure
+  - Fully integrated with bilingual interface
+
+### Improvements
+- Added automated testing suite with 32 validation tests
+- Enhanced tag formatting to preserve forward slashes
+- Improved settings organization with nested tags section
+- Better documentation with CLAUDE.md for future development
+
+### Bug Fixes
+- Fixed icon display issue in ribbon and toolbar (replaced invalid 'network' icon with 'git-graph')
+
+## 📝 Previous Updates
+
+### Version 1.0.14
 - **🎉 Full Chinese Interface Support**: Complete localization for Chinese-speaking users
 - **🌍 Bilingual Interface**: Easy language switching between English and Chinese
 - **🔧 Enhanced Debug Mode**: Better logging and troubleshooting capabilities
 - **📋 Improved User Guidance**: Tips for popular AI tools and services
-
-### Improvements
-- Updated all UI elements to support internationalization
-- Enhanced error messages and notifications
-- Better translation management system
-- Improved user experience for non-English users
 
 ## 🚀 Quick Start
 
@@ -109,6 +126,10 @@ Alternatively, you can manually install the plugin:
   - Custom: Use your own tag list from a file
 - **Tag Limits**: Set maximum numbers for generated/matched tags (0-10)
 - **Tag Language**: Generate tags in your preferred language
+- **Nested Tags** (NEW!):
+  - Enable hierarchical tag generation (e.g., `parent/child/grandchild`)
+  - Configure max nesting depth (1-3 levels)
+  - Creates parent/child relationships for better organization
 
 ### Interface & Advanced
 - **Interface Language**: Choose between English and Chinese
