@@ -15,6 +15,7 @@ package-lock.json
 .roo/
 .claude/
 .env
+.vercel/
 *.log
 
 # Internal documentation and plans
