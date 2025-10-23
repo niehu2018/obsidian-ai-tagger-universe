@@ -96,10 +96,7 @@ export const en: Translations = {
         collectAllTags: "Collect all tags",
         showTagNetwork: "Show tag network",
         aiTagSelectedNotes: "AI Tag Selected Notes",
-        aiTagThisNote: "AI Tag This Note",
-        assignPredefinedTagsForCurrentNote: "Assign predefined tags to current note",
-        assignPredefinedTagsForCurrentFolder: "Assign predefined tags to current folder",
-        assignPredefinedTagsForVault: "Assign predefined tags to vault"
+        aiTagThisNote: "AI Tag This Note"
     },
 
     // Messages and notifications
@@ -150,19 +147,6 @@ export const en: Translations = {
         completedPrefix: "Completed: {success}/{total}",
         restartRequired: "Restart required after changing language",
         languageChangeNotice: "Language has been changed. Please restart Obsidian for changes to take effect.",
-        assignPredefinedTagsForCurrentNote: "Assign predefined tags to current note",
-        assignPredefinedTagsForCurrentFolder: "Assign predefined tags to current folder",
-        assignPredefinedTagsForVault: "Assign predefined tags to vault",
-        setTagsFile: "Please set tags file path",
-        noTagsInFile: "No tags in tags file",
-        noMatchingTags: "No matching tags",
-        assignFailed: "Assign tags failed",
-        assignPredefinedTagsForFolderConfirm: "Are you sure you want to assign predefined tags to {count} files in the current folder?",
-        assigningPredefinedTagsToFolder: "Assigning predefined tags to {count} files in folder...",
-        assignPredefinedTagsForVaultConfirm: "Are you sure you want to assign predefined tags to {count} files in the vault?",
-        assigningPredefinedTagsToVault: "Assigning predefined tags to {count} files in vault...",
-        failedToAssignPredefinedTagsFolder: "Failed to assign predefined tags to folder",
-        failedToAssignPredefinedTags: "Failed to assign predefined tags",
         clearTagsForFolderConfirm: "Are you sure you want to clear tags from {count} files in the current folder?",
         tagsClearedFrom: "Cleared tags from {count} files",
         failedToClearTags: "Failed to clear tags",

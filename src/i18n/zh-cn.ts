@@ -96,10 +96,7 @@ export const zhCN: Translations = {
         collectAllTags: "收集所有标签",
         showTagNetwork: "显示标签网络",
         aiTagSelectedNotes: "AI 标记选中的笔记",
-        aiTagThisNote: "AI 标记这篇笔记",
-        assignPredefinedTagsForCurrentNote: "为当前笔记分配预定义标签",
-        assignPredefinedTagsForCurrentFolder: "为当前文件夹分配预定义标签",
-        assignPredefinedTagsForVault: "为整个库分配预定义标签"
+        aiTagThisNote: "AI 标记这篇笔记"
     },
 
     // 消息和通知
@@ -150,19 +147,6 @@ export const zhCN: Translations = {
         completedPrefix: "完成: {success}/{total}",
         restartRequired: "更改语言后需要重启 Obsidian",
         languageChangeNotice: "语言已更改。请重启 Obsidian 以使更改生效。",
-        assignPredefinedTagsForCurrentNote: "为当前笔记分配预定义标签",
-        assignPredefinedTagsForCurrentFolder: "为当前文件夹分配预定义标签",
-        assignPredefinedTagsForVault: "为整个库分配预定义标签",
-        setTagsFile: "请设置标签文件路径",
-        noTagsInFile: "标签文件中没有标签",
-        noMatchingTags: "没有匹配的标签",
-        assignFailed: "分配标签失败",
-        assignPredefinedTagsForFolderConfirm: "确定要为当前文件夹中的 {count} 个文件分配预定义标签吗？",
-        assigningPredefinedTagsToFolder: "正在为文件夹中的 {count} 个文件分配预定义标签...",
-        assignPredefinedTagsForVaultConfirm: "确定要为库中的 {count} 个文件分配预定义标签吗？",
-        assigningPredefinedTagsToVault: "正在为库中的 {count} 个文件分配预定义标签...",
-        failedToAssignPredefinedTagsFolder: "为文件夹分配预定义标签失败",
-        failedToAssignPredefinedTags: "分配预定义标签失败",
         clearTagsForFolderConfirm: "确定要清除当前文件夹中 {count} 个文件的标签吗？",
         tagsClearedFrom: "已从 {count} 个文件中清除标签",
         failedToClearTags: "清除标签失败",

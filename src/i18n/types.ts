@@ -95,9 +95,6 @@ export interface Translations {
         showTagNetwork: string;
         aiTagSelectedNotes: string;
         aiTagThisNote: string;
-        assignPredefinedTagsForCurrentNote: string;
-        assignPredefinedTagsForCurrentFolder: string;
-        assignPredefinedTagsForVault: string;
     };
 
     // Messages and notifications
@@ -148,19 +145,6 @@ export interface Translations {
         completedPrefix: string;
         restartRequired: string;
         languageChangeNotice: string;
-        assignPredefinedTagsForCurrentNote: string;
-        assignPredefinedTagsForCurrentFolder: string;
-        assignPredefinedTagsForVault: string;
-        setTagsFile: string;
-        noTagsInFile: string;
-        noMatchingTags: string;
-        assignFailed: string;
-        assignPredefinedTagsForFolderConfirm: string;
-        assigningPredefinedTagsToFolder: string;
-        assignPredefinedTagsForVaultConfirm: string;
-        assigningPredefinedTagsToVault: string;
-        failedToAssignPredefinedTagsFolder: string;
-        failedToAssignPredefinedTags: string;
         clearTagsForFolderConfirm: string;
         tagsClearedFrom: string;
         failedToClearTags: string;
