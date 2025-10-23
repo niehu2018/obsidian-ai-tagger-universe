@@ -16,3 +16,10 @@ package-lock.json
 .claude/
 .env
 *.log
+
+# Internal documentation and plans
+CHANGES_SUMMARY.md
+DEBUG_INSTRUCTIONS.md
+NESTED_TAGS_IMPLEMENTATION_PLAN.md
+NESTED_TAGS_IMPLEMENTATION_PLAN_CN.md
+TEST_INSTRUCTIONS.md
