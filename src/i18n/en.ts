@@ -61,7 +61,12 @@ export const en: Translations = {
             customPrompt: "Custom Prompt",
             customPromptDesc: "Enter your custom prompt.",
             pathPlaceholder: "Enter path or pattern...",
-            customPromptPlaceholder: "Enter custom prompt..."
+            customPromptPlaceholder: "Enter custom prompt...",
+            nestedTagsSettings: "Nested Tags Settings",
+            enableNestedTags: "Enable Nested Tags",
+            enableNestedTagsDesc: "Generate hierarchical tags using forward slashes (e.g., science/biology). This creates parent/child relationships between tags.",
+            nestedTagsMaxDepth: "Max Nesting Depth",
+            nestedTagsMaxDepthDesc: "Maximum levels of nesting (1-3). Example: depth of 2 allows parent/child, depth of 3 allows parent/child/grandchild.",
         },
         support: {
             title: "Support",

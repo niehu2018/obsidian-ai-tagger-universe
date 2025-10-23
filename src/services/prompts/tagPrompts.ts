@@ -38,7 +38,7 @@ export function buildTagPrompt(
     // Prepare language instructions if needed
     if (language && language !== 'default') {
         const languageName = LanguageUtils.getLanguageDisplayName(language);
-        
+
         switch (mode) {
             case TaggingMode.Hybrid:
                 langInstructions = `IMPORTANT: Generate all new tags in ${languageName} language only.
@@ -46,7 +46,7 @@ When generating new tags (not selecting from predefined ones), they must be in $
 
 `;
                 break;
-                
+
             case TaggingMode.GenerateNew:
                 langInstructions = `IMPORTANT: Generate all tags in ${languageName} language only.
 Regardless of what language the content is in, all tags must be in ${languageName} only.
@@ -54,12 +54,45 @@ First understand the content, then if needed translate concepts to ${languageNam
 
 `;
                 break;
-                
+
             default:
                 langInstructions = '';
         }
     }
-    
+
+    // Add nested tags instructions if enabled
+    if (pluginSettings?.enableNestedTags) {
+        const nestedInstructions = `
+<nested_tags_requirements>
+Generate tags in hierarchical/nested format using forward slashes (/) when appropriate.
+Use nested tags to show relationships from general to specific concepts.
+
+Structure: parent/child or parent/child/grandchild (max ${pluginSettings.nestedTagsMaxDepth} levels)
+
+Examples of good nested tags:
+- technology/artificial-intelligence/machine-learning
+- science/biology/genetics
+- programming/languages/python
+- business/marketing/social-media
+- art/painting/impressionism
+
+When to use nested tags:
+1. When there's a clear categorical hierarchy (category/subcategory)
+2. When the concept has a broader parent topic
+3. When it helps organize knowledge by domain
+
+When NOT to use nested tags:
+1. Don't force nesting if concepts are independent
+2. Don't create unnecessary hierarchies
+3. Flat tags are fine for standalone concepts
+
+Generate a mix of nested and flat tags based on content relevance.
+</nested_tags_requirements>
+
+`;
+        prompt += nestedInstructions;
+    }
+
     switch (mode) {
         case TaggingMode.PredefinedTags:
             prompt += `<task>

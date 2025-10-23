@@ -418,5 +418,30 @@ export class TaggingSettingsSection extends BaseSettingSection {
             text.inputEl.rows = 8;
             text.inputEl.cols = 50;
         });
+
+        // Nested Tags Settings
+        this.containerEl.createEl('h3', { text: this.plugin.t.settings.tagging.nestedTagsSettings });
+
+        new Setting(this.containerEl)
+            .setName(this.plugin.t.settings.tagging.enableNestedTags)
+            .setDesc(this.plugin.t.settings.tagging.enableNestedTagsDesc)
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.enableNestedTags)
+                .onChange(async (value) => {
+                    this.plugin.settings.enableNestedTags = value;
+                    await this.plugin.saveSettings();
+                }));
+
+        new Setting(this.containerEl)
+            .setName(this.plugin.t.settings.tagging.nestedTagsMaxDepth)
+            .setDesc(this.plugin.t.settings.tagging.nestedTagsMaxDepthDesc)
+            .addSlider(slider => slider
+                .setLimits(1, 3, 1)
+                .setValue(this.plugin.settings.nestedTagsMaxDepth)
+                .setDynamicTooltip()
+                .onChange(async (value) => {
+                    this.plugin.settings.nestedTagsMaxDepth = value;
+                    await this.plugin.saveSettings();
+                }));
     }
 }

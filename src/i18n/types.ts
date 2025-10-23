@@ -60,6 +60,11 @@ export interface Translations {
             customPromptDesc: string;
             pathPlaceholder: string;
             customPromptPlaceholder: string;
+            nestedTagsSettings: string;
+            enableNestedTags: string;
+            enableNestedTagsDesc: string;
+            nestedTagsMaxDepth: string;
+            nestedTagsMaxDepthDesc: string;
         };
         support: {
             title: string;

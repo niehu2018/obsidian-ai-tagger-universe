@@ -61,7 +61,12 @@ export const zhCN: Translations = {
             customPrompt: "自定义提示",
             customPromptDesc: "输入您的自定义提示。",
             pathPlaceholder: "输入路径或模式...",
-            customPromptPlaceholder: "输入自定义提示..."
+            customPromptPlaceholder: "输入自定义提示...",
+            nestedTagsSettings: "嵌套标签设置",
+            enableNestedTags: "启用嵌套标签",
+            enableNestedTagsDesc: "使用正斜杠生成层级标签（例如：科学/生物学）。这将在标签之间创建父子关系。",
+            nestedTagsMaxDepth: "最大嵌套深度",
+            nestedTagsMaxDepthDesc: "嵌套的最大层级数（1-3）。示例：深度为 2 允许 父/子 结构，深度为 3 允许 父/子/孙 结构。",
         },
         support: {
             title: "支持",

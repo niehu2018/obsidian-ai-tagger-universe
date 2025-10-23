@@ -26,6 +26,9 @@ export interface AITaggerSettings {
     tagRangeGenerateMax: number;
     tagRangePredefinedMax: number;
     debugMode: boolean;
+    // Nested Tags Settings
+    enableNestedTags: boolean;           // Enable nested tag generation
+    nestedTagsMaxDepth: number;          // Max hierarchy depth (1-3)
 }
 
 export const DEFAULT_SETTINGS: AITaggerSettings = {
@@ -48,5 +51,7 @@ export const DEFAULT_SETTINGS: AITaggerSettings = {
     tagRangeGenerateMax: 5,
     tagRangePredefinedMax: 5,
     replaceTags: true,
-    debugMode: false
+    debugMode: false,
+    enableNestedTags: false,
+    nestedTagsMaxDepth: 2,
 };
