@@ -1,10 +1,12 @@
 # AI Tagger Universe: Easy Tag Generation & Management for Obsidian
 
+[![English](https://img.shields.io/badge/lang-English-blue.svg)](README.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md)
+
 ![AI Tagger Universe](https://img.shields.io/badge/Obsidian-AI%20Tagger%20Universe-blue)
 ![Obsidian Downloads](https://img.shields.io/badge/dynamic/json?logo=obsidian&color=%23483699&label=downloads&query=%24%5B%22ai-tagger-universe%22%5D.downloads&url=https%3A%2F%2Fraw.githubusercontent.com%2Fobsidianmd%2Fobsidian-releases%2Fmaster%2Fcommunity-plugin-stats.json)
 ![Obsidian Compatibility](https://img.shields.io/badge/Obsidian-v1.4.0+-blue)
 
-Automatically generate intelligent tags for your Obsidian notes using AI. This plugin analyzes your content and adds relevant tags to your note's frontmatter, helping you organize and discover connections in your knowledge base.
+> Automatically generate intelligent tags for your Obsidian notes using AI. This plugin analyzes your content and adds relevant tags to your note's frontmatter, helping you organize and discover connections in your knowledge base.
 
 ## 🔌 Installation
 
@@ -74,44 +76,45 @@ Alternatively, you can manually install the plugin:
 
 1. **Install the plugin** from Obsidian Community Plugins
 2. **Configure your AI provider**:
-   - Choose between Local LLM or Cloud Service
-   - Enter your endpoint URL and API key (if needed)
-3. **Select your interface language** (NEW!):
+   - Go to Settings → AI Tagger Universe → LLM Settings
+   - Choose between Local LLM (Ollama, LM Studio, etc.) or Cloud Service (OpenAI, Claude, etc.)
+   - Enter your endpoint URL and API key (if required)
+   - Test the connection to verify it works
+3. **Select your tagging mode**:
+   - Choose how you want tags to be generated (new tags, existing tags, or hybrid)
+   - Adjust tag generation limits (0-10 tags per note)
+4. **Optional: Configure interface language**:
    - Go to Settings → AI Tagger Universe → Interface
    - Choose between English or 中文 (Chinese)
    - Restart Obsidian for the language change to take effect
-4. **Select your tagging mode** and adjust tag generation limits
-5. **Generate tags** for your current note using the ribbon icon or command palette
-
-### Quick Setup for Chinese Users
-
-对于中文用户，插件现在提供完整的中文界面：
-
-1. **安装插件** - 从 Obsidian 社区插件浏览器安装
-2. **设置语言** - 设置 → AI Tagger Universe → 界面 → 选择"中文"
-3. **重启 Obsidian** - 语言更改需要重启生效
-4. **配置 AI 服务** - 选择您偏好的本地或云端 AI 服务
-5. **开始使用** - 享受完整的中文界面体验！
+5. **Start generating tags**:
+   - Use the ribbon icon (left sidebar) to tag the current note
+   - Use the command palette (Ctrl/Cmd+P) for more options
+   - View tag relationships with the Tag Network visualization
 
 ## 🔧 Configuration Options
 
-- **AI Provider**: Choose from 15+ local and cloud services
+### LLM Settings
+- **Service Type**: Local LLM or Cloud Service
+- **AI Provider**: Choose from 15+ services (Ollama, OpenAI, Claude, Gemini, Groq, etc.)
+- **Endpoint URL**: Your LLM service endpoint
+- **API Key**: Authentication key (if required)
+- **Model Name**: Specific model to use
+
+### Tag Generation
 - **Tagging Mode**: Select how tags are generated or matched
+  - Generate New: Create entirely new tags from content
+  - Predefined Tags: Match against existing vault tags
+  - Hybrid: Combine generation with existing tags
+  - Custom: Use your own tag list from a file
 - **Tag Limits**: Set maximum numbers for generated/matched tags (0-10)
+- **Tag Language**: Generate tags in your preferred language
+
+### Interface & Advanced
+- **Interface Language**: Choose between English and Chinese
 - **Excluded Paths**: Skip specific folders during batch operations
-- **Language**: Generate tags in your preferred language
-- **Interface Language**: Choose between English and Chinese interfaces (NEW!)
-- **Debug Mode**: Enable detailed logging for troubleshooting (NEW!)
-
-### Configuration for Chinese Users
-
-中文用户可以享受以下配置选项：
-
-- **界面语言**：英文/中文切换
-- **LLM 设置**：本地模型或云端服务
-- **标签模式**：生成新标签、使用预定义标签或混合模式
-- **调试模式**：详细的日志信息，便于问题排查
-- **热门工具提示**：常见 AI 工具的配置指导
+- **Debug Mode**: Enable detailed logging for troubleshooting
+- **Replace Tags**: Overwrite existing tags or append to them
 
 ## 📖 Usage Examples
 
@@ -169,3 +172,18 @@ This fork includes several enhancements over the original plugin:
 
 These improvements result in more reliable tag generation, better formatting consistency, and improved compatibility with various LLM providers including Claude, GPT-4, and local models.
 
+## 📝 License
+
+MIT License - see the [LICENSE](LICENSE) file for details
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit Issues or Pull Requests.
+
+## 📮 Support
+
+If you encounter any issues or have feature requests, please submit them on [GitHub Issues](https://github.com/niehu-szkt/obsidian-ai-tagger-universe/issues).
+
+## 🙏 Acknowledgments
+
+Thanks to all the developers and users who have contributed to this project!
