@@ -15,4 +15,3 @@ package-lock.json
 .claude/
 .env
 *.log
-CLAUDE.md
