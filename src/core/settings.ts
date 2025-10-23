@@ -40,7 +40,14 @@ export const DEFAULT_SETTINGS: AITaggerSettings = {
     cloudModel: 'gpt-4',
     cloudServiceType: 'openai',
     taggingMode: TaggingMode.GenerateNew,
-    customPrompt: "",
+    customPrompt: `Focus on main topics and key concepts from the content.
+
+Generate tags that are:
+- Specific enough to be useful for searching
+- General enough to connect related notes
+- Based on actual content, not assumptions
+
+Prefer technical terms and domain-specific vocabulary when appropriate.`,
     excludedFolders: [],
     language: 'default',
     interfaceLanguage: DEFAULT_LANGUAGE,

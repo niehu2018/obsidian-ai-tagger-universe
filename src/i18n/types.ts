@@ -208,6 +208,7 @@ export interface Translations {
         grok: string;
         mistral: string;
         openaiCompatible: string;
+        ollama: string;
         localai: string;
         lmStudio: string;
         jan: string;

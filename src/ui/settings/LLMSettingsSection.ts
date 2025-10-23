@@ -186,7 +186,7 @@ export class LLMSettingsSection extends BaseSettingSection {
         tipsEl.createEl('h3', { text: this.plugin.t.settings.llm.tipsPopularTools });
 
         const tipsList = tipsEl.createEl('ul');
-        tipsList.createEl('li', { text: `${this.plugin.t.dropdowns.openai}: http://localhost:11434/v1/chat/completions` });
+        tipsList.createEl('li', { text: `${this.plugin.t.dropdowns.ollama}: http://localhost:11434/v1/chat/completions` });
         tipsList.createEl('li', { text: `${this.plugin.t.dropdowns.localai}: http://localhost:8080/v1/chat/completions` });
         tipsList.createEl('li', { text: `${this.plugin.t.dropdowns.lmStudio}: http://localhost:1234/v1/chat/completions` });
         tipsList.createEl('li', { text: `${this.plugin.t.dropdowns.jan}: http://localhost:1337/v1/chat/completions` });
