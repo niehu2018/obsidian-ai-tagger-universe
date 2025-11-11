@@ -138,20 +138,10 @@ export abstract class BaseAdapter extends BaseLLMService {
     }
 
     protected async makeRequest(prompt: string): Promise<any> {
-        const headers = this.getHeaders();
-        const body = this.formatRequest(prompt, this.config.language);
-        
-        const response = await fetch(this.getEndpoint(), {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(body)
-        });
-
-        if (!response.ok) {
-            throw new Error(`Request failed: ${response.statusText}`);
-        }
-
-        return await response.json();
+        // This method should not be called directly.
+        // HTTP requests should be made through CloudLLMService which uses Obsidian's requestUrl
+        // to avoid CORS issues. Adapters are meant to format/parse requests, not make them.
+        throw new Error('BaseAdapter.makeRequest should not be called directly. Use CloudLLMService instead.');
     }
 
     getEndpoint(): string {
