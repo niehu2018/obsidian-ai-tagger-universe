@@ -3,7 +3,7 @@
   "gemini": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
   "deepseek": "https://api.deepseek.com/v1/chat/completions",
   "aliyun": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
-  "claude": "https://api.anthropic.com/v1/complete",
+  "claude": "https://api.anthropic.com/v1/messages",
   "groq": "https://api.groq.com/openai/v1/chat/completions",
   "openrouter": "https://openrouter.ai/api/v1/chat/completions",
   "bedrock": "https://bedrock-runtime.amazonaws.com",
