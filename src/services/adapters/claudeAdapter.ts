@@ -9,7 +9,7 @@ export class ClaudeAdapter extends BaseAdapter {
         super({
             ...config,
             endpoint: config.endpoint || endpoints.claude,
-            modelName: config.modelName || 'claude-3-opus-20240229'
+            modelName: config.modelName || 'claude-sonnet-4-5-20250929'
         });
         this.provider = {
             name: 'claude',
