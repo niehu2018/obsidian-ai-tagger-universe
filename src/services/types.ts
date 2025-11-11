@@ -2,7 +2,7 @@ import { TaggingMode } from './prompts/types';
 
 export const MAX_CONCURRENT_REQUESTS = 3;
 
-export type LanguageCode = 
+export type LanguageCode =
     | "default"
     | "en"
     | "ar"
@@ -11,6 +11,7 @@ export type LanguageCode =
     | "de"
     | "es"
     | "fr"
+    | "he"
     | "id"
     | "it"
     | "ja"
