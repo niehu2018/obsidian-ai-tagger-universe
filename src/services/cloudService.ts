@@ -102,10 +102,13 @@ export class CloudLLMService extends BaseLLMService {
                 }
             }
 
-            // Verify response format
+            // Verify we can parse the response - don't check specific format
+            // since different providers have different response structures
             const data = JSON.parse(responseText);
-            if (!data.choices || !Array.isArray(data.choices)) {
-                throw new Error('Invalid API response format: missing choices array');
+
+            // Just verify we got some kind of valid response
+            if (!data || typeof data !== 'object') {
+                throw new Error('Invalid API response format');
             }
 
             return { result: ConnectionTestResult.Success };
