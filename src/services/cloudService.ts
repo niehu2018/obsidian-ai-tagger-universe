@@ -3,7 +3,7 @@ import { BaseLLMService } from './baseService';
 import { AdapterType, createAdapter, BaseAdapter } from './adapters';
 import { TaggingMode } from './prompts/types';
 import { LanguageCode } from './types';
-import { App } from 'obsidian';
+import { App, requestUrl } from 'obsidian';
 
 export class CloudLLMService extends BaseLLMService {
     private adapter: BaseAdapter;
@@ -31,23 +31,22 @@ export class CloudLLMService extends BaseLLMService {
         return null;
     }
 
-    private async makeRequest(prompt: string, timeoutMs: number): Promise<Response> {
+    private async makeRequest(prompt: string, timeoutMs: number): Promise<any> {
         try {
             const validationError = this.validateCloudConfig();
             if (validationError) {
                 throw new Error(validationError);
             }
 
-            const { controller, cleanup } = this.createRequestController(timeoutMs);
-            try {
-                const response = await fetch(this.adapter.getEndpoint(), {
-                    method: 'POST',
-                    headers: this.adapter.getHeaders(),
-                    body: JSON.stringify(this.adapter.formatRequest(prompt)),
-                    signal: controller.signal
-                });
-                return response;
-            } finally { cleanup(); }
+            const response = await requestUrl({
+                url: this.adapter.getEndpoint(),
+                method: 'POST',
+                headers: this.adapter.getHeaders(),
+                body: JSON.stringify(this.adapter.formatRequest(prompt)),
+                throw: false
+            });
+
+            return response;
         } catch (error) {
             if (error instanceof Error && error.name === 'AbortError') {
                 throw new Error('Request timed out');
@@ -56,13 +55,14 @@ export class CloudLLMService extends BaseLLMService {
         }
     }
 
-    private async makeRequestWithRetry(prompt: string, timeoutMs: number): Promise<Response> {
+    private async makeRequestWithRetry(prompt: string, timeoutMs: number): Promise<any> {
         let lastError: Error | null = null;
-        
+
         for (let i = 0; i < this.MAX_RETRIES; i++) {
             try {
                 const response = await this.makeRequest(prompt, timeoutMs);
-                if (response.ok || response.status === 401) { // Don't retry auth errors
+                // requestUrl returns {status, json, text, etc.} - status 200-299 is success
+                if ((response.status >= 200 && response.status < 300) || response.status === 401) { // Don't retry auth errors
                     return response;
                 }
                 lastError = new Error(`HTTP error ${response.status}`);
@@ -72,22 +72,22 @@ export class CloudLLMService extends BaseLLMService {
                     throw error; // Don't retry auth errors
                 }
             }
-            
+
             if (i < this.MAX_RETRIES - 1) {
                 await new Promise(resolve => setTimeout(resolve, this.RETRY_DELAY * (i + 1)));
             }
         }
-        
+
         throw lastError || new Error('Max retries exceeded');
     }
 
     async testConnection(): Promise<{ result: ConnectionTestResult; error?: ConnectionTestError }> {
         try {
             const response = await this.makeRequestWithRetry('Connection test', 10000);
-            
-            const responseText = await response.text();
 
-            if (!response.ok) {
+            const responseText = response.text;
+
+            if (response.status < 200 || response.status >= 300) {
                 if (response.status === 401) {
                     throw new Error('Authentication failed: Invalid API key');
                 } else if (response.status === 404) {
@@ -102,10 +102,13 @@ export class CloudLLMService extends BaseLLMService {
                 }
             }
 
-            // Verify response format
+            // Verify we can parse the response - don't check specific format
+            // since different providers have different response structures
             const data = JSON.parse(responseText);
-            if (!data.choices || !Array.isArray(data.choices)) {
-                throw new Error('Invalid API response format: missing choices array');
+
+            // Just verify we got some kind of valid response
+            if (!data || typeof data !== 'object') {
+                throw new Error('Invalid API response format');
             }
 
             return { result: ConnectionTestResult.Success };
@@ -167,23 +170,23 @@ export class CloudLLMService extends BaseLLMService {
 
     /**
      * Sends a request to the LLM service and returns the response
-     * @param prompt - The prompt to send 
+     * @param prompt - The prompt to send
      * @returns Promise resolving to the response
      */
     protected async sendRequest(prompt: string): Promise<string> {
         const response = await this.makeRequestWithRetry(prompt, this.TIMEOUT);
 
-        if (!response.ok) {
-            const responseText = await response.text();
+        if (response.status < 200 || response.status >= 300) {
+            const responseText = response.text;
             try {
                 const errorJson = JSON.parse(responseText);
                 throw new Error(errorJson.error?.message || errorJson.message || `API error: ${response.status}`);
             } catch {
-                throw new Error(`API error: ${response.status} ${response.statusText}`);
+                throw new Error(`API error: ${response.status}`);
             }
         }
 
-        const responseText = await response.text();
+        const responseText = response.text;
         try {
             const data = JSON.parse(responseText);
             // Try to get the completion content based on adapter or standard format

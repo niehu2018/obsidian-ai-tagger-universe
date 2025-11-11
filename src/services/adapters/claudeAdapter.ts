@@ -1,6 +1,7 @@
 import { BaseAdapter } from './baseAdapter';
 import { AdapterConfig } from './types';
 import * as endpoints from './cloudEndpoints.json';
+import { SYSTEM_PROMPT } from '../../utils/constants';
 
 export class ClaudeAdapter extends BaseAdapter {
     private readonly anthropicVersion = '2023-06-01';
@@ -9,7 +10,7 @@ export class ClaudeAdapter extends BaseAdapter {
         super({
             ...config,
             endpoint: config.endpoint || endpoints.claude,
-            modelName: config.modelName || 'claude-3-opus-20240229'
+            modelName: config.modelName || 'claude-sonnet-4-5-20250929'
         });
         this.provider = {
             name: 'claude',
@@ -28,6 +29,21 @@ export class ClaudeAdapter extends BaseAdapter {
                 path: ['content', '0', 'text'],
                 errorPath: ['error', 'message']
             }
+        };
+    }
+
+    /**
+     * Formats a request for Claude's Messages API
+     * Claude requires 'system' as a separate parameter, not in messages array
+     */
+    public formatRequest(prompt: string, language?: string): any {
+        return {
+            model: this.config.modelName,
+            max_tokens: 1024,
+            system: SYSTEM_PROMPT,
+            messages: [
+                { role: 'user', content: prompt }
+            ]
         };
     }
 

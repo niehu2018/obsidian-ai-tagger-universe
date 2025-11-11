@@ -3,7 +3,7 @@ import { SYSTEM_PROMPT } from '../utils/constants';
 import { BaseLLMService } from './baseService';
 import { TaggingMode } from './prompts/types';
 import { LanguageCode } from './types';
-import { App } from 'obsidian';
+import { App, requestUrl } from 'obsidian';
 import { extractAuthFromUrl } from './localModelFetcher';
 
 export class LocalLLMService extends BaseLLMService {
@@ -58,23 +58,23 @@ export class LocalLLMService extends BaseLLMService {
         return null;
     }
 
-    private async makeRequest(options: RequestInit, timeoutMs: number): Promise<Response> {
+    private async makeRequest(options: RequestInit, timeoutMs: number): Promise<any> {
         try {
-            const { controller, cleanup } = this.createRequestController(timeoutMs);
-            try {
-                // Merge the stored authentication headers with the request headers
-                const mergedHeaders = {
-                    ...this.authHeaders,
-                    ...(options.headers as Record<string, string> || {})
-                };
-                
-                const response = await fetch(this.endpoint, {
-                    ...options,
-                    headers: mergedHeaders,
-                    signal: controller.signal
-                });
-                return response;
-            } finally { cleanup(); }
+            // Merge the stored authentication headers with the request headers
+            const mergedHeaders = {
+                ...this.authHeaders,
+                ...(options.headers as Record<string, string> || {})
+            };
+
+            const response = await requestUrl({
+                url: this.endpoint,
+                method: options.method as string || 'POST',
+                headers: mergedHeaders,
+                body: options.body as string,
+                throw: false
+            });
+
+            return response;
         } catch (error) {
             if (error instanceof Error) {
                 if (error.name === 'AbortError') {
@@ -85,25 +85,24 @@ export class LocalLLMService extends BaseLLMService {
         }
     }
 
-    private async makeRequestWithRetry(options: RequestInit, timeoutMs: number): Promise<Response> {
+    private async makeRequestWithRetry(options: RequestInit, timeoutMs: number): Promise<any> {
         let lastError: Error | null = null;
 
         for (let i = 0; i < this.MAX_RETRIES; i++) {
             try {
                 const response = await this.makeRequest(options, timeoutMs);
-                
+
                 // For local service, we might want to retry on any error
                 // as it could be starting up or processing another request
-                if (response.ok) {
+                // requestUrl returns {status, json, text, etc.} - status 200-299 is success
+                if (response.status >= 200 && response.status < 300) {
                     return response;
                 }
 
                 // Read the error response
-                const errorText = await response.text();
+                const errorText = response.text;
                 lastError = new Error(
-                    `HTTP error ${response.status}: ${
-                        errorText || response.statusText
-                    }`
+                    `HTTP error ${response.status}: ${errorText || ''}`
                 );
             } catch (error) {
                 lastError = error instanceof Error ? error : new Error('Unknown error');
@@ -145,7 +144,7 @@ export class LocalLLMService extends BaseLLMService {
                 })
             }, 10000);
 
-            const responseText = await response.text();
+            const responseText = response.text;
             try {
                 const data = JSON.parse(responseText);
 
@@ -234,12 +233,12 @@ export class LocalLLMService extends BaseLLMService {
             })
         }, this.TIMEOUT);
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`HTTP error ${response.status}: ${errorText || response.statusText}`);
+        if (response.status < 200 || response.status >= 300) {
+            const errorText = response.text;
+            throw new Error(`HTTP error ${response.status}: ${errorText || ''}`);
         }
 
-        const data = await response.json();
+        const data = JSON.parse(response.text);
         if (!data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
             throw new Error('Invalid response format from service');
         }

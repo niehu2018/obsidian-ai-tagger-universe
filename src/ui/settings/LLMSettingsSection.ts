@@ -87,7 +87,7 @@ export class LLMSettingsSection extends BaseSettingSection {
                                 switch (type) {
                                     case 'openai':
                                         this.plugin.settings.cloudEndpoint = endpoints.openai;
-                                        this.plugin.settings.cloudModel = 'gpt-3.5-turbo';
+                                        this.plugin.settings.cloudModel = 'gpt-4o';
                                         break;
                                     case 'gemini':
                                         this.plugin.settings.cloudEndpoint = endpoints.gemini;
@@ -103,11 +103,11 @@ export class LLMSettingsSection extends BaseSettingSection {
                                         break;
                                     case 'claude':
                                         this.plugin.settings.cloudEndpoint = endpoints.claude;
-                                        this.plugin.settings.cloudModel = 'claude-3-opus-20240229';
+                                        this.plugin.settings.cloudModel = 'claude-sonnet-4-5-20250929';
                                         break;
                                     case 'groq':
                                         this.plugin.settings.cloudEndpoint = endpoints.groq;
-                                        this.plugin.settings.cloudModel = 'mixtral-8x7b-32768';
+                                        this.plugin.settings.cloudModel = 'llama-3.3-70b-versatile';
                                         break;
                                     case 'vertex':
                                         this.plugin.settings.cloudEndpoint = endpoints.vertex;
@@ -115,27 +115,27 @@ export class LLMSettingsSection extends BaseSettingSection {
                                         break;
                                     case 'openrouter':
                                         this.plugin.settings.cloudEndpoint = endpoints.openrouter;
-                                        this.plugin.settings.cloudModel = 'default';
+                                        this.plugin.settings.cloudModel = 'openai/gpt-4o';
                                         break;
                                     case 'bedrock':
                                         this.plugin.settings.cloudEndpoint = endpoints.bedrock;
-                                        this.plugin.settings.cloudModel = 'anthropic.claude-v2';
+                                        this.plugin.settings.cloudModel = 'us.anthropic.claude-sonnet-4-0-v2:0';
                                         break;
                                     case 'requesty':
                                         this.plugin.settings.cloudEndpoint = endpoints.requesty;
-                                        this.plugin.settings.cloudModel = 'gpt-4';
+                                        this.plugin.settings.cloudModel = 'gpt-4o';
                                         break;
                                     case 'cohere':
                                         this.plugin.settings.cloudEndpoint = endpoints.cohere;
-                                        this.plugin.settings.cloudModel = 'command';
+                                        this.plugin.settings.cloudModel = 'command-r-plus';
                                         break;
                                     case 'grok':
                                         this.plugin.settings.cloudEndpoint = endpoints.grok;
-                                        this.plugin.settings.cloudModel = 'grok-1';
+                                        this.plugin.settings.cloudModel = 'grok-2-vision-1212';
                                         break;
                                     case 'mistral':
                                         this.plugin.settings.cloudEndpoint = endpoints.mistral;
-                                        this.plugin.settings.cloudModel = 'mistral-medium';
+                                        this.plugin.settings.cloudModel = 'mistral-large-latest';
                                         break;
                                     case 'openai-compatible':
                                         this.plugin.settings.cloudEndpoint = 'http://your-api-endpoint/v1/chat/completions';
@@ -300,18 +300,18 @@ export class LLMSettingsSection extends BaseSettingSection {
             .setDesc(this.plugin.t.settings.llm.modelNameDesc)
             .addText(text => text
                 .setPlaceholder(
-                    this.plugin.settings.cloudServiceType === 'openai' ? 'gpt-3.5-turbo' :
-                    this.plugin.settings.cloudServiceType === 'gemini' ? 'gemini-pro' :
+                    this.plugin.settings.cloudServiceType === 'openai' ? 'gpt-4o' :
+                    this.plugin.settings.cloudServiceType === 'gemini' ? 'gemini-2.0-flash' :
                     this.plugin.settings.cloudServiceType === 'deepseek' ? 'deepseek-chat' :
                     this.plugin.settings.cloudServiceType === 'aliyun' ? 'qwen-max' :
-                    this.plugin.settings.cloudServiceType === 'claude' ? 'claude-3-opus-20240229' :
-                    this.plugin.settings.cloudServiceType === 'groq' ? 'mixtral-8x7b-32768' :
-                    this.plugin.settings.cloudServiceType === 'openrouter' ? 'default' :
-                    this.plugin.settings.cloudServiceType === 'bedrock' ? 'anthropic.claude-v2' :
-                    this.plugin.settings.cloudServiceType === 'requesty' ? 'gpt-4' :
-                    this.plugin.settings.cloudServiceType === 'cohere' ? 'command' :
-                    this.plugin.settings.cloudServiceType === 'grok' ? 'grok-1' :
-                    this.plugin.settings.cloudServiceType === 'mistral' ? 'mistral-medium' :
+                    this.plugin.settings.cloudServiceType === 'claude' ? 'claude-sonnet-4-5-20250929' :
+                    this.plugin.settings.cloudServiceType === 'groq' ? 'llama-3.3-70b-versatile' :
+                    this.plugin.settings.cloudServiceType === 'openrouter' ? 'openai/gpt-4o' :
+                    this.plugin.settings.cloudServiceType === 'bedrock' ? 'us.anthropic.claude-sonnet-4-0-v2:0' :
+                    this.plugin.settings.cloudServiceType === 'requesty' ? 'gpt-4o' :
+                    this.plugin.settings.cloudServiceType === 'cohere' ? 'command-r-plus' :
+                    this.plugin.settings.cloudServiceType === 'grok' ? 'grok-2-vision-1212' :
+                    this.plugin.settings.cloudServiceType === 'mistral' ? 'mistral-large-latest' :
                     this.plugin.settings.cloudServiceType === 'openai-compatible' ? 'your-model' :
                     'gemini-pro'
                 )
