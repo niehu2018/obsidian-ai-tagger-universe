@@ -6,6 +6,7 @@ import { BaseSettingSection } from './BaseSettingSection';
 export class LLMSettingsSection extends BaseSettingSection {
     private statusContainer: HTMLElement = null!;
     private statusEl: HTMLElement = null!;
+    private isUpdatingTemperatureInput: boolean = false;
 
     display(): void {
         this.containerEl.createEl('h1', { text: this.plugin.t.settings.llm.title });
@@ -178,6 +179,8 @@ export class LLMSettingsSection extends BaseSettingSection {
                     await this.plugin.saveSettings();
                 }));
 
+        this.displayTemperatureOverrideSetting();
+
         // Add a tips section about common local LLM tools
         const tipsEl = this.containerEl.createEl('div', {
             cls: 'ai-tagger-tips-block'
@@ -200,6 +203,48 @@ export class LLMSettingsSection extends BaseSettingSection {
         tipsEl.style.fontSize = '0.9em';
 
         this.createTestButton();
+    }
+
+    private displayTemperatureOverrideSetting(): void {
+        new Setting(this.containerEl)
+            .setName(this.plugin.t.settings.llm.temperature)
+            .setDesc(this.plugin.t.settings.llm.temperatureDesc)
+            .addText(text => {
+                text.setPlaceholder(this.plugin.t.settings.llm.temperaturePlaceholder)
+                    .setValue(typeof this.plugin.settings.llmTemperatureOverride === 'number'
+                        ? String(this.plugin.settings.llmTemperatureOverride)
+                        : '');
+
+                text.onChange(async (value) => {
+                    if (this.isUpdatingTemperatureInput) {
+                        return;
+                    }
+
+                    const trimmed = value.trim();
+                    if (trimmed === '') {
+                        this.plugin.settings.llmTemperatureOverride = null;
+                        await this.plugin.saveSettings();
+                        return;
+                    }
+
+                    const parsed = Number(trimmed);
+                    if (!Number.isFinite(parsed) || parsed < 0 || parsed > 2) {
+                        new Notice(this.plugin.t.settings.llm.temperatureInvalid);
+                        this.plugin.settings.llmTemperatureOverride = null;
+                        await this.plugin.saveSettings();
+
+                        this.isUpdatingTemperatureInput = true;
+                        text.setValue('');
+                        this.isUpdatingTemperatureInput = false;
+                        return;
+                    }
+
+                    this.plugin.settings.llmTemperatureOverride = parsed;
+                    await this.plugin.saveSettings();
+                });
+
+                return text;
+            });
     }
 
     private createTestButton(): void {
@@ -320,6 +365,8 @@ export class LLMSettingsSection extends BaseSettingSection {
                     this.plugin.settings.cloudModel = value;
                     await this.plugin.saveSettings();
                 }));
+
+        this.displayTemperatureOverrideSetting();
 
         this.createTestButton();
     }

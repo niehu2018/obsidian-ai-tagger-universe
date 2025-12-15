@@ -7,6 +7,42 @@ export abstract class BaseAdapter extends BaseLLMService {
     protected config: AdapterConfig;
     protected provider: any;
 
+    protected getTemperatureOverride(): number | null {
+        const value = this.config.llmTemperatureOverride;
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return null;
+        }
+        return value;
+    }
+
+    protected applyTemperatureOverride(body: Record<string, any>): void {
+        const override = this.getTemperatureOverride();
+        if (override === null) {
+            return;
+        }
+
+        // Common OpenAI-compatible providers
+        body.temperature = override;
+
+        // Vertex AI style: { parameters: { temperature } } or { _vertex: { parameters: { temperature } } }
+        if (body.parameters && typeof body.parameters === 'object') {
+            body.parameters.temperature = override;
+        }
+        if (body._vertex?.parameters && typeof body._vertex.parameters === 'object') {
+            body._vertex.parameters.temperature = override;
+        }
+
+        // AWS Bedrock Titan style: { textGenerationConfig: { temperature } }
+        if (body.textGenerationConfig && typeof body.textGenerationConfig === 'object') {
+            body.textGenerationConfig.temperature = override;
+        }
+
+        // Gemini style (non-OpenAI endpoints): { generationConfig: { temperature } }
+        if (body.generationConfig && typeof body.generationConfig === 'object') {
+            body.generationConfig.temperature = override;
+        }
+    }
+
     /**
      * Formats a request for the cloud service
      * Handles provider-specific request formats
@@ -15,19 +51,26 @@ export abstract class BaseAdapter extends BaseLLMService {
      * @returns Formatted request body
      */
     public formatRequest(prompt: string, language?: string): any {
+        let requestBody: any;
         if (this.provider?.requestFormat?.body) {
             // For providers that need specific request format
-            return {
+            requestBody = {
                 ...this.provider.requestFormat.body,
                 messages: [
                     { role: 'system', content: SYSTEM_PROMPT },
                     { role: 'user', content: prompt }
                 ]
             };
+        } else {
+            // If no provider-specific format, use the parent class implementation
+            requestBody = super.formatRequest(prompt, language);
         }
-        
-        // If no provider-specific format, use the parent class implementation
-        return super.formatRequest(prompt, language);
+
+        if (requestBody && typeof requestBody === 'object') {
+            this.applyTemperatureOverride(requestBody);
+        }
+
+        return requestBody;
     }
 
     public parseResponse(response: any): any {

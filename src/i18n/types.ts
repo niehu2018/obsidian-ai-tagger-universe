@@ -11,6 +11,10 @@ export interface Translations {
             localEndpointDesc: string;
             modelName: string;
             modelNameDesc: string;
+            temperature: string;
+            temperatureDesc: string;
+            temperaturePlaceholder: string;
+            temperatureInvalid: string;
             apiEndpoint: string;
             apiEndpointDesc: string;
             apiKey: string;

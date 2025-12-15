@@ -13,6 +13,7 @@ export interface AdapterConfig {
     model?: string;
     modelName?: string;
     language?: LanguageCode;
+    llmTemperatureOverride?: number | null;
 }
 
 export interface RequestBody {

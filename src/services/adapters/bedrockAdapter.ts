@@ -33,6 +33,8 @@ export class BedrockAdapter extends BaseAdapter {
     public formatRequest(prompt: string): RequestBody {
         const modelName = this.config.modelName || '';
         const baseRequest = super.formatRequest(prompt);
+        delete (baseRequest as any).temperature;
+        const temperature = this.getTemperatureOverride() ?? this.defaultConfig.temperature;
         
         // 根据模型类型提供不同的请求格式
         if (modelName.includes('claude')) {
@@ -40,6 +42,7 @@ export class BedrockAdapter extends BaseAdapter {
                 ...baseRequest,
                 prompt: `\n\nHuman: ${prompt}\n\nAssistant: `,
                 ...this.defaultConfig,
+                temperature,
                 anthropic_version: '2023-01-01'
             };
         } else if (modelName.includes('titan')) {
@@ -48,7 +51,7 @@ export class BedrockAdapter extends BaseAdapter {
                 inputText: prompt,
                 textGenerationConfig: {
                     maxTokenCount: this.defaultConfig.max_tokens,
-                    temperature: this.defaultConfig.temperature,
+                    temperature,
                     stopSequences: []
                 }
             };
@@ -57,7 +60,8 @@ export class BedrockAdapter extends BaseAdapter {
         return {
             ...baseRequest,
             prompt,
-            ...this.defaultConfig
+            ...this.defaultConfig,
+            temperature
         };
     }
 

@@ -37,10 +37,12 @@ export class ClaudeAdapter extends BaseAdapter {
      * Claude requires 'system' as a separate parameter, not in messages array
      */
     public formatRequest(prompt: string, language?: string): any {
+        const temperature = this.getTemperatureOverride();
         return {
             model: this.config.modelName,
             max_tokens: 1024,
             system: SYSTEM_PROMPT,
+            ...(temperature !== null ? { temperature } : {}),
             messages: [
                 { role: 'user', content: prompt }
             ]

@@ -39,6 +39,7 @@ export interface LLMServiceConfig {
     apiKey?: string;
     apiSecret?: string;
     language?: LanguageCode;
+    llmTemperatureOverride?: number | null;
 }
 
 export interface LLMService {
