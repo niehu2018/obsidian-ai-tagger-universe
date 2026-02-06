@@ -177,9 +177,13 @@ export class TagNetworkView extends ItemView {
 
         // Register metadata cache listener for real-time updates
         const metadataCacheHandler = this.app.metadataCache.on('changed', async () => {
-            await this.refreshNetworkData();
-            if (this.simulation) {
-                this.simulation.alpha(0.3).restart();
+            try {
+                await this.refreshNetworkData();
+                if (this.simulation) {
+                    this.simulation.alpha(0.3).restart();
+                }
+            } catch (error) {
+                console.error('Error refreshing tag network:', error);
             }
         });
         this.cleanup.push(() => this.app.metadataCache.offref(metadataCacheHandler));
@@ -405,17 +409,20 @@ export class TagNetworkView extends ItemView {
             tooltip.style.left = `${event.pageX + 5}px`;
             tooltip.style.top = `${event.pageY + 5}px`;
 
-            const tooltipContent = tooltip.querySelector('.tag-tooltip-content');
+            const tooltipContent = tooltip.querySelector('.tag-tooltip-content') as HTMLElement;
             if (tooltipContent) {
                 const connectedNodes = links.filter((link: any) =>
                     link.source.id === d.id || link.target.id === d.id
                 ).length;
 
-                tooltipContent.innerHTML = `
-                    <div class="tag-tooltip-title">${d.label}</div>
-                    <div class="tag-tooltip-info">Frequency: ${d.frequency}</div>
-                    <div class="tag-tooltip-info">Connected to ${connectedNodes} other tags</div>
-                `;
+                // Use safe DOM methods instead of innerHTML to prevent XSS
+                tooltipContent.empty();
+                const titleDiv = tooltipContent.createDiv({ cls: 'tag-tooltip-title' });
+                titleDiv.textContent = d.label;
+                const freqDiv = tooltipContent.createDiv({ cls: 'tag-tooltip-info' });
+                freqDiv.textContent = `Frequency: ${d.frequency}`;
+                const connDiv = tooltipContent.createDiv({ cls: 'tag-tooltip-info' });
+                connDiv.textContent = `Connected to ${connectedNodes} other tags`;
             }
         };
 
