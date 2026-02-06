@@ -443,5 +443,25 @@ export class TaggingSettingsSection extends BaseSettingSection {
                     this.plugin.settings.nestedTagsMaxDepth = value;
                     await this.plugin.saveSettings();
                 }));
+
+        // Tag Format Settings
+        this.containerEl.createEl('h3', { text: this.plugin.t.settings.tagging.tagFormatSettings });
+
+        new Setting(this.containerEl)
+            .setName(this.plugin.t.settings.tagging.tagFormat)
+            .setDesc(this.plugin.t.settings.tagging.tagFormatDesc)
+            .addDropdown(dropdown => dropdown
+                .addOptions({
+                    'kebab-case': this.plugin.t.settings.tagging.tagFormatKebab,
+                    'camelCase': this.plugin.t.settings.tagging.tagFormatCamel,
+                    'PascalCase': this.plugin.t.settings.tagging.tagFormatPascal,
+                    'snake_case': this.plugin.t.settings.tagging.tagFormatSnake,
+                    'original': this.plugin.t.settings.tagging.tagFormatOriginal
+                })
+                .setValue(this.plugin.settings.tagFormat)
+                .onChange(async (value) => {
+                    this.plugin.settings.tagFormat = value as 'kebab-case' | 'camelCase' | 'PascalCase' | 'snake_case' | 'original';
+                    await this.plugin.saveSettings();
+                }));
     }
 }

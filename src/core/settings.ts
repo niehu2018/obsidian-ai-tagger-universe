@@ -3,6 +3,8 @@ import { LanguageCode } from '../services/types';
 import { AdapterType } from '../services/adapters';
 import { SupportedLanguage, DEFAULT_LANGUAGE } from '../i18n';
 
+export type TagFormat = 'kebab-case' | 'camelCase' | 'PascalCase' | 'snake_case' | 'original';
+
 export interface AITaggerSettings {
     serviceType: 'local' | 'cloud';
     localEndpoint: string;
@@ -30,6 +32,8 @@ export interface AITaggerSettings {
     // Nested Tags Settings
     enableNestedTags: boolean;           // Enable nested tag generation
     nestedTagsMaxDepth: number;          // Max hierarchy depth (1-3)
+    // Tag Format Settings
+    tagFormat: TagFormat;                // Tag naming convention
 }
 
 export const DEFAULT_SETTINGS: AITaggerSettings = {
@@ -63,4 +67,5 @@ Prefer technical terms and domain-specific vocabulary when appropriate.`,
     debugMode: false,
     enableNestedTags: false,
     nestedTagsMaxDepth: 2,
+    tagFormat: 'kebab-case',
 };

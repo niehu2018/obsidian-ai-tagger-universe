@@ -76,11 +76,12 @@ export class LLMSettingsSection extends BaseSettingSection {
                             'cohere': this.plugin.t.dropdowns.cohere,
                             'grok': this.plugin.t.dropdowns.grok,
                             'mistral': this.plugin.t.dropdowns.mistral,
+                            'glm': this.plugin.t.dropdowns.glm,
                             'openai-compatible': this.plugin.t.dropdowns.openaiCompatible
                         })
                         .setValue(this.plugin.settings.cloudServiceType)
                         .onChange(async (value) => {
-                            const type = value as 'openai' | 'gemini' | 'deepseek' | 'aliyun' | 'claude' | 'groq' | 'vertex' | 'openrouter' | 'bedrock' | 'requesty' | 'cohere' | 'grok' | 'mistral' | 'openai-compatible';
+                            const type = value as 'openai' | 'gemini' | 'deepseek' | 'aliyun' | 'claude' | 'groq' | 'vertex' | 'openrouter' | 'bedrock' | 'requesty' | 'cohere' | 'grok' | 'mistral' | 'glm' | 'openai-compatible';
                             this.plugin.settings.cloudServiceType = type;
 
                             try {
@@ -137,6 +138,10 @@ export class LLMSettingsSection extends BaseSettingSection {
                                     case 'mistral':
                                         this.plugin.settings.cloudEndpoint = endpoints.mistral;
                                         this.plugin.settings.cloudModel = 'mistral-large-latest';
+                                        break;
+                                    case 'glm':
+                                        this.plugin.settings.cloudEndpoint = endpoints.glm;
+                                        this.plugin.settings.cloudModel = 'glm-4-flash';
                                         break;
                                     case 'openai-compatible':
                                         this.plugin.settings.cloudEndpoint = 'http://your-api-endpoint/v1/chat/completions';

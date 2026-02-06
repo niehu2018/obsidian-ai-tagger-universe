@@ -12,5 +12,6 @@
   "grok": "https://api.x.ai/v1/chat/completions",
   "mistral": "https://api.mistral.ai/v1/generate",
   "vertex": "https://us-central1-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}/endpoints/{endpoint}:predict",
+  "glm": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
   "openai-compatible": "http://your-api-endpoint/v1/chat/completions"
 }

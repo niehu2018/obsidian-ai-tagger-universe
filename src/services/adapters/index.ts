@@ -20,10 +20,11 @@ import { RequestyAdapter } from './requestyAdapter';
 import { CohereAdapter } from './cohereAdapter';
 import { GrokAdapter } from './grokAdapter';
 import { MistralAdapter } from './mistralAdapter';
+import { GLMAdapter } from './glmAdapter';
 import { OpenAICompatibleAdapter } from './openaiCompatibleAdapter';
 
-export type AdapterType = 'openai' | 'gemini' | 'deepseek' | 'aliyun' | 'claude' | 'groq' | 'vertex' | 
-    'openrouter' | 'bedrock' | 'requesty' | 'cohere' | 'grok' | 'mistral' | 'openai-compatible';
+export type AdapterType = 'openai' | 'gemini' | 'deepseek' | 'aliyun' | 'claude' | 'groq' | 'vertex' |
+    'openrouter' | 'bedrock' | 'requesty' | 'cohere' | 'grok' | 'mistral' | 'glm' | 'openai-compatible';
 
 export function createAdapter(type: AdapterType, config: AdapterConfig): BaseAdapter {
     switch (type.toLowerCase()) {
@@ -91,6 +92,11 @@ export function createAdapter(type: AdapterType, config: AdapterConfig): BaseAda
             return new MistralAdapter({
                 ...config,
                 endpoint: config.endpoint || cloudEndpoints.mistral
+            });
+        case 'glm':
+            return new GLMAdapter({
+                ...config,
+                endpoint: config.endpoint || cloudEndpoints.glm
             });
         case 'openai-compatible':
             return new OpenAICompatibleAdapter(config);

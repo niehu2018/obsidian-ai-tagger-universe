@@ -2,6 +2,15 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Language Requirements
+
+**All code comments and commit messages MUST be in English.**
+
+- Write all code comments in English only
+- Write all git commit messages in English only
+- Variable names, function names, and documentation should be in English
+- The only exception is i18n translation strings (which contain Chinese translations)
+
 ## Build Commands
 
 ```bash

@@ -56,6 +56,7 @@ export class ClaudeAdapter extends BaseAdapter {
         return {
             'Content-Type': 'application/json',
             'anthropic-version': this.anthropicVersion,
+            'anthropic-dangerous-direct-browser-access': 'true',
             'x-api-key': this.config.apiKey
         };
     }

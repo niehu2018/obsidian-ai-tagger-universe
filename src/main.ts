@@ -534,7 +534,8 @@ export default class AITaggerPlugin extends Plugin {
                     allTags,
                     [], // No matched tags since we've already combined them
                     false, // Show notifications
-                    this.settings.replaceTags // Always use the setting value
+                    this.settings.replaceTags, // Always use the setting value
+                    this.settings.tagFormat // Tag format style
                 );
 
                 if (this.settings.debugMode) {

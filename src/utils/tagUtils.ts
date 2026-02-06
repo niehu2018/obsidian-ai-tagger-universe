@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as yaml from 'js-yaml';
 import { ConfirmationModal } from '../ui/modals/ConfirmationModal';
 import { TAG_RANGE, TAG_PREDEFINED_RANGE, TAG_GENERATE_RANGE } from './constants';
+import { TagFormat } from '../core/settings';
 
 // Re-export constants for backward compatibility
 export { TAG_RANGE, TAG_PREDEFINED_RANGE, TAG_GENERATE_RANGE };
@@ -84,35 +85,96 @@ export class TagUtils {
     }
 
     /**
+     * Converts a string to different case formats
+     */
+    private static toKebabCase(str: string): string {
+        return str
+            .replace(/\s+/g, '-')
+            .replace(/[^\p{L}\p{N}/-]/gu, '-')
+            .replace(/-{2,}/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .toLowerCase();
+    }
+
+    private static toCamelCase(str: string): string {
+        const words = str.split(/[\s\-_]+/).filter(w => w.length > 0);
+        if (words.length === 0) return '';
+        return words[0].toLowerCase() + words.slice(1)
+            .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+            .join('');
+    }
+
+    private static toPascalCase(str: string): string {
+        const words = str.split(/[\s\-_]+/).filter(w => w.length > 0);
+        return words
+            .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+            .join('');
+    }
+
+    private static toSnakeCase(str: string): string {
+        return str
+            .replace(/\s+/g, '_')
+            .replace(/[^\p{L}\p{N}/_]/gu, '_')
+            .replace(/_{2,}/g, '_')
+            .replace(/^_+|_+$/g, '')
+            .toLowerCase();
+    }
+
+    /**
      * Formats a tag to ensure consistent formatting
      * @param tag - Tag to format
+     * @param format - Tag format style (default: 'kebab-case')
      * @returns Properly formatted tag
      */
-    static formatTag(tag: unknown): string {
+    static formatTag(tag: unknown, format: TagFormat = 'kebab-case'): string {
         // Handle non-string tags by converting to string
         if (tag === null || tag === undefined) {
             return '';
         }
-        
+
         const tagStr = typeof tag === 'string' ? tag : String(tag);
-        
+
         // Remove leading # if present
         let formatted = tagStr.trim();
         if (formatted.startsWith('#')) {
             formatted = formatted.substring(1);
         }
-        
-        // Replace spaces and special characters with hyphens
-        formatted = formatted.replace(/\s+/g, '-'); // First replace spaces with hyphens
-        formatted = formatted.replace(/[^\p{L}\p{N}/-]/gu, '-'); // Then replace other special chars
-        
-        // Collapse multiple consecutive hyphens into a single one
-        formatted = formatted.replace(/-{2,}/g, '-');
-        
-        // Remove hyphens from start and end
-        formatted = formatted.replace(/^-+|-+$/g, '');
-        
-        return formatted.length > 0 ? formatted : '';
+
+        // Handle nested tags (preserve / separator)
+        if (formatted.includes('/')) {
+            const parts = formatted.split('/');
+            const formattedParts = parts.map(part => this.formatTagPart(part, format));
+            return formattedParts.filter(p => p.length > 0).join('/');
+        }
+
+        return this.formatTagPart(formatted, format);
+    }
+
+    /**
+     * Formats a single tag part (without nested tag separators)
+     */
+    private static formatTagPart(part: string, format: TagFormat): string {
+        if (!part || part.trim().length === 0) return '';
+
+        const trimmed = part.trim();
+
+        switch (format) {
+            case 'camelCase':
+                return this.toCamelCase(trimmed);
+            case 'PascalCase':
+                return this.toPascalCase(trimmed);
+            case 'snake_case':
+                return this.toSnakeCase(trimmed);
+            case 'original':
+                // Only remove invalid characters, preserve case and spaces->underscores
+                return trimmed
+                    .replace(/[^\p{L}\p{N}\s\-_]/gu, '')
+                    .replace(/\s+/g, '-')
+                    .trim();
+            case 'kebab-case':
+            default:
+                return this.toKebabCase(trimmed);
+        }
     }
 
     /**
@@ -209,6 +271,7 @@ export class TagUtils {
      * @param matchedTags - Array of matched existing tags to add
      * @param silent - Whether to suppress notifications
      * @param replaceTags - Whether to replace existing tags (true) or merge with them (false)
+     * @param tagFormat - Tag format style (default: 'kebab-case')
      * @returns Promise resolving to operation result
      */
     static async updateNoteTags(
@@ -217,7 +280,8 @@ export class TagUtils {
         newTags: string[],
         matchedTags: string[],
         silent: boolean = false,
-        replaceTags: boolean = true
+        replaceTags: boolean = true,
+        tagFormat: TagFormat = 'kebab-case'
     ): Promise<TagOperationResult> {
         try {
             debugLog(`updateNoteTags called with newTags:`, newTags);
@@ -231,7 +295,7 @@ export class TagUtils {
             const allTags = [...newTags, ...matchedTags];
             debugLog(`Combined tags before formatting:`, allTags);
 
-            const yamlReadyTags = this.formatTags(allTags);
+            const yamlReadyTags = this.formatTags(allTags, false, tagFormat);
             debugLog(`YAML-ready tags after formatting:`, yamlReadyTags);
 
             if (yamlReadyTags.length === 0) {
@@ -502,9 +566,10 @@ export class TagUtils {
      * Formats an array of tags, filtering out invalid ones
      * @param tags - Array of tags to format
      * @param keepHashPrefix - Whether to keep # prefix in the returned tags
+     * @param format - Tag format style (default: 'kebab-case')
      * @returns Array of formatted valid tags
      */
-    static formatTags(tags: unknown[], keepHashPrefix: boolean = false): string[] {
+    static formatTags(tags: unknown[], keepHashPrefix: boolean = false, format: TagFormat = 'kebab-case'): string[] {
         if (!Array.isArray(tags)) {
             return [];
         }
@@ -515,7 +580,7 @@ export class TagUtils {
             .filter(tag => tag !== null && tag !== undefined)
             .map(tag => {
                 try {
-                    const formatted = this.formatTag(tag);
+                    const formatted = this.formatTag(tag, format);
                     if (formatted !== tag) {
                         debugLog(`formatTag transformed: "${tag}" -> "${formatted}"`);
                     }
@@ -524,7 +589,7 @@ export class TagUtils {
                     return null;
                 }
             })
-            .filter((tag): tag is string => tag !== null);
+            .filter((tag): tag is string => tag !== null && tag.length > 0);
 
         debugLog(`formatTags result:`, result);
         return result;
@@ -536,13 +601,15 @@ export class TagUtils {
      * @param file - File to update
      * @param tags - Array of tags to add
      * @param replace - Whether to replace existing tags (default: false)
+     * @param tagFormat - Tag format style (default: 'kebab-case')
      * @returns Promise resolving to operation result
      */
     static async writeTagsToFrontmatter(
-        app: App, 
-        file: TFile, 
-        tags: string[], 
-        replace: boolean = false
+        app: App,
+        file: TFile,
+        tags: string[],
+        replace: boolean = false,
+        tagFormat: TagFormat = 'kebab-case'
     ): Promise<TagOperationResult> {
         try {
             if (!Array.isArray(tags)) {
@@ -550,7 +617,7 @@ export class TagUtils {
             }
 
             // Format and sanitize tags
-            const formattedTags = this.formatTags(tags);
+            const formattedTags = this.formatTags(tags, false, tagFormat);
             
             if (formattedTags.length === 0) {
                 return { 

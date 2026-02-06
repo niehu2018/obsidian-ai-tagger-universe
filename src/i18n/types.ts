@@ -69,6 +69,14 @@ export interface Translations {
             enableNestedTagsDesc: string;
             nestedTagsMaxDepth: string;
             nestedTagsMaxDepthDesc: string;
+            tagFormatSettings: string;
+            tagFormat: string;
+            tagFormatDesc: string;
+            tagFormatKebab: string;
+            tagFormatCamel: string;
+            tagFormatPascal: string;
+            tagFormatSnake: string;
+            tagFormatOriginal: string;
         };
         support: {
             title: string;
@@ -211,6 +219,7 @@ export interface Translations {
         cohere: string;
         grok: string;
         mistral: string;
+        glm: string;
         openaiCompatible: string;
         ollama: string;
         localai: string;

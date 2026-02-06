@@ -46,7 +46,7 @@ export function registerGenerateCommands(plugin: AITaggerPlugin) {
                 const suggestedTags = analysis.suggestedTags;
                 const matchedTags = analysis.matchedExistingTags || [];
 
-                const result = await TagUtils.updateNoteTags(plugin.app, view.file, suggestedTags, matchedTags, true, true);
+                const result = await TagUtils.updateNoteTags(plugin.app, view.file, suggestedTags, matchedTags, true, true, plugin.settings.tagFormat);
 
                 if (selectedText && result.success) {
                     editor.replaceSelection(selectedText);
