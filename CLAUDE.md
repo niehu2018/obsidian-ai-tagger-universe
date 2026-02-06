@@ -214,6 +214,29 @@ Version is stored in three places (must stay in sync):
 
 Use `npm run version` to bump all three automatically via `version-bump.mjs`.
 
+## Releasing a New Version
+
+Obsidian plugin releases require uploading binary files to the GitHub release:
+
+1. **Update version** in `package.json`, `manifest.json`, and `versions.json`
+2. **Build the plugin**: `npm run build`
+3. **Create git tag** matching the version exactly (e.g., `1.0.16`, NOT `v1.0.16`)
+4. **Create GitHub release** with the tag
+5. **Upload required files** to the release:
+   - `main.js` (required)
+   - `manifest.json` (required)
+   - `styles.css` (required if plugin has styles)
+
+```bash
+# Example release workflow
+git tag 1.0.16
+git push origin 1.0.16
+gh release create 1.0.16 --title "v1.0.16" --notes "Release notes here"
+gh release upload 1.0.16 main.js manifest.json styles.css
+```
+
+**Important**: The release tag must match the version in `manifest.json` exactly. Obsidian uses this to locate and download plugin files.
+
 ## Known Constraints
 
 - Obsidian API externals must match platform version (defined in `esbuild.config.mjs`)
