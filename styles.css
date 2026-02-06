@@ -156,8 +156,55 @@
 
 .tag-network-controls {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
+    align-items: center;
+    gap: var(--size-4-2);
     padding: var(--size-4-2) 0;
+}
+
+.tag-network-force-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--size-4-3);
+}
+
+.tag-network-slider-container {
+    display: flex;
+    align-items: center;
+    gap: var(--size-2-1);
+}
+
+.tag-network-slider-container label {
+    font-size: var(--font-smaller);
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.tag-network-slider {
+    width: 80px;
+    cursor: pointer;
+}
+
+.tag-network-slider-value {
+    font-size: var(--font-smaller);
+    color: var(--text-normal);
+    min-width: 30px;
+    text-align: right;
+}
+
+.tag-network-refresh-btn {
+    font-size: var(--font-smaller);
+    padding: var(--size-2-1) var(--size-4-2);
+    cursor: pointer;
+}
+
+.tag-network-hint {
+    font-size: var(--font-smaller);
+    color: var(--text-muted);
+    font-style: italic;
+    margin-bottom: var(--size-4-2);
 }
 
 .tag-network-search {
@@ -282,6 +329,85 @@
 
 .tag-network-legend-color.high {
     background-color: rgb(0, 49, 187);
+}
+
+/* Document Panel for Tag Network */
+.tag-network-doc-panel {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 280px;
+    height: 100%;
+    background-color: var(--background-primary);
+    border-left: 1px solid var(--background-modifier-border);
+    box-shadow: var(--shadow-s);
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s ease;
+}
+
+.tag-network-doc-panel-hidden {
+    transform: translateX(100%);
+}
+
+.tag-network-doc-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--size-4-2) var(--size-4-3);
+    border-bottom: 1px solid var(--background-modifier-border);
+    background-color: var(--background-secondary);
+}
+
+.tag-network-doc-panel-title {
+    font-weight: var(--font-medium);
+    font-size: var(--font-smaller);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+}
+
+.tag-network-doc-panel-close {
+    background: none;
+    border: none;
+    font-size: var(--font-ui-large);
+    cursor: pointer;
+    color: var(--text-muted);
+    padding: 0 var(--size-2-1);
+    line-height: 1;
+}
+
+.tag-network-doc-panel-close:hover {
+    color: var(--text-normal);
+}
+
+.tag-network-doc-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--size-4-2);
+}
+
+.tag-network-doc-item {
+    padding: var(--size-4-2);
+    margin-bottom: var(--size-2-1);
+    background-color: var(--background-secondary);
+    border-radius: var(--radius-s);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    font-size: var(--font-smaller);
+}
+
+.tag-network-doc-item:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.tag-network-doc-empty {
+    color: var(--text-muted);
+    font-style: italic;
+    text-align: center;
+    padding: var(--size-4-4);
 }
 
 /* Excluded paths list */

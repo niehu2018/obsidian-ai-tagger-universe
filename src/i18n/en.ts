@@ -237,5 +237,21 @@ export const en: Translations = {
         lmStudio: "Make sure LM Studio is running and the server is enabled",
         jan: "Make sure Jan is running and the local server is activated",
         koboldcpp: "Make sure KoboldCpp is running and the API endpoint is accessible"
+    },
+
+    // Tag Network View
+    tagNetwork: {
+        title: "Tag Network Visualization",
+        description: "Node size represents tag frequency. Connections represent tags that appear together in notes.",
+        searchPlaceholder: "Type to search...",
+        repulsionStrength: "Repulsion",
+        linkDistance: "Link Distance",
+        frequencyLow: "Low",
+        frequencyMedium: "Medium",
+        frequencyHigh: "High",
+        clickToShowDocs: "Click tag to show documents",
+        documentsWithTag: "Documents with tag",
+        noDocuments: "No documents found",
+        refresh: "Refresh"
     }
 };

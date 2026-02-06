@@ -115,7 +115,7 @@ export default class AITaggerPlugin extends Plugin {
         // Register view type for tag network
         this.registerView(
             TAG_NETWORK_VIEW_TYPE,
-            (leaf) => new TagNetworkView(leaf, this.tagNetworkManager.getNetworkData())
+            (leaf) => new TagNetworkView(leaf, this.tagNetworkManager.getNetworkData(), this.app, this.t)
         );
 
         // Add ribbon icons with descriptive tooltips

@@ -237,5 +237,21 @@ export const zhCN: Translations = {
         lmStudio: "确保 LM Studio 正在运行并且服务器已启用",
         jan: "确保 Jan 正在运行并且本地服务器已激活",
         koboldcpp: "确保 KoboldCpp 正在运行并且 API 端点可访问"
+    },
+
+    // 标签网络视图
+    tagNetwork: {
+        title: "标签网络可视化",
+        description: "节点大小代表标签频率。连接表示同时出现在笔记中的标签。",
+        searchPlaceholder: "输入搜索...",
+        repulsionStrength: "排斥力",
+        linkDistance: "连接距离",
+        frequencyLow: "低",
+        frequencyMedium: "中",
+        frequencyHigh: "高",
+        clickToShowDocs: "点击标签显示文档",
+        documentsWithTag: "包含此标签的文档",
+        noDocuments: "未找到文档",
+        refresh: "刷新"
     }
 };

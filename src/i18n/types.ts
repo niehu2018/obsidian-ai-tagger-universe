@@ -202,6 +202,22 @@ export interface Translations {
         tagNetwork: string;
     };
 
+    // Tag Network View
+    tagNetwork: {
+        title: string;
+        description: string;
+        searchPlaceholder: string;
+        repulsionStrength: string;
+        linkDistance: string;
+        frequencyLow: string;
+        frequencyMedium: string;
+        frequencyHigh: string;
+        clickToShowDocs: string;
+        documentsWithTag: string;
+        noDocuments: string;
+        refresh: string;
+    };
+
     // Dropdown options
     dropdowns: {
         localLLM: string;
