@@ -63,10 +63,11 @@ export interface LLMServiceProvider {
     requestFormat: {
         url?: string;
         headers?: Record<string, string>;
-        body?: any;
+        body?: Record<string, unknown>;
     };
     responseFormat: {
         path: (string | number)[];
         errorPath?: (string | number)[];
+        contentPath?: (string | number)[];
     };
 }

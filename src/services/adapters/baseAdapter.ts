@@ -1,11 +1,11 @@
 import { BaseLLMService } from "../baseService";
-import { AdapterConfig } from "./types";
+import { AdapterConfig, LLMServiceProvider } from "./types";
 import { SYSTEM_PROMPT } from "../../utils/constants";
 import { TaggingMode } from "../prompts/types";
 
 export abstract class BaseAdapter extends BaseLLMService {
     protected config: AdapterConfig;
-    protected provider: any;
+    protected provider: LLMServiceProvider | null = null;
 
     protected getTemperatureOverride(): number | null {
         const value = this.config.llmTemperatureOverride;
@@ -80,11 +80,14 @@ export abstract class BaseAdapter extends BaseLLMService {
 
         try {
             if (response.error && this.provider.responseFormat.errorPath) {
-                let errorMsg = response;
+                let errorMsg: unknown = response;
                 for (const key of this.provider.responseFormat.errorPath) {
-                    errorMsg = errorMsg[key];
+                    if (errorMsg === null || errorMsg === undefined || typeof errorMsg !== 'object') {
+                        break;
+                    }
+                    errorMsg = (errorMsg as Record<string | number, unknown>)[key];
                 }
-                throw new Error(errorMsg || 'Unknown error');
+                throw new Error(typeof errorMsg === 'string' ? errorMsg : 'Unknown error');
             }
 
             let result = response;

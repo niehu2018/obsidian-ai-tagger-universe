@@ -55,11 +55,13 @@ export class DeepseekAdapter extends BaseAdapter {
       }
       
       // 解析结构化数据
-      for (const key of this.provider.responseFormat.path) {
-        if (!result || typeof result !== 'object') {
-          throw new Error('Invalid response structure');
+      if (this.provider?.responseFormat?.path) {
+        for (const key of this.provider.responseFormat.path) {
+          if (!result || typeof result !== 'object') {
+            throw new Error('Invalid response structure');
+          }
+          result = result[key];
         }
-        result = result[key];
       }
       
       // 提取标签数据

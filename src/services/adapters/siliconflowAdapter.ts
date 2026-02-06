@@ -80,8 +80,10 @@ export class SiliconflowAdapter extends BaseAdapter {
   parseResponse(response: any): any {
     try {
       let result = response;
-      for (const key of this.provider.responseFormat.path) {
-        result = result[key];
+      if (this.provider?.responseFormat?.path) {
+        for (const key of this.provider.responseFormat.path) {
+          result = result[key];
+        }
       }
       return result;
     } catch (error) {

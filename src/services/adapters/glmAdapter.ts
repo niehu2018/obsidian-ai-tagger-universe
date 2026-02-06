@@ -54,11 +54,13 @@ export class GLMAdapter extends BaseAdapter {
         content = response.choices[0].message.content;
       }
 
-      for (const key of this.provider.responseFormat.path) {
-        if (!result || typeof result !== 'object') {
-          throw new Error('Invalid response structure');
+      if (this.provider?.responseFormat?.path) {
+        for (const key of this.provider.responseFormat.path) {
+          if (!result || typeof result !== 'object') {
+            throw new Error('Invalid response structure');
+          }
+          result = result[key];
         }
-        result = result[key];
       }
 
       const jsonContent = this.extractJsonFromContent(content);

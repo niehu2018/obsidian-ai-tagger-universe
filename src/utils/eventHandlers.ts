@@ -4,12 +4,18 @@ export class EventHandlers {
     private app: App;
     private fileChangeTimeoutId: NodeJS.Timeout | null = null;
     private eventRefs: EventRef[] = [];
+    private isRegistered: boolean = false;
 
     constructor(app: App) {
         this.app = app;
     }
 
     registerEventHandlers() {
+        // Prevent duplicate registration
+        if (this.isRegistered) {
+            return;
+        }
+        this.isRegistered = true;
         // Handle file deletions
         const deleteRef = this.app.vault.on('delete', (file) => {
             if (file instanceof TFile && file.extension === 'md') {
@@ -55,5 +61,6 @@ export class EventHandlers {
             this.app.workspace.offref(ref);
         }
         this.eventRefs = [];
+        this.isRegistered = false;
     }
 }
