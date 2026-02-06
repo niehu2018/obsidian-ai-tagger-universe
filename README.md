@@ -30,7 +30,7 @@ Alternatively, you can manually install the plugin:
 
 - **Use your preferred AI service**:
   - **Local LLMs**: Ollama, LM Studio, LocalAI, or any OpenAI-compatible endpoint
-  - **Cloud Services**: OpenAI, Claude, Gemini, Groq, Grok, Mistral, DeepSeek, Cohere, GLM (Zhipu AI), SiliconFlow, Aliyun, Bedrock, Vertex AI, OpenRouter, and more
+  - **Cloud Services**: OpenAI, Claude, Gemini, Groq, Grok, Mistral, DeepSeek, Cohere, GLM (Zhipu AI), MiMo (Xiaomi), Minimax, SiliconFlow, Aliyun, Bedrock, Vertex AI, OpenRouter, and more
 
 ### 🏷️ Smart Tagging System
 
@@ -71,7 +71,10 @@ Alternatively, you can manually install the plugin:
 ## 🆕 What's New in Version 1.0.16
 
 ### Major Features
-- **🌐 GLM (Zhipu AI) Provider**: Native support for China's leading AI service
+- **🌐 New AI Providers**:
+  - GLM (Zhipu AI) - China's leading AI service
+  - MiMo (Xiaomi) - Xiaomi's MiMo-V2-Flash model
+  - Minimax - MiniMax-M2.1 model
 - **🏷️ Tag Format Options**: Choose your preferred naming convention
   - kebab-case (my-tag-name)
   - camelCase (myTagName)

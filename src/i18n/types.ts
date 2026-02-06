@@ -245,6 +245,8 @@ export interface Translations {
         grok: string;
         mistral: string;
         glm: string;
+        mimo: string;
+        minimax: string;
         openaiCompatible: string;
         ollama: string;
         localai: string;

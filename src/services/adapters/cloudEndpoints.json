@@ -13,5 +13,7 @@
   "mistral": "https://api.mistral.ai/v1/generate",
   "vertex": "https://us-central1-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}/endpoints/{endpoint}:predict",
   "glm": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+  "mimo": "https://api.xiaomimimo.com/v1/chat/completions",
+  "minimax": "https://api.minimax.io/v1/chat/completions",
   "openai-compatible": "http://your-api-endpoint/v1/chat/completions"
 }

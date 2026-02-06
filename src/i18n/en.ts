@@ -231,6 +231,8 @@ export const en: Translations = {
         grok: "Grok",
         mistral: "Mistral",
         glm: "GLM (Zhipu AI)",
+        mimo: "MiMo (Xiaomi)",
+        minimax: "Minimax",
         openaiCompatible: "OpenAI Compatible",
         ollama: "Ollama",
         localai: "LocalAI",

@@ -77,11 +77,13 @@ export class LLMSettingsSection extends BaseSettingSection {
                             'grok': this.plugin.t.dropdowns.grok,
                             'mistral': this.plugin.t.dropdowns.mistral,
                             'glm': this.plugin.t.dropdowns.glm,
+                            'mimo': this.plugin.t.dropdowns.mimo,
+                            'minimax': this.plugin.t.dropdowns.minimax,
                             'openai-compatible': this.plugin.t.dropdowns.openaiCompatible
                         })
                         .setValue(this.plugin.settings.cloudServiceType)
                         .onChange(async (value) => {
-                            const type = value as 'openai' | 'gemini' | 'deepseek' | 'aliyun' | 'claude' | 'groq' | 'vertex' | 'openrouter' | 'bedrock' | 'requesty' | 'cohere' | 'grok' | 'mistral' | 'glm' | 'openai-compatible';
+                            const type = value as 'openai' | 'gemini' | 'deepseek' | 'aliyun' | 'claude' | 'groq' | 'vertex' | 'openrouter' | 'bedrock' | 'requesty' | 'cohere' | 'grok' | 'mistral' | 'glm' | 'mimo' | 'minimax' | 'openai-compatible';
                             this.plugin.settings.cloudServiceType = type;
 
                             try {
@@ -142,6 +144,14 @@ export class LLMSettingsSection extends BaseSettingSection {
                                     case 'glm':
                                         this.plugin.settings.cloudEndpoint = endpoints.glm;
                                         this.plugin.settings.cloudModel = 'glm-4-flash';
+                                        break;
+                                    case 'mimo':
+                                        this.plugin.settings.cloudEndpoint = endpoints.mimo;
+                                        this.plugin.settings.cloudModel = 'MiMo-V2-Flash';
+                                        break;
+                                    case 'minimax':
+                                        this.plugin.settings.cloudEndpoint = endpoints.minimax;
+                                        this.plugin.settings.cloudModel = 'MiniMax-M2.1';
                                         break;
                                     case 'openai-compatible':
                                         this.plugin.settings.cloudEndpoint = 'http://your-api-endpoint/v1/chat/completions';

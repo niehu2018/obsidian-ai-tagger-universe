@@ -21,10 +21,12 @@ import { CohereAdapter } from './cohereAdapter';
 import { GrokAdapter } from './grokAdapter';
 import { MistralAdapter } from './mistralAdapter';
 import { GLMAdapter } from './glmAdapter';
+import { MiMoAdapter } from './mimoAdapter';
+import { MinimaxAdapter } from './minimaxAdapter';
 import { OpenAICompatibleAdapter } from './openaiCompatibleAdapter';
 
 export type AdapterType = 'openai' | 'gemini' | 'deepseek' | 'aliyun' | 'claude' | 'groq' | 'vertex' |
-    'openrouter' | 'bedrock' | 'requesty' | 'cohere' | 'grok' | 'mistral' | 'glm' | 'openai-compatible';
+    'openrouter' | 'bedrock' | 'requesty' | 'cohere' | 'grok' | 'mistral' | 'glm' | 'mimo' | 'minimax' | 'openai-compatible';
 
 export function createAdapter(type: AdapterType, config: AdapterConfig): BaseAdapter {
     switch (type.toLowerCase()) {
@@ -97,6 +99,16 @@ export function createAdapter(type: AdapterType, config: AdapterConfig): BaseAda
             return new GLMAdapter({
                 ...config,
                 endpoint: config.endpoint || cloudEndpoints.glm
+            });
+        case 'mimo':
+            return new MiMoAdapter({
+                ...config,
+                endpoint: config.endpoint || cloudEndpoints.mimo
+            });
+        case 'minimax':
+            return new MinimaxAdapter({
+                ...config,
+                endpoint: config.endpoint || cloudEndpoints.minimax
             });
         case 'openai-compatible':
             return new OpenAICompatibleAdapter(config);

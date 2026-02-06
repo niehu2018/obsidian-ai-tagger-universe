@@ -231,6 +231,8 @@ export const zhCN: Translations = {
         grok: "Grok",
         mistral: "Mistral",
         glm: "智谱 GLM",
+        mimo: "小米 MiMo",
+        minimax: "Minimax",
         openaiCompatible: "OpenAI 兼容",
         ollama: "Ollama",
         localai: "LocalAI",
