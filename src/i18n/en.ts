@@ -108,7 +108,10 @@ export const en: Translations = {
         collectAllTags: "Collect all tags",
         showTagNetwork: "Show tag network",
         aiTagSelectedNotes: "AI Tag Selected Notes",
-        aiTagThisNote: "AI Tag This Note"
+        aiTagThisNote: "AI Tag This Note",
+        flattenTagsForCurrentNote: "Flatten hierarchical tags for current note",
+        flattenTagsForCurrentFolder: "Flatten hierarchical tags for current folder",
+        flattenTagsForVault: "Flatten hierarchical tags for vault"
     },
 
     // Messages and notifications
@@ -170,7 +173,13 @@ export const en: Translations = {
         noMatchingFiles: "No matching files",
         errorLoadingFiles: "Error loading files",
         noActiveFile: "No active file",
-        noPredefinedTagsFound: "No predefined tags found"
+        noPredefinedTagsFound: "No predefined tags found",
+        flattenTagsConfirm: "This will convert hierarchical tags (e.g., a/b/c) into separate tags (a, b, c). Continue?",
+        flattenTagsForFolderConfirm: "Flatten hierarchical tags for {count} files in the current folder?",
+        flattenTagsForVaultConfirm: "Flatten hierarchical tags for all files in your vault? This may take a while.",
+        flatteningTags: "Flattening tags...",
+        tagsFlattenedSuccessfully: "Flattened tags in {count} files",
+        noHierarchicalTags: "No hierarchical tags found"
     },
 
     // Modal dialogs

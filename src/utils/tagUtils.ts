@@ -801,6 +801,99 @@ export class TagUtils {
     }
     
     /**
+     * Flattens hierarchical tags (e.g., a/b/c) into separate tags (a, b, c)
+     * @param app - Obsidian App instance
+     * @param file - File to flatten tags in
+     * @param tagFormat - Tag format style (default: 'kebab-case')
+     * @returns Promise resolving to operation result with count of flattened tags
+     */
+    static async flattenHierarchicalTags(
+        app: App,
+        file: TFile,
+        tagFormat: TagFormat = 'kebab-case'
+    ): Promise<TagOperationResult> {
+        try {
+            const cache = app.metadataCache.getFileCache(file);
+            const existingTags = cache?.frontmatter ? this.getExistingTags(cache.frontmatter) : [];
+
+            if (existingTags.length === 0) {
+                return { success: true, message: 'No tags found', tags: [] };
+            }
+
+            // Check if any tags are hierarchical
+            const hasHierarchicalTags = existingTags.some(tag => tag.includes('/'));
+            if (!hasHierarchicalTags) {
+                return { success: true, message: 'No hierarchical tags found', tags: existingTags };
+            }
+
+            // Flatten all hierarchical tags
+            const flattenedTags = new Set<string>();
+            for (const tag of existingTags) {
+                if (tag.includes('/')) {
+                    // Split hierarchical tag and add each part
+                    const parts = tag.split('/').filter(p => p.trim().length > 0);
+                    for (const part of parts) {
+                        flattenedTags.add(this.formatTag(part, tagFormat));
+                    }
+                } else {
+                    flattenedTags.add(this.formatTag(tag, tagFormat));
+                }
+            }
+
+            const newTags = Array.from(flattenedTags).sort();
+
+            // Update the file with flattened tags
+            const content = await app.vault.read(file);
+            const frontmatterPosition = cache?.frontmatterPosition;
+
+            if (!frontmatterPosition) {
+                return { success: true, message: 'No frontmatter found', tags: [] };
+            }
+
+            const frontmatterText = content.substring(
+                frontmatterPosition.start.offset + 4,
+                frontmatterPosition.end.offset - 4
+            );
+
+            let frontmatter: any;
+            try {
+                frontmatter = yaml.load(frontmatterText) || {};
+            } catch (yamlError) {
+                return {
+                    success: false,
+                    message: 'YAML parse error',
+                    tags: []
+                };
+            }
+
+            frontmatter.tags = newTags;
+            const newFrontmatter = yaml.dump(frontmatter).trim();
+            const newContent =
+                '---\n' +
+                newFrontmatter +
+                '\n---' +
+                content.substring(frontmatterPosition.end.offset);
+
+            if (newContent !== content) {
+                await app.vault.modify(file, newContent);
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+
+            return {
+                success: true,
+                message: `Flattened to ${newTags.length} tags`,
+                tags: newTags.map(t => `#${t}`)
+            };
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            return {
+                success: false,
+                message: `Flatten failed: ${message}`
+            };
+        }
+    }
+
+    /**
      * Simple glob pattern matching implementation
      * Supports * (any characters) and ? (single character)
      * @param str - String to test

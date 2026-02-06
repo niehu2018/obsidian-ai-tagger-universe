@@ -107,6 +107,9 @@ export interface Translations {
         showTagNetwork: string;
         aiTagSelectedNotes: string;
         aiTagThisNote: string;
+        flattenTagsForCurrentNote: string;
+        flattenTagsForCurrentFolder: string;
+        flattenTagsForVault: string;
     };
 
     // Messages and notifications
@@ -169,6 +172,12 @@ export interface Translations {
         errorLoadingFiles: string;
         noActiveFile: string;
         noPredefinedTagsFound: string;
+        flattenTagsConfirm: string;
+        flattenTagsForFolderConfirm: string;
+        flattenTagsForVaultConfirm: string;
+        flatteningTags: string;
+        tagsFlattenedSuccessfully: string;
+        noHierarchicalTags: string;
     };
 
     // Modal dialogs

@@ -108,7 +108,10 @@ export const zhCN: Translations = {
         collectAllTags: "收集所有标签",
         showTagNetwork: "显示标签网络",
         aiTagSelectedNotes: "AI 标记选中的笔记",
-        aiTagThisNote: "AI 标记这篇笔记"
+        aiTagThisNote: "AI 标记这篇笔记",
+        flattenTagsForCurrentNote: "展开当前笔记的层级标签",
+        flattenTagsForCurrentFolder: "展开当前文件夹的层级标签",
+        flattenTagsForVault: "展开整个库的层级标签"
     },
 
     // 消息和通知
@@ -170,7 +173,13 @@ export const zhCN: Translations = {
         noMatchingFiles: "没有匹配的文件",
         errorLoadingFiles: "加载文件时出错",
         noActiveFile: "没有活动文件",
-        noPredefinedTagsFound: "没有找到预定义标签"
+        noPredefinedTagsFound: "没有找到预定义标签",
+        flattenTagsConfirm: "这将把层级标签（如 a/b/c）转换为独立标签（a、b、c）。继续吗？",
+        flattenTagsForFolderConfirm: "要展开当前文件夹中 {count} 个文件的层级标签吗？",
+        flattenTagsForVaultConfirm: "要展开整个库中所有文件的层级标签吗？这可能需要一些时间。",
+        flatteningTags: "正在展开标签...",
+        tagsFlattenedSuccessfully: "已展开 {count} 个文件中的标签",
+        noHierarchicalTags: "未找到层级标签"
     },
 
     // 模态对话框
