@@ -29,12 +29,18 @@ export class InterfaceSettingsSection extends BaseSettingSection {
                         notice.style.border = '1px solid var(--background-modifier-border)';
                         notice.style.borderRadius = '4px';
                         notice.style.color = 'var(--text-normal)';
-                        notice.innerHTML = `
-                            <div style="display: flex; align-items: center;">
-                                <span style="margin-right: 8px;">ℹ️</span>
-                                <span>${this.plugin.t.messages.restartRequired}</span>
-                            </div>
-                        `;
+                        // Use safe DOM methods instead of innerHTML to prevent XSS
+                        const noticeContent = document.createElement('div');
+                        noticeContent.style.display = 'flex';
+                        noticeContent.style.alignItems = 'center';
+                        const iconSpan = document.createElement('span');
+                        iconSpan.style.marginRight = '8px';
+                        iconSpan.textContent = 'ℹ️';
+                        const textSpan = document.createElement('span');
+                        textSpan.textContent = this.plugin.t.messages.restartRequired;
+                        noticeContent.appendChild(iconSpan);
+                        noticeContent.appendChild(textSpan);
+                        notice.appendChild(noticeContent);
 
                         const existingNotice = this.containerEl.querySelector('.language-notice');
                         if (existingNotice) {
@@ -51,7 +57,7 @@ export class InterfaceSettingsSection extends BaseSettingSection {
                     });
             });
 
-        // 添加重启提示
+        // 添加重启提示 - use safe DOM methods instead of innerHTML
         const restartNotice = this.containerEl.createDiv('language-notice');
         restartNotice.style.marginTop = '10px';
         restartNotice.style.padding = '8px 12px';
@@ -59,11 +65,13 @@ export class InterfaceSettingsSection extends BaseSettingSection {
         restartNotice.style.border = '1px solid var(--background-modifier-border)';
         restartNotice.style.borderRadius = '4px';
         restartNotice.style.color = 'var(--text-normal)';
-        restartNotice.innerHTML = `
-            <div style="display: flex; align-items: center;">
-                <span style="margin-right: 8px;">💡</span>
-                <span>${this.plugin.t.messages.languageChangeNotice}</span>
-            </div>
-        `;
+        const restartContent = restartNotice.createDiv();
+        restartContent.style.display = 'flex';
+        restartContent.style.alignItems = 'center';
+        const restartIcon = restartContent.createSpan();
+        restartIcon.style.marginRight = '8px';
+        restartIcon.textContent = '💡';
+        const restartText = restartContent.createSpan();
+        restartText.textContent = this.plugin.t.messages.languageChangeNotice;
     }
 }

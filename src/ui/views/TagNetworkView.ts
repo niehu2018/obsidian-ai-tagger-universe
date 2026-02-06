@@ -23,6 +23,8 @@ export class TagNetworkView extends ItemView {
     private forceSettings: ForceSettings = { repulsion: -300, linkDistance: 100 };
     private tagNetworkManager: TagNetworkManager;
     private t: Translations;
+    // Static counter to track D3 usage across multiple views
+    private static d3RefCount: number = 0;
 
     constructor(leaf: WorkspaceLeaf, data: NetworkData, app: App, t: Translations) {
         super(leaf);
@@ -199,9 +201,16 @@ export class TagNetworkView extends ItemView {
         this.cleanup.forEach(cleanup => cleanup());
         this.cleanup = [];
         this.simulation = null;
-        const d3Script = document.querySelector('script[src*="d3.v7.min.js"]');
-        if (d3Script) {
-            d3Script.remove();
+        // Only remove D3 script when no other views are using it
+        TagNetworkView.d3RefCount--;
+        if (TagNetworkView.d3RefCount <= 0) {
+            TagNetworkView.d3RefCount = 0;
+            const d3Script = document.querySelector('script[src*="d3.v7.min.js"]');
+            if (d3Script) {
+                d3Script.remove();
+            }
+            // Clear global D3 reference
+            delete (window as any).d3;
         }
         this.contentEl.empty();
     }
@@ -270,6 +279,7 @@ export class TagNetworkView extends ItemView {
         }
 
         if (window.d3) {
+            TagNetworkView.d3RefCount++;
             this.renderD3Network(container, searchInput, tooltip, statusEl, docPanel, docList);
             return;
         }
@@ -287,6 +297,7 @@ export class TagNetworkView extends ItemView {
             const handleLoad = () => {
                 cleanup();
                 try {
+                    TagNetworkView.d3RefCount++;
                     this.renderD3Network(container, searchInput, tooltip, statusEl, docPanel, docList);
                     resolve();
                 } catch (error) {

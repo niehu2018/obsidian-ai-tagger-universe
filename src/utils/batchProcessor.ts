@@ -56,6 +56,10 @@ export class BatchProcessor {
                 // Process files in current batch concurrently
                 const batchResults = await Promise.all(
                     batch.map(async (file: TFile) => {
+                        // Check cancellation before processing each file
+                        if (this.isCancelled) {
+                            return false;
+                        }
                         try {
                             await processor(file);
                             return true;

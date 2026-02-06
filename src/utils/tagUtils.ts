@@ -736,6 +736,11 @@ export class TagUtils {
                 // Regex pattern (enclosed in slashes)
                 if (pattern.startsWith('/') && pattern.endsWith('/') && pattern.length > 2) {
                     const regexPattern = pattern.slice(1, -1);
+                    // Validate regex complexity to prevent ReDoS attacks
+                    // Reject patterns with nested quantifiers or excessive length
+                    if (regexPattern.length > 100 || /(\+|\*|\{)\s*(\+|\*|\{)/.test(regexPattern)) {
+                        continue; // Skip potentially dangerous patterns
+                    }
                     try {
                         const regex = new RegExp(regexPattern, 'i');
                         if (regex.test(filePath)) {

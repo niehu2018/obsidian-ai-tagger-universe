@@ -152,8 +152,11 @@ export abstract class BaseLLMService {
                 // Validate JSON is parseable
                 JSON.parse(markdownMatch[1]);
                 return markdownMatch[1];
-            } catch {
+            } catch (e) {
                 // Continue to next attempt if JSON is invalid
+                if (this.debugMode) {
+                    console.debug('Failed to parse markdown JSON:', e);
+                }
             }
         }
 
@@ -165,8 +168,11 @@ export abstract class BaseLLMService {
                 // Validate JSON is parseable
                 JSON.parse(jsonMatch[0]);
                 return jsonMatch[0];
-            } catch {
+            } catch (e) {
                 // Continue to next attempt if JSON is invalid
+                if (this.debugMode) {
+                    console.debug('Failed to parse standalone JSON:', e);
+                }
             }
         }
         
