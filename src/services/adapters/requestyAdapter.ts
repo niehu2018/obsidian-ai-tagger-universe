@@ -34,10 +34,12 @@ export class RequestyAdapter extends BaseAdapter {
 
     public formatRequest(prompt: string): RequestBody {
         const baseRequest = super.formatRequest(prompt);
+        const temperature = this.getTemperatureOverride() ?? this.defaultConfig.temperature;
         
         return {
             ...baseRequest,
-            ...this.defaultConfig
+            ...this.defaultConfig,
+            temperature
         };
     }
 

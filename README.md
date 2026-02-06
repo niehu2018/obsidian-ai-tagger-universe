@@ -117,6 +117,7 @@ Alternatively, you can manually install the plugin:
 - **Endpoint URL**: Your LLM service endpoint
 - **API Key**: Authentication key (if required)
 - **Model Name**: Specific model to use
+- **Temperature (Override)**: Leave empty to use provider default; set to `0` to reduce randomness for more repeatable tag output
 
 ### Tag Generation
 - **Tagging Mode**: Select how tags are generated or matched

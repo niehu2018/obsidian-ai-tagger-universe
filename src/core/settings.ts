@@ -12,6 +12,7 @@ export interface AITaggerSettings {
     cloudApiKey: string;
     cloudModel: string;
     cloudServiceType: AdapterType;
+    llmTemperatureOverride: number | null;
     taggingMode: TaggingMode;
     customPrompt: string;
     excludedFolders: string[];
@@ -39,6 +40,7 @@ export const DEFAULT_SETTINGS: AITaggerSettings = {
     cloudApiKey: '',
     cloudModel: 'gpt-4',
     cloudServiceType: 'openai',
+    llmTemperatureOverride: null,
     taggingMode: TaggingMode.GenerateNew,
     customPrompt: `Focus on main topics and key concepts from the content.
 

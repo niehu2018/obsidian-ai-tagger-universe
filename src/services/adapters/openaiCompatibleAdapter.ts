@@ -36,9 +36,14 @@ export class OpenAICompatibleAdapter extends BaseAdapter {
 
         // Add any additional parameters from config
         for (const [key, value] of Object.entries(this.config)) {
-            if (!['endpoint', 'apiKey', 'modelName'].includes(key)) {
+            if (!['endpoint', 'apiKey', 'modelName', 'llmTemperatureOverride'].includes(key)) {
                 body[key] = value;
             }
+        }
+
+        const temperature = this.getTemperatureOverride();
+        if (temperature !== null) {
+            body.temperature = temperature;
         }
 
         return body;

@@ -46,6 +46,11 @@ export class VertexAdapter extends BaseAdapter {
                 content: prompt
             }
         ];
+        const temperature = this.getTemperatureOverride() ?? this.defaultConfig.temperature;
+        const vertexParameters = {
+            ...this.defaultConfig,
+            temperature
+        };
         
         // 使用基本的格式化后添加 Vertex AI 特定的字段
         const baseRequest = super.formatRequest(prompt);
@@ -55,6 +60,7 @@ export class VertexAdapter extends BaseAdapter {
             model: this.config.modelName || 'gemini-pro',
             maxTokens: this.defaultConfig.maxOutputTokens,
             ...this.defaultConfig,
+            temperature,
             _vertex: {
                 instances: [{
                     messages: messages.map(m => ({
@@ -62,7 +68,7 @@ export class VertexAdapter extends BaseAdapter {
                         content: m.content
                     }))
                 }],
-                parameters: this.defaultConfig
+                parameters: vertexParameters
             }
         };
     }

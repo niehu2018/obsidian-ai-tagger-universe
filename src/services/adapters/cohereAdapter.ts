@@ -34,11 +34,13 @@ export class CohereAdapter extends BaseAdapter {
 
     public formatRequest(prompt: string): RequestBody {
         const baseRequest = super.formatRequest(prompt);
+        const temperature = this.getTemperatureOverride() ?? this.defaultConfig.temperature;
         
         return {
             ...baseRequest,
             message: prompt,
             ...this.defaultConfig,
+            temperature,
             connectors: []
         };
     }

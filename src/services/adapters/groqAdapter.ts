@@ -34,10 +34,11 @@ export class GroqAdapter extends BaseAdapter {
 
     public formatRequest(prompt: string): RequestBody {
         const baseRequest = super.formatRequest(prompt);
+        const temperature = this.getTemperatureOverride() ?? this.defaultConfig.temperature;
         
         return {
             ...baseRequest,
-            temperature: this.defaultConfig.temperature
+            temperature
         };
     }
 

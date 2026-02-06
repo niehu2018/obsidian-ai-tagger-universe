@@ -32,13 +32,20 @@ export class SiliconflowAdapter extends BaseAdapter {
   }
 
   formatRequest(prompt: string): RequestBody {
-    return {
+    const requestBody: RequestBody = {
       model: this.config.modelName || 'siliconflow-chat',
       messages: [{
         role: 'user',
         content: prompt
       }]
     };
+
+    const temperature = this.getTemperatureOverride();
+    if (temperature !== null) {
+      requestBody.temperature = temperature;
+    }
+
+    return requestBody;
   }
 
   public validateConfig(): string | null {

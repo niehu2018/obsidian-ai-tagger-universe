@@ -17,7 +17,8 @@ export class CloudLLMService extends BaseLLMService {
             endpoint: config.endpoint,
             apiKey: config.apiKey || '',
             modelName: config.modelName,
-            language: config.language
+            language: config.language,
+            llmTemperatureOverride: config.llmTemperatureOverride
         });
     }
 

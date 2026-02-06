@@ -10,11 +10,15 @@ export class LocalLLMService extends BaseLLMService {
     private readonly MAX_CONTENT_LENGTH = 4000;
     private readonly MAX_RETRIES = 3;
     private readonly RETRY_DELAY = 1000; // 1 second
+    private llmTemperatureOverride: number | null = null;
     
     constructor(config: LLMServiceConfig, app: App) {
         super(config, app);
         // Ensure endpoint ends with standard chat completions path
         this.endpoint = this.normalizeEndpoint(config.endpoint);
+        this.llmTemperatureOverride = typeof config.llmTemperatureOverride === 'number' && Number.isFinite(config.llmTemperatureOverride)
+            ? config.llmTemperatureOverride
+            : null;
         this.validateLocalConfig(); // Validate on construction
     }
 
@@ -229,7 +233,7 @@ export class LocalLLMService extends BaseLLMService {
                         content: prompt
                     }
                 ],
-                temperature: 0.3
+                temperature: this.llmTemperatureOverride ?? 0.3
             })
         }, this.TIMEOUT);
 
