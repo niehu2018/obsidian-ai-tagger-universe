@@ -30,7 +30,7 @@ Alternatively, you can manually install the plugin:
 
 - **Use your preferred AI service**:
   - **Local LLMs**: Ollama, LM Studio, LocalAI, or any OpenAI-compatible endpoint
-  - **Cloud Services**: OpenAI, Claude, Gemini, Groq, Grok, Mistral, DeepSeek, Cohere, SiliconFlow, Aliyun, Bedrock, Vertex AI, OpenRouter, and more
+  - **Cloud Services**: OpenAI, Claude, Gemini, Groq, Grok, Mistral, DeepSeek, Cohere, GLM (Zhipu AI), SiliconFlow, Aliyun, Bedrock, Vertex AI, OpenRouter, and more
 
 ### 🏷️ Smart Tagging System
 
@@ -53,6 +53,9 @@ Alternatively, you can manually install the plugin:
 - Discover connections and patterns in your knowledge base
 - Search functionality to find specific tags
 - Node size indicates tag frequency
+- **Adjustable force settings**: Customize repulsion strength and link distance
+- **Click-to-show documents**: Click any tag to see all notes containing it
+- **Real-time updates**: Network refreshes automatically when tags change
 
 ### 🛠️ Advanced Management
 
@@ -60,10 +63,34 @@ Alternatively, you can manually install the plugin:
 - Batch tag entire folders or your whole vault
 - Clear tags while preserving other frontmatter
 - Collect and export all tags from your vault
-- **Debug Mode**: Enhanced logging for troubleshooting tag generation (NEW!)
-- **Popular Tools Tips**: Built-in guidance for common LLM setup configurations (NEW!)
+- **Flatten hierarchical tags**: Convert nested tags (a/b/c) into separate flat tags
+- **Tag format options**: Choose between kebab-case, camelCase, PascalCase, snake_case, or original
+- **Debug Mode**: Enhanced logging for troubleshooting tag generation
+- **Popular Tools Tips**: Built-in guidance for common LLM setup configurations
 
-## 🆕 What's New in Version 1.0.15
+## 🆕 What's New in Version 1.0.16
+
+### Major Features
+- **🌐 GLM (Zhipu AI) Provider**: Native support for China's leading AI service
+- **🏷️ Tag Format Options**: Choose your preferred naming convention
+  - kebab-case (my-tag-name)
+  - camelCase (myTagName)
+  - PascalCase (MyTagName)
+  - snake_case (my_tag_name)
+  - Original (preserve as-is)
+- **📊 Enhanced Tag Network Visualization**:
+  - Adjustable force settings (repulsion strength, link distance)
+  - Click any tag node to see all documents containing it
+  - Real-time updates when tags change in your vault
+  - Manual refresh button
+- **🔀 Flatten Hierarchical Tags**: New commands to convert nested tags into flat tags
+  - Flatten for current note, folder, or entire vault
+  - Converts `science/biology/genetics` → `science`, `biology`, `genetics`
+
+### Bug Fixes
+- Fixed Claude API CORS compatibility for browser-based access
+
+## 📝 Version 1.0.15
 
 ### Major Features
 - **🌳 Nested Tags Support**: Generate hierarchical tags with parent/child relationships
@@ -127,7 +154,8 @@ Alternatively, you can manually install the plugin:
   - Custom: Use your own tag list from a file
 - **Tag Limits**: Set maximum numbers for generated/matched tags (0-10)
 - **Tag Language**: Generate tags in your preferred language
-- **Nested Tags** (NEW!):
+- **Tag Format**: Choose naming convention (kebab-case, camelCase, PascalCase, snake_case, original)
+- **Nested Tags**:
   - Enable hierarchical tag generation (e.g., `parent/child/grandchild`)
   - Configure max nesting depth (1-3 levels)
   - Creates parent/child relationships for better organization
