@@ -33,27 +33,26 @@ export class CloudLLMService extends BaseLLMService {
     }
 
     private async makeRequest(prompt: string, timeoutMs: number): Promise<any> {
-        try {
-            const validationError = this.validateCloudConfig();
-            if (validationError) {
-                throw new Error(validationError);
-            }
-
-            const response = await requestUrl({
-                url: this.adapter.getEndpoint(),
-                method: 'POST',
-                headers: this.adapter.getHeaders(),
-                body: JSON.stringify(this.adapter.formatRequest(prompt)),
-                throw: false
-            });
-
-            return response;
-        } catch (error) {
-            if (error instanceof Error && error.name === 'AbortError') {
-                throw new Error('Request timed out');
-            }
-            throw error;
+        const validationError = this.validateCloudConfig();
+        if (validationError) {
+            throw new Error(validationError);
         }
+
+        // Create timeout promise for race condition
+        const timeoutPromise = new Promise<never>((_, reject) => {
+            setTimeout(() => reject(new Error(`Request timed out after ${timeoutMs}ms`)), timeoutMs);
+        });
+
+        const requestPromise = requestUrl({
+            url: this.adapter.getEndpoint(),
+            method: 'POST',
+            headers: this.adapter.getHeaders(),
+            body: JSON.stringify(this.adapter.formatRequest(prompt)),
+            throw: false
+        });
+
+        // Race between request and timeout
+        return Promise.race([requestPromise, timeoutPromise]);
     }
 
     private async makeRequestWithRetry(prompt: string, timeoutMs: number): Promise<any> {

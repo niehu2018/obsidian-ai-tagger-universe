@@ -4,6 +4,8 @@ export interface BatchProcessorOptions {
     batchSize: number;
     progressUpdateInterval: number;
     silent?: boolean;
+    delayBetweenBatches?: number;  // Rate limiting delay in ms
+    delayBetweenFiles?: number;    // Delay between files within a batch
 }
 
 export interface BatchProcessResult {
@@ -19,11 +21,17 @@ export class BatchProcessor {
 
     constructor(options: Partial<BatchProcessorOptions> = {}) {
         this.options = {
-            batchSize: 10,
+            batchSize: 5,  // Reduced default for rate limiting
             progressUpdateInterval: 5000,
             silent: false,
+            delayBetweenBatches: 1000,  // 1 second between batches
+            delayBetweenFiles: 200,     // 200ms between files
             ...options
         };
+    }
+
+    private delay(ms: number): Promise<void> {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     public cancel(): void {
@@ -53,24 +61,28 @@ export class BatchProcessor {
             }
 
             try {
-                // Process files in current batch concurrently
-                const batchResults = await Promise.all(
-                    batch.map(async (file: TFile) => {
-                        // Check cancellation before processing each file
-                        if (this.isCancelled) {
-                            return false;
-                        }
-                        try {
-                            await processor(file);
-                            return true;
-                        } catch (error) {
-                            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                            errors.push({ file: file.path, error: errorMessage });
-                            //console.error(`Error processing ${file.path}:`, errorMessage);
-                            return false;
-                        }
-                    })
-                );
+                // Process files sequentially with rate limiting to avoid API exhaustion
+                const batchResults: boolean[] = [];
+                for (let i = 0; i < batch.length; i++) {
+                    const file = batch[i];
+                    // Check cancellation before processing each file
+                    if (this.isCancelled) {
+                        batchResults.push(false);
+                        continue;
+                    }
+                    try {
+                        await processor(file);
+                        batchResults.push(true);
+                    } catch (error) {
+                        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                        errors.push({ file: file.path, error: errorMessage });
+                        batchResults.push(false);
+                    }
+                    // Rate limiting: delay between files (except for last file in batch)
+                    if (i < batch.length - 1 && this.options.delayBetweenFiles) {
+                        await this.delay(this.options.delayBetweenFiles);
+                    }
+                }
 
                 // Update counts
                 const batchSuccesses = batchResults.filter(Boolean).length;
@@ -86,6 +98,11 @@ export class BatchProcessor {
 
             } catch (error) {
                 //console.error('Error processing batch:', error);
+            }
+
+            // Rate limiting: delay between batches (except for last batch)
+            if (this.options.delayBetweenBatches && batches.indexOf(batch) < batches.length - 1) {
+                await this.delay(this.options.delayBetweenBatches);
             }
         }
 

@@ -18,13 +18,15 @@ interface ForceSettings {
 export class TagNetworkView extends ItemView {
     private networkData: NetworkData;
     private cleanup: (() => void)[] = [];
-    private d3LoadPromise: Promise<void> | null = null;
     private simulation: any = null;
     private forceSettings: ForceSettings = { repulsion: -300, linkDistance: 100 };
     private tagNetworkManager: TagNetworkManager;
     private t: Translations;
     // Static counter to track D3 usage across multiple views
     private static d3RefCount: number = 0;
+    // Debounce timer for metadata cache updates
+    private metadataDebounceTimer: NodeJS.Timeout | null = null;
+    private readonly DEBOUNCE_DELAY = 500; // 500ms debounce
 
     constructor(leaf: WorkspaceLeaf, data: NetworkData, app: App, t: Translations) {
         super(leaf);
@@ -177,18 +179,31 @@ export class TagNetworkView extends ItemView {
         refreshBtn.addEventListener('click', handleRefresh);
         this.cleanup.push(() => refreshBtn.removeEventListener('click', handleRefresh));
 
-        // Register metadata cache listener for real-time updates
-        const metadataCacheHandler = this.app.metadataCache.on('changed', async () => {
-            try {
-                await this.refreshNetworkData();
-                if (this.simulation) {
-                    this.simulation.alpha(0.3).restart();
-                }
-            } catch (error) {
-                console.error('Error refreshing tag network:', error);
+        // Register metadata cache listener for real-time updates (debounced)
+        const metadataCacheHandler = this.app.metadataCache.on('changed', () => {
+            // Debounce to prevent race conditions from rapid metadata changes
+            if (this.metadataDebounceTimer) {
+                clearTimeout(this.metadataDebounceTimer);
             }
+            this.metadataDebounceTimer = setTimeout(async () => {
+                this.metadataDebounceTimer = null;
+                try {
+                    await this.refreshNetworkData();
+                    if (this.simulation) {
+                        this.simulation.alpha(0.3).restart();
+                    }
+                } catch (error) {
+                    console.error('Error refreshing tag network:', error);
+                }
+            }, this.DEBOUNCE_DELAY);
         });
-        this.cleanup.push(() => this.app.metadataCache.offref(metadataCacheHandler));
+        this.cleanup.push(() => {
+            if (this.metadataDebounceTimer) {
+                clearTimeout(this.metadataDebounceTimer);
+                this.metadataDebounceTimer = null;
+            }
+            this.app.metadataCache.offref(metadataCacheHandler);
+        });
 
         try {
             await this.loadVisualizationLibrary(container, searchInput, tooltip, statusEl, docPanel, docList);
@@ -272,42 +287,49 @@ export class TagNetworkView extends ItemView {
         return docs;
     }
 
-    private async loadVisualizationLibrary(container: HTMLElement, searchInput: HTMLInputElement, tooltip: HTMLElement, statusEl: HTMLElement, docPanel: HTMLElement, docList: HTMLElement) {
-        if (this.d3LoadPromise) {
-            await this.d3LoadPromise;
-            return;
-        }
+    // Static promise to prevent multiple simultaneous D3 loads
+    private static d3LoadingPromise: Promise<void> | null = null;
 
+    private async loadVisualizationLibrary(container: HTMLElement, searchInput: HTMLInputElement, tooltip: HTMLElement, statusEl: HTMLElement, docPanel: HTMLElement, docList: HTMLElement) {
+        // If D3 is already loaded, just render
         if (window.d3) {
             TagNetworkView.d3RefCount++;
             this.renderD3Network(container, searchInput, tooltip, statusEl, docPanel, docList);
             return;
         }
 
-        this.d3LoadPromise = new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = 'https://d3js.org/d3.v7.min.js';
-            script.async = true;
+        // If D3 is currently being loaded by another view, wait for it
+        if (TagNetworkView.d3LoadingPromise) {
+            await TagNetworkView.d3LoadingPromise;
+            if (window.d3) {
+                TagNetworkView.d3RefCount++;
+                this.renderD3Network(container, searchInput, tooltip, statusEl, docPanel, docList);
+            }
+            return;
+        }
 
-            const cleanup = () => {
+        // Track if this view was closed during loading
+        let viewClosed = false;
+        this.cleanup.push(() => { viewClosed = true; });
+
+        // Create script element and register cleanup before any async operation
+        const script = document.createElement('script');
+        script.src = 'https://d3js.org/d3.v7.min.js';
+        script.async = true;
+
+        TagNetworkView.d3LoadingPromise = new Promise<void>((resolve, reject) => {
+            const cleanupListeners = () => {
                 script.removeEventListener('load', handleLoad);
                 script.removeEventListener('error', handleError);
             };
 
             const handleLoad = () => {
-                cleanup();
-                try {
-                    TagNetworkView.d3RefCount++;
-                    this.renderD3Network(container, searchInput, tooltip, statusEl, docPanel, docList);
-                    resolve();
-                } catch (error) {
-                    statusEl.setText('Error rendering network. Please try again.');
-                    reject(error);
-                }
+                cleanupListeners();
+                resolve();
             };
 
             const handleError = (error: ErrorEvent) => {
-                cleanup();
+                cleanupListeners();
                 statusEl.setText('Failed to load visualization library. Please check your internet connection.');
                 reject(error);
             };
@@ -315,17 +337,21 @@ export class TagNetworkView extends ItemView {
             script.addEventListener('load', handleLoad);
             script.addEventListener('error', handleError);
             document.head.appendChild(script);
-
-            this.cleanup.push(() => {
-                cleanup();
-                script.remove();
-            });
         });
 
         try {
-            await this.d3LoadPromise;
+            await TagNetworkView.d3LoadingPromise;
+            // Only render if view wasn't closed during loading
+            if (!viewClosed && window.d3) {
+                TagNetworkView.d3RefCount++;
+                this.renderD3Network(container, searchInput, tooltip, statusEl, docPanel, docList);
+            }
+        } catch (error) {
+            if (!viewClosed) {
+                statusEl.setText('Error loading visualization library.');
+            }
         } finally {
-            this.d3LoadPromise = null;
+            TagNetworkView.d3LoadingPromise = null;
         }
     }
 
