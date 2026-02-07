@@ -116,7 +116,8 @@ export const en: Translations = {
         bulkRenameTag: "Bulk rename tag",
         exportTagsCSV: "Export tags to CSV",
         exportTagsJSON: "Export tags to JSON",
-        importTags: "Import tags from file"
+        importTags: "Import tags from file",
+        applyTagTemplate: "Apply tag template"
     },
 
     // Messages and notifications
@@ -327,5 +328,29 @@ export const en: Translations = {
         documentsWithTag: "Documents with tag",
         noDocuments: "No documents found",
         refresh: "Refresh"
+    },
+
+    // Tag Templates
+    tagTemplates: {
+        title: "Tag Templates",
+        description: "Define reusable tag sets for quick application to notes.",
+        addTemplate: "Add Template",
+        editTemplate: "Edit",
+        deleteTemplate: "Delete",
+        templateName: "Template Name",
+        templateNamePlaceholder: "e.g., Meeting Notes",
+        templateTags: "Tags",
+        templateTagsPlaceholder: "meeting, notes, action-items",
+        templateTagsDesc: "Comma-separated list of tags",
+        save: "Save",
+        cancel: "Cancel",
+        noTemplates: "No templates defined. Click 'Add Template' to create one.",
+        applyTemplate: "Apply Template",
+        selectTemplate: "Select a template to apply",
+        templateApplied: "Template '{name}' applied ({count} tags)",
+        deleteConfirm: "Delete template '{name}'?",
+        duplicateName: "A template with this name already exists",
+        emptyName: "Template name cannot be empty",
+        emptyTags: "Please add at least one tag"
     }
 };

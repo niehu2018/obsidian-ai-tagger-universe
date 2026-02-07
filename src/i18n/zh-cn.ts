@@ -116,7 +116,8 @@ export const zhCN: Translations = {
         bulkRenameTag: "批量重命名标签",
         exportTagsCSV: "导出标签为 CSV",
         exportTagsJSON: "导出标签为 JSON",
-        importTags: "从文件导入标签"
+        importTags: "从文件导入标签",
+        applyTagTemplate: "应用标签模板"
     },
 
     // 消息和通知
@@ -327,5 +328,29 @@ export const zhCN: Translations = {
         documentsWithTag: "包含此标签的文档",
         noDocuments: "未找到文档",
         refresh: "刷新"
+    },
+
+    // 标签模板
+    tagTemplates: {
+        title: "标签模板",
+        description: "定义可重用的标签集，快速应用到笔记。",
+        addTemplate: "添加模板",
+        editTemplate: "编辑",
+        deleteTemplate: "删除",
+        templateName: "模板名称",
+        templateNamePlaceholder: "例如：会议笔记",
+        templateTags: "标签",
+        templateTagsPlaceholder: "会议, 笔记, 待办事项",
+        templateTagsDesc: "用逗号分隔的标签列表",
+        save: "保存",
+        cancel: "取消",
+        noTemplates: "暂无模板。点击「添加模板」创建一个。",
+        applyTemplate: "应用模板",
+        selectTemplate: "选择要应用的模板",
+        templateApplied: "已应用模板「{name}」（{count} 个标签）",
+        deleteConfirm: "删除模板「{name}」？",
+        duplicateName: "已存在同名模板",
+        emptyName: "模板名称不能为空",
+        emptyTags: "请至少添加一个标签"
     }
 };

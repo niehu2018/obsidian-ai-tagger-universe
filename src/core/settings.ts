@@ -5,6 +5,12 @@ import { SupportedLanguage, DEFAULT_LANGUAGE } from '../i18n';
 
 export type TagFormat = 'kebab-case' | 'camelCase' | 'PascalCase' | 'snake_case' | 'original';
 
+export interface TagTemplate {
+    id: string;
+    name: string;
+    tags: string[];
+}
+
 export interface AITaggerSettings {
     serviceType: 'local' | 'cloud';
     localEndpoint: string;
@@ -34,6 +40,8 @@ export interface AITaggerSettings {
     nestedTagsMaxDepth: number;          // Max hierarchy depth (1-3)
     // Tag Format Settings
     tagFormat: TagFormat;                // Tag naming convention
+    // Tag Templates
+    tagTemplates: TagTemplate[];         // User-defined tag templates
 }
 
 export const DEFAULT_SETTINGS: AITaggerSettings = {
@@ -68,4 +76,5 @@ Prefer technical terms and domain-specific vocabulary when appropriate.`,
     enableNestedTags: false,
     nestedTagsMaxDepth: 2,
     tagFormat: 'kebab-case',
+    tagTemplates: [],
 };

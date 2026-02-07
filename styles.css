@@ -883,3 +883,132 @@
     gap: var(--size-4-2);
     margin-top: var(--size-4-4);
 }
+
+/* Tag Templates Styles */
+.tag-templates-list {
+    margin-top: var(--size-4-4);
+}
+
+.tag-templates-empty {
+    color: var(--text-muted);
+    font-style: italic;
+    padding: var(--size-4-4);
+    text-align: center;
+}
+
+.tag-template-setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--size-4-3);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-m);
+    margin-bottom: var(--size-4-2);
+    background: var(--background-secondary);
+}
+
+.tag-template-info {
+    flex: 1;
+}
+
+.tag-template-name {
+    font-weight: var(--font-semibold);
+    margin-bottom: var(--size-2-1);
+}
+
+.tag-template-tags {
+    font-size: var(--font-smaller);
+    color: var(--text-muted);
+}
+
+.tag-template-actions {
+    display: flex;
+    gap: var(--size-4-2);
+}
+
+.tag-template-btn {
+    padding: var(--size-2-2) var(--size-4-2);
+    font-size: var(--font-smaller);
+}
+
+.tag-template-btn.mod-warning {
+    color: var(--text-error);
+}
+
+/* Tag Template Edit Modal */
+.tag-template-edit-modal {
+    padding: var(--size-4-4);
+}
+
+.tag-template-edit-modal h3 {
+    margin-bottom: var(--size-4-4);
+}
+
+.tag-template-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--size-4-2);
+    margin-top: var(--size-4-4);
+}
+
+/* Tag Template Apply Modal */
+.tag-template-apply-modal {
+    padding: var(--size-4-4);
+    min-width: 400px;
+}
+
+.tag-template-apply-modal h3 {
+    margin-bottom: var(--size-4-2);
+}
+
+.tag-template-description {
+    color: var(--text-muted);
+    margin-bottom: var(--size-4-4);
+}
+
+.tag-template-list {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: var(--size-4-4);
+}
+
+.tag-template-item {
+    padding: var(--size-4-3);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-m);
+    margin-bottom: var(--size-4-2);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.tag-template-item:hover {
+    background: var(--background-modifier-hover);
+}
+
+.tag-template-item.is-selected {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-color: var(--interactive-accent);
+}
+
+.tag-template-item.is-selected .tag-template-item-tags {
+    color: var(--text-on-accent);
+    opacity: 0.8;
+}
+
+.tag-template-item-name {
+    font-weight: var(--font-semibold);
+    margin-bottom: var(--size-2-1);
+}
+
+.tag-template-item-tags {
+    font-size: var(--font-smaller);
+    color: var(--text-muted);
+}
+
+.tag-template-empty {
+    color: var(--text-muted);
+    font-style: italic;
+    text-align: center;
+    padding: var(--size-4-4);
+}

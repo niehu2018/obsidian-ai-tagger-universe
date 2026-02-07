@@ -115,6 +115,7 @@ export interface Translations {
         exportTagsCSV: string;
         exportTagsJSON: string;
         importTags: string;
+        applyTagTemplate: string;
     };
 
     // Messages and notifications
@@ -288,6 +289,30 @@ export interface Translations {
         documentsWithTag: string;
         noDocuments: string;
         refresh: string;
+    };
+
+    // Tag Templates
+    tagTemplates: {
+        title: string;
+        description: string;
+        addTemplate: string;
+        editTemplate: string;
+        deleteTemplate: string;
+        templateName: string;
+        templateNamePlaceholder: string;
+        templateTags: string;
+        templateTagsPlaceholder: string;
+        templateTagsDesc: string;
+        save: string;
+        cancel: string;
+        noTemplates: string;
+        applyTemplate: string;
+        selectTemplate: string;
+        templateApplied: string;
+        deleteConfirm: string;
+        duplicateName: string;
+        emptyName: string;
+        emptyTags: string;
     };
 
     // Dropdown options

@@ -4,6 +4,7 @@ import { TagUtils } from '../utils/tagUtils';
 import { TagRenameModal } from '../ui/modals/TagRenameModal';
 import { TagImportModal } from '../ui/modals/TagImportModal';
 import { TagImportExport } from '../utils/tagImportExport';
+import { TagTemplateApplyModal } from '../ui/modals/TagTemplateApplyModal';
 
 export function registerUtilityCommands(plugin: AITaggerPlugin) {
     // Command to collect all tags from vault
@@ -88,6 +89,32 @@ export function registerUtilityCommands(plugin: AITaggerPlugin) {
                 plugin.app,
                 plugin.t,
                 plugin.settings.tagFormat
+            ).open();
+        }
+    });
+
+    // Command to apply tag template
+    plugin.addCommand({
+        id: 'apply-tag-template',
+        name: plugin.t.commands.applyTagTemplate,
+        icon: 'layout-template',
+        callback: () => {
+            const activeView = plugin.app.workspace.getActiveViewOfType(MarkdownView);
+            if (!activeView?.file) {
+                new Notice(plugin.t.messages.openNote);
+                return;
+            }
+
+            if (plugin.settings.tagTemplates.length === 0) {
+                new Notice(plugin.t.tagTemplates.noTemplates);
+                return;
+            }
+
+            new TagTemplateApplyModal(
+                plugin.app,
+                plugin.t,
+                plugin.settings.tagTemplates,
+                activeView.file
             ).open();
         }
     });
