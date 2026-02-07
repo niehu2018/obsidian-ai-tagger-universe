@@ -111,7 +111,8 @@ export const en: Translations = {
         aiTagThisNote: "AI Tag This Note",
         flattenTagsForCurrentNote: "Flatten hierarchical tags for current note",
         flattenTagsForCurrentFolder: "Flatten hierarchical tags for current folder",
-        flattenTagsForVault: "Flatten hierarchical tags for vault"
+        flattenTagsForVault: "Flatten hierarchical tags for vault",
+        showTagAnalytics: "Show tag analytics dashboard"
     },
 
     // Messages and notifications
@@ -248,6 +249,35 @@ export const en: Translations = {
         lmStudio: "Make sure LM Studio is running and the server is enabled",
         jan: "Make sure Jan is running and the local server is activated",
         koboldcpp: "Make sure KoboldCpp is running and the API endpoint is accessible"
+    },
+
+    // Tag Analytics View
+    tagAnalytics: {
+        title: "Tag Analytics Dashboard",
+        description: "Usage statistics and health metrics for your vault's tag system.",
+        refresh: "Refresh",
+        exportCSV: "Export CSV",
+        summary: "Summary",
+        totalUniqueTags: "Unique Tags",
+        totalTaggedNotes: "Tagged Notes",
+        totalUntaggedNotes: "Untagged Notes",
+        averageTagsPerNote: "Avg Tags/Note",
+        orphanedTags: "Orphaned",
+        tagUsage: "Tag Usage",
+        tagName: "Tag Name",
+        frequency: "Frequency",
+        status: "Status",
+        statusHealthy: "Healthy",
+        statusLowUse: "Low-use",
+        statusOrphaned: "Orphaned",
+        health: "Health",
+        orphanedTagsSection: "Orphaned Tags (used once)",
+        untaggedNotesSection: "Untagged Notes",
+        showNotes: "Show",
+        noOrphanedTags: "No orphaned tags",
+        noUntaggedNotes: "All notes are tagged",
+        exportSuccess: "CSV exported successfully",
+        notesWithTag: "Notes with tag"
     },
 
     // Tag Network View

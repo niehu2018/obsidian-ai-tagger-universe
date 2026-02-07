@@ -110,6 +110,7 @@ export interface Translations {
         flattenTagsForCurrentNote: string;
         flattenTagsForCurrentFolder: string;
         flattenTagsForVault: string;
+        showTagAnalytics: string;
     };
 
     // Messages and notifications
@@ -209,6 +210,35 @@ export interface Translations {
     // File menu items
     fileMenu: {
         tagNetwork: string;
+    };
+
+    // Tag Analytics View
+    tagAnalytics: {
+        title: string;
+        description: string;
+        refresh: string;
+        exportCSV: string;
+        summary: string;
+        totalUniqueTags: string;
+        totalTaggedNotes: string;
+        totalUntaggedNotes: string;
+        averageTagsPerNote: string;
+        orphanedTags: string;
+        tagUsage: string;
+        tagName: string;
+        frequency: string;
+        status: string;
+        statusHealthy: string;
+        statusLowUse: string;
+        statusOrphaned: string;
+        health: string;
+        orphanedTagsSection: string;
+        untaggedNotesSection: string;
+        showNotes: string;
+        noOrphanedTags: string;
+        noUntaggedNotes: string;
+        exportSuccess: string;
+        notesWithTag: string;
     };
 
     // Tag Network View

@@ -23,6 +23,16 @@ export function registerUtilityCommands(plugin: AITaggerPlugin) {
         }
     });
 
+    // Command to show tag analytics dashboard
+    plugin.addCommand({
+        id: 'show-tag-analytics',
+        name: plugin.t.commands.showTagAnalytics,
+        icon: 'bar-chart-2',
+        callback: async () => {
+            await plugin.showTagAnalytics();
+        }
+    });
+
     // Command to flatten hierarchical tags for current note
     plugin.addCommand({
         id: 'flatten-tags-for-current-note',

@@ -623,3 +623,232 @@
 .path-dropdown-error {
     color: var(--text-error);
 }
+
+/* Tag Analytics Dashboard Styles */
+.tag-analytics-view {
+    padding: var(--size-4-4);
+    overflow-y: auto;
+}
+
+.tag-analytics-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--size-4-2);
+}
+
+.tag-analytics-header h2 {
+    margin: 0;
+}
+
+.tag-analytics-buttons {
+    display: flex;
+    gap: var(--size-4-2);
+}
+
+.tag-analytics-btn {
+    font-size: var(--font-smaller);
+    padding: var(--size-2-1) var(--size-4-2);
+    cursor: pointer;
+}
+
+.tag-analytics-desc {
+    color: var(--text-muted);
+    margin-bottom: var(--size-4-4);
+}
+
+.tag-analytics-summary h3,
+.tag-analytics-table-section h3,
+.tag-analytics-health-section h3 {
+    font-size: var(--font-ui-medium);
+    margin-bottom: var(--size-4-2);
+    border-bottom: 1px solid var(--background-modifier-border);
+    padding-bottom: var(--size-2-1);
+}
+
+.tag-analytics-cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--size-4-3);
+    margin-bottom: var(--size-4-4);
+}
+
+.tag-analytics-stat-card {
+    flex: 1;
+    min-width: 100px;
+    padding: var(--size-4-3);
+    background-color: var(--background-secondary);
+    border-radius: var(--radius-m);
+    text-align: center;
+}
+
+.tag-analytics-stat-icon {
+    margin-bottom: var(--size-2-1);
+    color: var(--text-muted);
+}
+
+.tag-analytics-stat-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.tag-analytics-stat-value {
+    font-size: var(--font-ui-large);
+    font-weight: var(--font-bold);
+    color: var(--text-normal);
+}
+
+.tag-analytics-stat-label {
+    font-size: var(--font-smaller);
+    color: var(--text-muted);
+}
+
+.tag-analytics-table-section {
+    margin-bottom: var(--size-4-4);
+}
+
+.tag-analytics-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-smaller);
+}
+
+.tag-analytics-table th,
+.tag-analytics-table td {
+    padding: var(--size-4-2);
+    text-align: left;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.tag-analytics-table th {
+    background-color: var(--background-secondary);
+    font-weight: var(--font-medium);
+}
+
+.tag-analytics-sortable {
+    cursor: pointer;
+    user-select: none;
+}
+
+.tag-analytics-sortable:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.tag-analytics-tag-name {
+    cursor: pointer;
+    color: var(--text-accent);
+}
+
+.tag-analytics-tag-name:hover {
+    text-decoration: underline;
+}
+
+.tag-analytics-status {
+    display: inline-block;
+    padding: var(--size-2-1) var(--size-4-2);
+    border-radius: var(--radius-s);
+    font-size: var(--font-smallest);
+    font-weight: var(--font-medium);
+}
+
+.tag-analytics-status-healthy {
+    background-color: rgba(0, 200, 83, 0.2);
+    color: var(--color-green);
+}
+
+.tag-analytics-status-low-use {
+    background-color: rgba(255, 170, 0, 0.2);
+    color: var(--color-orange);
+}
+
+.tag-analytics-status-orphaned {
+    background-color: rgba(255, 82, 82, 0.2);
+    color: var(--color-red);
+}
+
+.tag-analytics-health-section {
+    margin-bottom: var(--size-4-4);
+}
+
+.tag-analytics-health-item {
+    margin-bottom: var(--size-4-3);
+}
+
+.tag-analytics-health-item h4 {
+    font-size: var(--font-ui-small);
+    margin-bottom: var(--size-4-2);
+    color: var(--text-muted);
+}
+
+.tag-analytics-tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--size-2-1);
+}
+
+.tag-analytics-orphan-tag {
+    padding: var(--size-2-1) var(--size-4-2);
+    background-color: var(--background-secondary);
+    border-radius: var(--radius-s);
+    font-size: var(--font-smaller);
+    cursor: pointer;
+}
+
+.tag-analytics-orphan-tag:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.tag-analytics-note-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-2-1);
+}
+
+.tag-analytics-note-item {
+    padding: var(--size-4-2);
+    background-color: var(--background-secondary);
+    border-radius: var(--radius-s);
+    cursor: pointer;
+    font-size: var(--font-smaller);
+}
+
+.tag-analytics-note-item:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.tag-analytics-more {
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: var(--font-smaller);
+}
+
+.tag-analytics-empty {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.tag-analytics-modal {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.tag-analytics-modal h3 {
+    margin-bottom: var(--size-4-3);
+}
+
+.tag-analytics-modal-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-2-1);
+}
+
+.tag-analytics-modal-item {
+    padding: var(--size-4-2);
+    background-color: var(--background-secondary);
+    border-radius: var(--radius-s);
+    cursor: pointer;
+}
+
+.tag-analytics-modal-item:hover {
+    background-color: var(--background-modifier-hover);
+}

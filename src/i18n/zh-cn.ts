@@ -111,7 +111,8 @@ export const zhCN: Translations = {
         aiTagThisNote: "AI 标记这篇笔记",
         flattenTagsForCurrentNote: "展开当前笔记的层级标签",
         flattenTagsForCurrentFolder: "展开当前文件夹的层级标签",
-        flattenTagsForVault: "展开整个库的层级标签"
+        flattenTagsForVault: "展开整个库的层级标签",
+        showTagAnalytics: "显示标签分析仪表板"
     },
 
     // 消息和通知
@@ -248,6 +249,35 @@ export const zhCN: Translations = {
         lmStudio: "确保 LM Studio 正在运行并且服务器已启用",
         jan: "确保 Jan 正在运行并且本地服务器已激活",
         koboldcpp: "确保 KoboldCpp 正在运行并且 API 端点可访问"
+    },
+
+    // 标签分析视图
+    tagAnalytics: {
+        title: "标签分析仪表板",
+        description: "库中标签系统的使用统计和健康指标。",
+        refresh: "刷新",
+        exportCSV: "导出 CSV",
+        summary: "概要",
+        totalUniqueTags: "唯一标签",
+        totalTaggedNotes: "已标记笔记",
+        totalUntaggedNotes: "未标记笔记",
+        averageTagsPerNote: "平均标签数",
+        orphanedTags: "孤立标签",
+        tagUsage: "标签使用",
+        tagName: "标签名称",
+        frequency: "频率",
+        status: "状态",
+        statusHealthy: "健康",
+        statusLowUse: "低使用",
+        statusOrphaned: "孤立",
+        health: "健康状况",
+        orphanedTagsSection: "孤立标签（仅使用一次）",
+        untaggedNotesSection: "未标记笔记",
+        showNotes: "查看",
+        noOrphanedTags: "没有孤立标签",
+        noUntaggedNotes: "所有笔记均已标记",
+        exportSuccess: "CSV 导出成功",
+        notesWithTag: "包含此标签的笔记"
     },
 
     // 标签网络视图

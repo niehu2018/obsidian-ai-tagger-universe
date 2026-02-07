@@ -17,6 +17,8 @@ import { AITaggerSettingTab } from './ui/settings/AITaggerSettingTab';
 import { EventHandlers } from './utils/eventHandlers';
 import { TagNetworkManager } from './utils/tagNetworkUtils';
 import { TagNetworkView, TAG_NETWORK_VIEW_TYPE } from './ui/views/TagNetworkView';
+import { TagAnalyticsManager } from './utils/tagAnalyticsUtils';
+import { TagAnalyticsView, TAG_ANALYTICS_VIEW_TYPE } from './ui/views/TagAnalyticsView';
 import { TagOperations } from './utils/tagOperations';
 import { BatchProcessResult } from './utils/batchProcessor';
 import { getTranslations, SupportedLanguage } from './i18n';
@@ -26,6 +28,7 @@ export default class AITaggerPlugin extends Plugin {
     public llmService: LLMService;
     private eventHandlers: EventHandlers;
     private tagNetworkManager: TagNetworkManager;
+    private tagAnalyticsManager: TagAnalyticsManager;
     private tagOperations: TagOperations;
     public t = getTranslations(this.settings.interfaceLanguage);
 
@@ -39,6 +42,7 @@ export default class AITaggerPlugin extends Plugin {
         }, app);
         this.eventHandlers = new EventHandlers(app);
         this.tagNetworkManager = new TagNetworkManager(app);
+        this.tagAnalyticsManager = new TagAnalyticsManager(app);
         this.tagOperations = new TagOperations(app);
     }
 
@@ -118,6 +122,12 @@ export default class AITaggerPlugin extends Plugin {
             (leaf) => new TagNetworkView(leaf, this.tagNetworkManager.getNetworkData(), this.app, this.t, this.tagNetworkManager)
         );
 
+        // Register view type for tag analytics
+        this.registerView(
+            TAG_ANALYTICS_VIEW_TYPE,
+            (leaf) => new TagAnalyticsView(leaf, this.app, this.t, this.tagAnalyticsManager)
+        );
+
         // Add ribbon icons with descriptive tooltips
         this.addRibbonIcon(
             'tags',
@@ -143,6 +153,7 @@ export default class AITaggerPlugin extends Plugin {
         
         // Unregister views
         this.app.workspace.detachLeavesOfType(TAG_NETWORK_VIEW_TYPE);
+        this.app.workspace.detachLeavesOfType(TAG_ANALYTICS_VIEW_TYPE);
         
         // Trigger layout refresh
         this.app.workspace.trigger('layout-change');
@@ -192,6 +203,35 @@ export default class AITaggerPlugin extends Plugin {
         } catch (error) {
             //console.error('Failed to show tag network:', error);
             new Notice(this.t.messages.failedToBuildNetwork, 4000);
+        }
+    }
+
+    public async showTagAnalytics(): Promise<void> {
+        try {
+            // Try to find existing analytics view
+            let leaf = this.app.workspace.getLeavesOfType(TAG_ANALYTICS_VIEW_TYPE)[0];
+
+            if (!leaf) {
+                // Create new view in right sidebar
+                const newLeaf = await this.app.workspace.getRightLeaf(false);
+                if (!newLeaf) {
+                    throw new Error('Failed to create new workspace leaf');
+                }
+
+                await newLeaf.setViewState({
+                    type: TAG_ANALYTICS_VIEW_TYPE,
+                    active: true
+                });
+
+                leaf = this.app.workspace.getLeavesOfType(TAG_ANALYTICS_VIEW_TYPE)[0];
+                if (!leaf) {
+                    throw new Error('Failed to initialize tag analytics view');
+                }
+            }
+
+            this.app.workspace.revealLeaf(leaf);
+        } catch (error) {
+            new Notice('Failed to open tag analytics', 4000);
         }
     }
 
