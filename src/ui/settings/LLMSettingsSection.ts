@@ -332,8 +332,8 @@ export class LLMSettingsSection extends BaseSettingSection {
         new Setting(this.containerEl)
             .setName(this.plugin.t.settings.llm.apiKey)
             .setDesc(this.plugin.t.settings.llm.apiKeyDesc)
-            .addText(text => text
-                .setPlaceholder(
+            .addText(text => {
+                text.setPlaceholder(
                     this.plugin.settings.cloudServiceType === 'openai' ? 'sk-...' :
                     this.plugin.settings.cloudServiceType === 'gemini' ? 'AIza...' :
                     this.plugin.settings.cloudServiceType === 'deepseek' ? 'deepseek-...' :
@@ -353,6 +353,25 @@ export class LLMSettingsSection extends BaseSettingSection {
                 .onChange(async (value) => {
                     this.plugin.settings.cloudApiKey = value;
                     await this.plugin.saveSettings();
+                });
+                // Mask API key by default for security
+                text.inputEl.type = 'password';
+                text.inputEl.autocomplete = 'off';
+            })
+            .addExtraButton(button => button
+                .setIcon('eye')
+                .setTooltip('Show/Hide API Key')
+                .onClick(() => {
+                    const inputEl = button.extraSettingsEl.parentElement?.querySelector('input');
+                    if (inputEl) {
+                        if (inputEl.type === 'password') {
+                            inputEl.type = 'text';
+                            button.setIcon('eye-off');
+                        } else {
+                            inputEl.type = 'password';
+                            button.setIcon('eye');
+                        }
+                    }
                 }));
 
         new Setting(this.containerEl)
