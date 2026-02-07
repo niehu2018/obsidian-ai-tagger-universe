@@ -204,6 +204,15 @@
 
 这些改进使标签生成更可靠、格式更一致，并提高了与各种 LLM 提供商（包括 Claude、GPT-4 和本地模型）的兼容性。
 
+## ☕ 赞助支持
+
+如果您觉得这个插件有帮助，欢迎请我喝杯咖啡！
+
+<p align="center">
+  <img src="assets/wechat-pay.jpg" alt="微信支付" width="200" />
+  <img src="assets/alipay.jpg" alt="支付宝" width="200" />
+</p>
+
 ## 📝 许可证
 
 MIT License - 详见 [LICENSE](LICENSE) 文件

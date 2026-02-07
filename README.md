@@ -225,6 +225,15 @@ This fork includes several enhancements over the original plugin:
 
 These improvements result in more reliable tag generation, better formatting consistency, and improved compatibility with various LLM providers including Claude, GPT-4, and local models.
 
+## ☕ Support
+
+If you find this plugin helpful, consider buying me a coffee!
+
+<p align="center">
+  <img src="assets/wechat-pay.jpg" alt="WeChat Pay" width="200" />
+  <img src="assets/alipay.jpg" alt="Alipay" width="200" />
+</p>
+
 ## 📝 License
 
 MIT License - see the [LICENSE](LICENSE) file for details
