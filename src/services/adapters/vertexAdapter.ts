@@ -52,7 +52,7 @@ export class VertexAdapter extends BaseAdapter {
             temperature
         };
         
-        // 使用基本的格式化后添加 Vertex AI 特定的字段
+        // Use basic formatting then add Vertex AI specific fields
         const baseRequest = super.formatRequest(prompt);
         
         return {

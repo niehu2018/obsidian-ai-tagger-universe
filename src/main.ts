@@ -60,7 +60,7 @@ export default class AITaggerPlugin extends Plugin {
             this.settings.customPrompt = DEFAULT_SETTINGS.customPrompt;
         }
 
-        // 初始化翻译
+        // Initialize translations
         this.t = getTranslations(this.settings.interfaceLanguage);
     }
 
@@ -68,7 +68,7 @@ export default class AITaggerPlugin extends Plugin {
         await this.saveData(this.settings);
         await this.initializeLLMService();
 
-        // 更新翻译
+        // Update translations
         this.t = getTranslations(this.settings.interfaceLanguage);
     }
 

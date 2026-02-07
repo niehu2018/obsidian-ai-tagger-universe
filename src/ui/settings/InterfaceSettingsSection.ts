@@ -20,7 +20,7 @@ export class InterfaceSettingsSection extends BaseSettingSection {
                         this.plugin.settings.interfaceLanguage = value as SupportedLanguage;
                         await this.plugin.saveSettings();
 
-                        // 显示需要重启的提示
+                        // Show restart required notice
                         const notice = document.createElement('div');
                         notice.className = 'notice';
                         notice.style.marginTop = '10px';
@@ -50,14 +50,14 @@ export class InterfaceSettingsSection extends BaseSettingSection {
                         notice.addClass('language-notice');
                         this.containerEl.appendChild(notice);
 
-                        // 5秒后自动移除提示
+                        // Auto-remove notice after 5 seconds
                         setTimeout(() => {
                             notice.remove();
                         }, 5000);
                     });
             });
 
-        // 添加重启提示 - use safe DOM methods instead of innerHTML
+        // Add restart notice - use safe DOM methods instead of innerHTML
         const restartNotice = this.containerEl.createDiv('language-notice');
         restartNotice.style.marginTop = '10px';
         restartNotice.style.padding = '8px 12px';

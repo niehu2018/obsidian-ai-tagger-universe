@@ -36,7 +36,7 @@ export class BedrockAdapter extends BaseAdapter {
         delete (baseRequest as any).temperature;
         const temperature = this.getTemperatureOverride() ?? this.defaultConfig.temperature;
         
-        // 根据模型类型提供不同的请求格式
+        // Provide different request formats based on model type
         if (modelName.includes('claude')) {
             return {
                 ...baseRequest,

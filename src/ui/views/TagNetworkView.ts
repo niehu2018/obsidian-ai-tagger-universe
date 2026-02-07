@@ -575,7 +575,9 @@ export class TagNetworkView extends ItemView {
     private getNodeColor(frequency: number, opacity: number = 1): string {
         const minFreq = 1;
         const maxFreq = Math.max(...this.networkData.nodes.map(n => n.frequency));
-        const normalizedFreq = (frequency - minFreq) / (maxFreq - minFreq);
+        // Prevent division by zero when all nodes have the same frequency
+        const range = maxFreq - minFreq;
+        const normalizedFreq = range > 0 ? (frequency - minFreq) / range : 0;
 
         const r = Math.floor(100 - normalizedFreq * 100);
         const g = Math.floor(149 - normalizedFreq * 100);

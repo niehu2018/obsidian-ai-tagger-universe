@@ -14,14 +14,15 @@ export abstract class BaseLLMService {
     protected modelName: string;
     protected readonly TIMEOUT = 30000; // 30 seconds timeout
     private activeRequests = new Set<{ controller: AbortController; timeoutId?: NodeJS.Timeout }>();
-    protected readonly app: App;
+    protected readonly app: App | null;
     protected debugMode: boolean = false;
 
     /**
      * Creates a new LLM service instance
      * @param config - Configuration for the LLM service
+     * @param app - Optional Obsidian app instance (not needed for adapters)
      */
-    constructor(config: LLMServiceConfig, app: App) {
+    constructor(config: LLMServiceConfig, app: App | null) {
         this.endpoint = config.endpoint.trim();
         this.modelName = config.modelName.trim();
         this.app = app;

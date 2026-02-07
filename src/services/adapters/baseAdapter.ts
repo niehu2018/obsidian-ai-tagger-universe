@@ -164,7 +164,7 @@ export abstract class BaseAdapter extends BaseLLMService {
             ...config,
             endpoint: config.endpoint ?? "",
             modelName: config.modelName ?? ""
-        }, null as any);  // Pass null for app as it's not needed in the adapter
+        }, null);  // Adapters don't need the Obsidian app instance
         this.config = config;
     }
 
@@ -176,7 +176,7 @@ export abstract class BaseAdapter extends BaseLLMService {
 
     async testConnection(): Promise<{ result: any; error?: any }> {
         try {
-            const response = await this.makeRequest('test');
+            await this.makeRequest('test');
             return { result: { success: true } };
         } catch (error) {
             return { result: { success: false }, error };

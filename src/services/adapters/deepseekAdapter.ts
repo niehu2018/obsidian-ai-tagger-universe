@@ -49,12 +49,12 @@ export class DeepseekAdapter extends BaseAdapter {
       let result = response;
       let content = '';
       
-      // 先获取原始的响应内容
+      // Get the original response content first
       if (response.choices?.[0]?.message?.content) {
         content = response.choices[0].message.content;
       }
       
-      // 解析结构化数据
+      // Parse structured data
       if (this.provider?.responseFormat?.path) {
         for (const key of this.provider.responseFormat.path) {
           if (!result || typeof result !== 'object') {
@@ -64,7 +64,7 @@ export class DeepseekAdapter extends BaseAdapter {
         }
       }
       
-      // 提取标签数据
+      // Extract tag data
       const jsonContent = this.extractJsonFromContent(content);
       
       return {
