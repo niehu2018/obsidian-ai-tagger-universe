@@ -116,6 +116,7 @@ export interface Translations {
         exportTagsJSON: string;
         importTags: string;
         applyTagTemplate: string;
+        deduplicateTags: string;
     };
 
     // Messages and notifications
@@ -313,6 +314,29 @@ export interface Translations {
         duplicateName: string;
         emptyName: string;
         emptyTags: string;
+    };
+
+    // Tag Deduplication
+    tagDeduplication: {
+        title: string;
+        description: string;
+        scanning: string;
+        noDuplicates: string;
+        duplicatesFound: string;
+        keepTag: string;
+        mergeInto: string;
+        merge: string;
+        mergeAll: string;
+        skip: string;
+        merging: string;
+        mergeSuccess: string;
+        similarityType: string;
+        typeAbbreviation: string;
+        typeCaseDiff: string;
+        typePlural: string;
+        typeSimilar: string;
+        usageCount: string;
+        affectedFiles: string;
     };
 
     // Dropdown options

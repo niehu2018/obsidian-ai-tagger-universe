@@ -5,6 +5,7 @@ import { TagRenameModal } from '../ui/modals/TagRenameModal';
 import { TagImportModal } from '../ui/modals/TagImportModal';
 import { TagImportExport } from '../utils/tagImportExport';
 import { TagTemplateApplyModal } from '../ui/modals/TagTemplateApplyModal';
+import { TagDeduplicationModal } from '../ui/modals/TagDeduplicationModal';
 
 export function registerUtilityCommands(plugin: AITaggerPlugin) {
     // Command to collect all tags from vault
@@ -115,6 +116,20 @@ export function registerUtilityCommands(plugin: AITaggerPlugin) {
                 plugin.t,
                 plugin.settings.tagTemplates,
                 activeView.file
+            ).open();
+        }
+    });
+
+    // Command to find and merge similar tags
+    plugin.addCommand({
+        id: 'deduplicate-tags',
+        name: plugin.t.commands.deduplicateTags,
+        icon: 'git-merge',
+        callback: () => {
+            new TagDeduplicationModal(
+                plugin.app,
+                plugin.t,
+                plugin.settings.tagFormat
             ).open();
         }
     });

@@ -117,7 +117,8 @@ export const zhCN: Translations = {
         exportTagsCSV: "导出标签为 CSV",
         exportTagsJSON: "导出标签为 JSON",
         importTags: "从文件导入标签",
-        applyTagTemplate: "应用标签模板"
+        applyTagTemplate: "应用标签模板",
+        deduplicateTags: "查找并合并相似标签"
     },
 
     // 消息和通知
@@ -352,5 +353,28 @@ export const zhCN: Translations = {
         duplicateName: "已存在同名模板",
         emptyName: "模板名称不能为空",
         emptyTags: "请至少添加一个标签"
+    },
+
+    // 标签去重
+    tagDeduplication: {
+        title: "智能标签去重",
+        description: "查找并合并相似标签，保持库整洁有序。",
+        scanning: "正在扫描相似标签...",
+        noDuplicates: "未发现相似标签，您的标签很整洁！",
+        duplicatesFound: "发现 {count} 组相似标签",
+        keepTag: "保留",
+        mergeInto: "合并到",
+        merge: "合并",
+        mergeAll: "全部合并",
+        skip: "跳过",
+        merging: "正在合并标签...",
+        mergeSuccess: "已将「{source}」合并到「{target}」（更新了 {count} 个文件）",
+        similarityType: "相似类型",
+        typeAbbreviation: "缩写",
+        typeCaseDiff: "大小写差异",
+        typePlural: "复数形式",
+        typeSimilar: "拼写相似",
+        usageCount: "使用 {count} 次",
+        affectedFiles: "{count} 个文件"
     }
 };

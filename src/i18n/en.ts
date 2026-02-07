@@ -117,7 +117,8 @@ export const en: Translations = {
         exportTagsCSV: "Export tags to CSV",
         exportTagsJSON: "Export tags to JSON",
         importTags: "Import tags from file",
-        applyTagTemplate: "Apply tag template"
+        applyTagTemplate: "Apply tag template",
+        deduplicateTags: "Find and merge similar tags"
     },
 
     // Messages and notifications
@@ -352,5 +353,28 @@ export const en: Translations = {
         duplicateName: "A template with this name already exists",
         emptyName: "Template name cannot be empty",
         emptyTags: "Please add at least one tag"
+    },
+
+    // Tag Deduplication
+    tagDeduplication: {
+        title: "Smart Tag Deduplication",
+        description: "Find and merge similar tags to keep your vault organized.",
+        scanning: "Scanning for similar tags...",
+        noDuplicates: "No similar tags found. Your tags are clean!",
+        duplicatesFound: "{count} similar tag groups found",
+        keepTag: "Keep",
+        mergeInto: "Merge into",
+        merge: "Merge",
+        mergeAll: "Merge All",
+        skip: "Skip",
+        merging: "Merging tags...",
+        mergeSuccess: "Merged '{source}' into '{target}' ({count} files updated)",
+        similarityType: "Similarity",
+        typeAbbreviation: "Abbreviation",
+        typeCaseDiff: "Case difference",
+        typePlural: "Plural form",
+        typeSimilar: "Similar spelling",
+        usageCount: "Used {count} times",
+        affectedFiles: "{count} files"
     }
 };
