@@ -2,6 +2,16 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Obsidian Plugin Development Skill
+
+**Use the `obsidian-plugin-dev` skill** when working on this plugin. It contains:
+- Obsidian Plugin API reference and TypeScript definitions
+- UI components (Modal, Setting, ItemView, etc.)
+- CSS variables for theming
+- Best practices for plugin development
+
+Invoke with: `/obsidian-plugin-dev` or reference when needed for API lookups.
+
 ## Language Requirements
 
 **All code comments and commit messages MUST be in English.**
