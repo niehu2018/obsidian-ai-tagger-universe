@@ -1,5 +1,5 @@
 import { LLMResponse, LLMServiceConfig, ConnectionTestResult, ConnectionTestError } from './types';
-import { SYSTEM_PROMPT } from '../utils/constants';
+import { SYSTEM_PROMPT, LLM_SERVICE_CONFIG } from '../utils/constants';
 import { BaseLLMService } from './baseService';
 import { TaggingMode } from './prompts/types';
 import { LanguageCode } from './types';
@@ -7,9 +7,9 @@ import { App, requestUrl } from 'obsidian';
 import { extractAuthFromUrl } from './localModelFetcher';
 
 export class LocalLLMService extends BaseLLMService {
-    private readonly MAX_CONTENT_LENGTH = 4000;
-    private readonly MAX_RETRIES = 3;
-    private readonly RETRY_DELAY = 1000; // 1 second
+    private readonly MAX_CONTENT_LENGTH = LLM_SERVICE_CONFIG.MAX_CONTENT_LENGTH;
+    private readonly MAX_RETRIES = LLM_SERVICE_CONFIG.MAX_RETRIES;
+    private readonly RETRY_DELAY = LLM_SERVICE_CONFIG.RETRY_DELAY;
     private llmTemperatureOverride: number | null = null;
     
     constructor(config: LLMServiceConfig, app: App) {

@@ -30,10 +30,20 @@ export const TAG_PREDEFINED_RANGE = {
 
 /**
  * Maximum number of tags to generate for new tags
- * In hybrid mode, total tags are composed of up to TAG_PREDEFINED_RANGE.MAX tags from predefined source 
+ * In hybrid mode, total tags are composed of up to TAG_PREDEFINED_RANGE.MAX tags from predefined source
  * and up to TAG_GENERATE_RANGE.MAX new generated tags
  */
 export const TAG_GENERATE_RANGE = {
     MIN: TAG_RANGE.MIN,
     MAX: 5
+};
+
+/**
+ * LLM Service configuration constants
+ */
+export const LLM_SERVICE_CONFIG = {
+    MAX_CONTENT_LENGTH: 4000,  // Maximum content length for API requests
+    MAX_RETRIES: 3,            // Maximum retry attempts for failed requests
+    RETRY_DELAY: 1000,         // Base delay between retries in ms
+    DEFAULT_TIMEOUT: 30000     // Default request timeout in ms
 }; 

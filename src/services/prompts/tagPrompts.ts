@@ -10,10 +10,36 @@ export { TaggingMode };
 
 import { AITaggerSettings } from '../../core/settings';
 
+// Kept for backward compatibility but deprecated - pass settings directly to buildTagPrompt
 let pluginSettings: AITaggerSettings | undefined;
 
+/** @deprecated Pass settings directly to buildTagPrompt instead */
 export function setSettings(settings: AITaggerSettings): void {
     pluginSettings = settings;
+}
+
+/**
+ * Validates custom prompt content for basic safety
+ */
+function validateCustomPrompt(prompt: string): string | null {
+    if (!prompt || typeof prompt !== 'string') {
+        return 'Custom prompt must be a non-empty string';
+    }
+    if (prompt.length > 10000) {
+        return 'Custom prompt exceeds maximum length (10000 characters)';
+    }
+    // Check for suspicious patterns that might indicate injection attempts
+    const suspiciousPatterns = [
+        /ignore\s+(all\s+)?(previous|above|prior)\s+(instructions?|prompts?)/i,
+        /disregard\s+(all\s+)?(previous|above|prior)/i,
+        /system\s*:\s*you\s+are/i
+    ];
+    for (const pattern of suspiciousPatterns) {
+        if (pattern.test(prompt)) {
+            return 'Custom prompt contains potentially unsafe content';
+        }
+    }
+    return null;
 }
 
 /**
@@ -23,15 +49,19 @@ export function setSettings(settings: AITaggerSettings): void {
  * @param mode - Tagging mode
  * @param maxTags - Maximum number of tags to return
  * @param language - Language for generated tags
+ * @param settings - Optional plugin settings (required for Custom mode)
  * @returns Formatted prompt string
  */
 export function buildTagPrompt(
-    content: string, 
-    candidateTags: string[], 
+    content: string,
+    candidateTags: string[],
     mode: TaggingMode,
     maxTags: number = 5,
-    language?: LanguageCode | 'default'
+    language?: LanguageCode | 'default',
+    settings?: AITaggerSettings
 ): string {
+    // Use passed settings or fall back to global (for backward compatibility)
+    const activeSettings = settings || pluginSettings;
     let prompt = '';
     let langInstructions = '';
 
@@ -199,8 +229,14 @@ Do NOT include explanations or additional text, just the comma-separated tag lis
             break;
 
         case TaggingMode.Custom:
-            if (!pluginSettings?.customPrompt) {
+            if (!activeSettings?.customPrompt) {
                 throw new Error('Custom tagging mode requires a custom prompt to be configured in settings.');
+            }
+
+            // Validate custom prompt for safety
+            const validationError = validateCustomPrompt(activeSettings.customPrompt);
+            if (validationError) {
+                throw new Error(`Custom prompt validation failed: ${validationError}`);
             }
 
             prompt += `${langInstructions}<task>
@@ -216,7 +252,7 @@ ${content}
 </document_content>
 
 <custom_instructions>
-${pluginSettings.customPrompt}
+${activeSettings.customPrompt}
 </custom_instructions>
 
 <tag_requirements>

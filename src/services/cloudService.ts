@@ -4,12 +4,13 @@ import { AdapterType, createAdapter, BaseAdapter } from './adapters';
 import { TaggingMode } from './prompts/types';
 import { LanguageCode } from './types';
 import { App, requestUrl } from 'obsidian';
+import { LLM_SERVICE_CONFIG } from '../utils/constants';
 
 export class CloudLLMService extends BaseLLMService {
     private adapter: BaseAdapter;
-    private readonly MAX_CONTENT_LENGTH = 4000; // Reasonable limit for most APIs
-    private readonly MAX_RETRIES = 3;
-    private readonly RETRY_DELAY = 1000; // 1 second
+    private readonly MAX_CONTENT_LENGTH = LLM_SERVICE_CONFIG.MAX_CONTENT_LENGTH;
+    private readonly MAX_RETRIES = LLM_SERVICE_CONFIG.MAX_RETRIES;
+    private readonly RETRY_DELAY = LLM_SERVICE_CONFIG.RETRY_DELAY;
 
     constructor(config: Omit<LLMServiceConfig, 'type'> & { type: AdapterType }, app: App) {
         super(config, app);
@@ -97,8 +98,12 @@ export class CloudLLMService extends BaseLLMService {
                 try {
                     const errorJson = JSON.parse(responseText);
                     throw new Error(errorJson.error?.message || errorJson.message || `HTTP error ${response.status}`);
-                } catch {
-                    throw new Error(`HTTP error ${response.status}: ${responseText}`);
+                } catch (parseError) {
+                    // Truncate response to avoid exposing sensitive data in error messages
+                    const truncatedResponse = responseText.length > 200
+                        ? responseText.substring(0, 200) + '...'
+                        : responseText;
+                    throw new Error(`HTTP error ${response.status}: ${truncatedResponse}`);
                 }
             }
 

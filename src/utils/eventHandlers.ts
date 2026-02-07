@@ -1,9 +1,14 @@
 import { App, TFile, MarkdownView, EventRef } from 'obsidian';
 
+interface TrackedEventRef {
+    ref: EventRef;
+    source: 'vault' | 'workspace';
+}
+
 export class EventHandlers {
     private app: App;
     private fileChangeTimeoutId: NodeJS.Timeout | null = null;
-    private eventRefs: EventRef[] = [];
+    private trackedRefs: TrackedEventRef[] = [];
     private isRegistered: boolean = false;
 
     constructor(app: App) {
@@ -16,15 +21,16 @@ export class EventHandlers {
             return;
         }
         this.isRegistered = true;
-        // Handle file deletions
+
+        // Handle file deletions (vault event)
         const deleteRef = this.app.vault.on('delete', (file) => {
             if (file instanceof TFile && file.extension === 'md') {
                 this.app.workspace.trigger('file-open', file);
             }
         });
-        this.eventRefs.push(deleteRef);
+        this.trackedRefs.push({ ref: deleteRef, source: 'vault' });
 
-        // Handle file modifications
+        // Handle file modifications (vault event)
         const modifyRef = this.app.vault.on('modify', (file) => {
             if (file instanceof TFile && file.extension === 'md') {
                 // Debounce file refresh on changes
@@ -37,9 +43,9 @@ export class EventHandlers {
                 }, 2000);
             }
         });
-        this.eventRefs.push(modifyRef);
+        this.trackedRefs.push({ ref: modifyRef, source: 'vault' });
 
-        // Handle layout changes
+        // Handle layout changes (workspace event)
         const layoutRef = this.app.workspace.on('layout-change', () => {
             // Refresh any active editor views
             const view = this.app.workspace.getActiveViewOfType(MarkdownView);
@@ -47,7 +53,7 @@ export class EventHandlers {
                 view.editor.refresh();
             }
         });
-        this.eventRefs.push(layoutRef);
+        this.trackedRefs.push({ ref: layoutRef, source: 'workspace' });
     }
 
     cleanup() {
@@ -55,12 +61,15 @@ export class EventHandlers {
             clearTimeout(this.fileChangeTimeoutId);
             this.fileChangeTimeoutId = null;
         }
-        // Properly unregister all event listeners
-        for (const ref of this.eventRefs) {
-            this.app.vault.offref(ref);
-            this.app.workspace.offref(ref);
+        // Properly unregister event listeners from their correct sources
+        for (const tracked of this.trackedRefs) {
+            if (tracked.source === 'vault') {
+                this.app.vault.offref(tracked.ref);
+            } else {
+                this.app.workspace.offref(tracked.ref);
+            }
         }
-        this.eventRefs = [];
+        this.trackedRefs = [];
         this.isRegistered = false;
     }
 }

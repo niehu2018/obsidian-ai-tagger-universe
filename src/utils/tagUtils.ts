@@ -193,9 +193,19 @@ export class TagUtils {
                 return { success: true, message: "Skipped: Note has no frontmatter", tags: [] };
             }
             
-            const frontmatterText = content.substring(
-                frontmatterPosition.start.offset + 4, // Skip '---\n'
-                frontmatterPosition.end.offset - 4    // Skip '\n---'
+            // Extract frontmatter content, handling different line endings (LF, CRLF)
+            const fullFrontmatter = content.substring(
+                frontmatterPosition.start.offset,
+                frontmatterPosition.end.offset
+            );
+            // Find actual content between the --- delimiters
+            const startDelimMatch = fullFrontmatter.match(/^---[\r\n]+/);
+            const endDelimMatch = fullFrontmatter.match(/[\r\n]+---$/);
+            const startOffset = startDelimMatch ? startDelimMatch[0].length : 4;
+            const endOffset = endDelimMatch ? endDelimMatch[0].length : 4;
+            const frontmatterText = fullFrontmatter.substring(
+                startOffset,
+                fullFrontmatter.length - endOffset
             );
             
             let frontmatter: any;

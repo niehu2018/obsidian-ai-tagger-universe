@@ -28,10 +28,11 @@ export class TagNetworkView extends ItemView {
     private metadataDebounceTimer: NodeJS.Timeout | null = null;
     private readonly DEBOUNCE_DELAY = 500; // 500ms debounce
 
-    constructor(leaf: WorkspaceLeaf, data: NetworkData, app: App, t: Translations) {
+    constructor(leaf: WorkspaceLeaf, data: NetworkData, app: App, t: Translations, tagNetworkManager?: TagNetworkManager) {
         super(leaf);
         this.networkData = data;
-        this.tagNetworkManager = new TagNetworkManager(app);
+        // Use provided manager or create new one (for backward compatibility)
+        this.tagNetworkManager = tagNetworkManager || new TagNetworkManager(app);
         this.t = t;
     }
 
