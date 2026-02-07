@@ -942,4 +942,116 @@ export class TagUtils {
             return false;
         }
     }
+
+    /**
+     * Renames a tag across all files in the vault
+     * @param app - Obsidian App instance
+     * @param oldTag - Tag to rename (without # prefix)
+     * @param newTag - New tag name (without # prefix)
+     * @param files - Optional array of files to process (defaults to all markdown files)
+     * @param tagFormat - Tag format style
+     * @returns Promise resolving to operation result with count of affected files
+     */
+    static async renameTagInVault(
+        app: App,
+        oldTag: string,
+        newTag: string,
+        files?: TFile[],
+        tagFormat: TagFormat = 'kebab-case'
+    ): Promise<TagOperationResult & { affectedFiles: number }> {
+        const normalizedOldTag = oldTag.startsWith('#') ? oldTag.substring(1).toLowerCase() : oldTag.toLowerCase();
+        const formattedNewTag = this.formatTag(newTag, tagFormat);
+
+        if (!normalizedOldTag || !formattedNewTag) {
+            return { success: false, message: 'Invalid tag names', affectedFiles: 0 };
+        }
+
+        if (normalizedOldTag === formattedNewTag.toLowerCase()) {
+            return { success: false, message: 'Old and new tag names are the same', affectedFiles: 0 };
+        }
+
+        const markdownFiles = files || app.vault.getMarkdownFiles();
+        let affectedFiles = 0;
+        let errorCount = 0;
+
+        for (const file of markdownFiles) {
+            try {
+                const cache = app.metadataCache.getFileCache(file);
+                const existingTags = cache?.frontmatter ? this.getExistingTags(cache.frontmatter) : [];
+
+                if (existingTags.length === 0) continue;
+
+                // Check if this file has the tag to rename
+                const normalizedTags = existingTags.map(t =>
+                    t.startsWith('#') ? t.substring(1).toLowerCase() : t.toLowerCase()
+                );
+                const tagIndex = normalizedTags.indexOf(normalizedOldTag);
+
+                if (tagIndex === -1) continue;
+
+                // Replace the old tag with the new one
+                const newTags = existingTags.map((tag, idx) => {
+                    if (idx === tagIndex) {
+                        return formattedNewTag;
+                    }
+                    return this.formatTag(tag, tagFormat);
+                });
+
+                // Remove duplicates (in case new tag already exists)
+                const uniqueTags = [...new Set(newTags)];
+
+                // Update the file
+                const content = await app.vault.read(file);
+                const frontmatterPosition = cache?.frontmatterPosition;
+
+                if (!frontmatterPosition) continue;
+
+                const frontmatterText = content.substring(
+                    frontmatterPosition.start.offset + 4,
+                    frontmatterPosition.end.offset - 4
+                );
+
+                let frontmatter: any;
+                try {
+                    frontmatter = yaml.load(frontmatterText) || {};
+                } catch {
+                    continue;
+                }
+
+                frontmatter.tags = uniqueTags;
+                const newFrontmatter = yaml.dump(frontmatter).trim();
+                const newContent =
+                    '---\n' +
+                    newFrontmatter +
+                    '\n---' +
+                    content.substring(frontmatterPosition.end.offset);
+
+                if (newContent !== content) {
+                    await app.vault.modify(file, newContent);
+                    affectedFiles++;
+                }
+            } catch {
+                errorCount++;
+            }
+        }
+
+        // Small delay to allow file system to settle
+        if (affectedFiles > 0) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+        }
+
+        if (errorCount > 0) {
+            return {
+                success: true,
+                message: `Renamed tag in ${affectedFiles} files (${errorCount} errors)`,
+                affectedFiles
+            };
+        }
+
+        return {
+            success: true,
+            message: `Renamed #${normalizedOldTag} to #${formattedNewTag} in ${affectedFiles} files`,
+            affectedFiles
+        };
+    }
 }

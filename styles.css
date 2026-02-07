@@ -852,3 +852,34 @@
 .tag-analytics-modal-item:hover {
     background-color: var(--background-modifier-hover);
 }
+
+/* Tag Rename Modal Styles */
+.tag-rename-modal {
+    padding: var(--size-4-4);
+}
+
+.tag-rename-modal h3 {
+    margin-bottom: var(--size-4-4);
+}
+
+.tag-rename-input-group {
+    margin-bottom: var(--size-4-3);
+}
+
+.tag-rename-input-group label {
+    display: block;
+    font-size: var(--font-smaller);
+    color: var(--text-muted);
+    margin-bottom: var(--size-2-1);
+}
+
+.tag-rename-input {
+    width: 100%;
+}
+
+.tag-rename-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--size-4-2);
+    margin-top: var(--size-4-4);
+}

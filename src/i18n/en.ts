@@ -112,7 +112,8 @@ export const en: Translations = {
         flattenTagsForCurrentNote: "Flatten hierarchical tags for current note",
         flattenTagsForCurrentFolder: "Flatten hierarchical tags for current folder",
         flattenTagsForVault: "Flatten hierarchical tags for vault",
-        showTagAnalytics: "Show tag analytics dashboard"
+        showTagAnalytics: "Show tag analytics dashboard",
+        bulkRenameTag: "Bulk rename tag"
     },
 
     // Messages and notifications
@@ -249,6 +250,20 @@ export const en: Translations = {
         lmStudio: "Make sure LM Studio is running and the server is enabled",
         jan: "Make sure Jan is running and the local server is activated",
         koboldcpp: "Make sure KoboldCpp is running and the API endpoint is accessible"
+    },
+
+    // Tag Rename
+    tagRename: {
+        title: "Bulk Rename Tag",
+        oldTagLabel: "Old tag name",
+        newTagLabel: "New tag name",
+        oldTagPlaceholder: "Enter tag to rename...",
+        newTagPlaceholder: "Enter new tag name...",
+        rename: "Rename",
+        renaming: "Renaming...",
+        success: "Renamed tag in {count} files",
+        noTagSpecified: "Please enter both old and new tag names",
+        sameTagError: "Old and new tag names are the same"
     },
 
     // Tag Analytics View

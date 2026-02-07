@@ -112,7 +112,8 @@ export const zhCN: Translations = {
         flattenTagsForCurrentNote: "展开当前笔记的层级标签",
         flattenTagsForCurrentFolder: "展开当前文件夹的层级标签",
         flattenTagsForVault: "展开整个库的层级标签",
-        showTagAnalytics: "显示标签分析仪表板"
+        showTagAnalytics: "显示标签分析仪表板",
+        bulkRenameTag: "批量重命名标签"
     },
 
     // 消息和通知
@@ -249,6 +250,20 @@ export const zhCN: Translations = {
         lmStudio: "确保 LM Studio 正在运行并且服务器已启用",
         jan: "确保 Jan 正在运行并且本地服务器已激活",
         koboldcpp: "确保 KoboldCpp 正在运行并且 API 端点可访问"
+    },
+
+    // 标签重命名
+    tagRename: {
+        title: "批量重命名标签",
+        oldTagLabel: "原标签名",
+        newTagLabel: "新标签名",
+        oldTagPlaceholder: "输入要重命名的标签...",
+        newTagPlaceholder: "输入新标签名...",
+        rename: "重命名",
+        renaming: "重命名中...",
+        success: "已在 {count} 个文件中重命名标签",
+        noTagSpecified: "请输入原标签名和新标签名",
+        sameTagError: "原标签名和新标签名相同"
     },
 
     // 标签分析视图

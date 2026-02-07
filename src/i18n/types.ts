@@ -111,6 +111,7 @@ export interface Translations {
         flattenTagsForCurrentFolder: string;
         flattenTagsForVault: string;
         showTagAnalytics: string;
+        bulkRenameTag: string;
     };
 
     // Messages and notifications
@@ -210,6 +211,20 @@ export interface Translations {
     // File menu items
     fileMenu: {
         tagNetwork: string;
+    };
+
+    // Tag Rename
+    tagRename: {
+        title: string;
+        oldTagLabel: string;
+        newTagLabel: string;
+        oldTagPlaceholder: string;
+        newTagPlaceholder: string;
+        rename: string;
+        renaming: string;
+        success: string;
+        noTagSpecified: string;
+        sameTagError: string;
     };
 
     // Tag Analytics View

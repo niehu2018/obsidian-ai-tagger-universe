@@ -1,6 +1,7 @@
 import { MarkdownView, Notice, TFile } from 'obsidian';
 import AITaggerPlugin from '../main';
 import { TagUtils } from '../utils/tagUtils';
+import { TagRenameModal } from '../ui/modals/TagRenameModal';
 
 export function registerUtilityCommands(plugin: AITaggerPlugin) {
     // Command to collect all tags from vault
@@ -30,6 +31,20 @@ export function registerUtilityCommands(plugin: AITaggerPlugin) {
         icon: 'bar-chart-2',
         callback: async () => {
             await plugin.showTagAnalytics();
+        }
+    });
+
+    // Command to bulk rename tag
+    plugin.addCommand({
+        id: 'bulk-rename-tag',
+        name: plugin.t.commands.bulkRenameTag,
+        icon: 'replace',
+        callback: () => {
+            new TagRenameModal(
+                plugin.app,
+                plugin.t,
+                plugin.settings.tagFormat
+            ).open();
         }
     });
 
