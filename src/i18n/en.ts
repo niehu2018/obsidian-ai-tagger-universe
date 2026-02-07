@@ -113,7 +113,10 @@ export const en: Translations = {
         flattenTagsForCurrentFolder: "Flatten hierarchical tags for current folder",
         flattenTagsForVault: "Flatten hierarchical tags for vault",
         showTagAnalytics: "Show tag analytics dashboard",
-        bulkRenameTag: "Bulk rename tag"
+        bulkRenameTag: "Bulk rename tag",
+        exportTagsCSV: "Export tags to CSV",
+        exportTagsJSON: "Export tags to JSON",
+        importTags: "Import tags from file"
     },
 
     // Messages and notifications
@@ -250,6 +253,21 @@ export const en: Translations = {
         lmStudio: "Make sure LM Studio is running and the server is enabled",
         jan: "Make sure Jan is running and the local server is activated",
         koboldcpp: "Make sure KoboldCpp is running and the API endpoint is accessible"
+    },
+
+    // Tag Import/Export
+    tagImportExport: {
+        exportSuccess: "Tags exported successfully",
+        importTitle: "Import Tags",
+        selectFile: "Select file",
+        importMode: "Import mode",
+        modeMerge: "Merge with existing tags",
+        modeReplace: "Replace existing tags",
+        import: "Import",
+        importing: "Importing...",
+        importSuccess: "Imported tags: {success} files updated, {skipped} skipped, {failed} failed",
+        importError: "Import failed",
+        noFileSelected: "Please select a file"
     },
 
     // Tag Rename

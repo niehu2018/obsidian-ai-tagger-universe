@@ -113,7 +113,10 @@ export const zhCN: Translations = {
         flattenTagsForCurrentFolder: "展开当前文件夹的层级标签",
         flattenTagsForVault: "展开整个库的层级标签",
         showTagAnalytics: "显示标签分析仪表板",
-        bulkRenameTag: "批量重命名标签"
+        bulkRenameTag: "批量重命名标签",
+        exportTagsCSV: "导出标签为 CSV",
+        exportTagsJSON: "导出标签为 JSON",
+        importTags: "从文件导入标签"
     },
 
     // 消息和通知
@@ -250,6 +253,21 @@ export const zhCN: Translations = {
         lmStudio: "确保 LM Studio 正在运行并且服务器已启用",
         jan: "确保 Jan 正在运行并且本地服务器已激活",
         koboldcpp: "确保 KoboldCpp 正在运行并且 API 端点可访问"
+    },
+
+    // 标签导入导出
+    tagImportExport: {
+        exportSuccess: "标签导出成功",
+        importTitle: "导入标签",
+        selectFile: "选择文件",
+        importMode: "导入模式",
+        modeMerge: "与现有标签合并",
+        modeReplace: "替换现有标签",
+        import: "导入",
+        importing: "导入中...",
+        importSuccess: "标签已导入：{success} 个文件更新，{skipped} 个跳过，{failed} 个失败",
+        importError: "导入失败",
+        noFileSelected: "请选择文件"
     },
 
     // 标签重命名

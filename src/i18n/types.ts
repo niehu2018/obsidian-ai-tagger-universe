@@ -112,6 +112,9 @@ export interface Translations {
         flattenTagsForVault: string;
         showTagAnalytics: string;
         bulkRenameTag: string;
+        exportTagsCSV: string;
+        exportTagsJSON: string;
+        importTags: string;
     };
 
     // Messages and notifications
@@ -211,6 +214,21 @@ export interface Translations {
     // File menu items
     fileMenu: {
         tagNetwork: string;
+    };
+
+    // Tag Import/Export
+    tagImportExport: {
+        exportSuccess: string;
+        importTitle: string;
+        selectFile: string;
+        importMode: string;
+        modeMerge: string;
+        modeReplace: string;
+        import: string;
+        importing: string;
+        importSuccess: string;
+        importError: string;
+        noFileSelected: string;
     };
 
     // Tag Rename

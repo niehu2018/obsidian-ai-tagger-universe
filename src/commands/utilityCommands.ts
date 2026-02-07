@@ -2,6 +2,8 @@ import { MarkdownView, Notice, TFile } from 'obsidian';
 import AITaggerPlugin from '../main';
 import { TagUtils } from '../utils/tagUtils';
 import { TagRenameModal } from '../ui/modals/TagRenameModal';
+import { TagImportModal } from '../ui/modals/TagImportModal';
+import { TagImportExport } from '../utils/tagImportExport';
 
 export function registerUtilityCommands(plugin: AITaggerPlugin) {
     // Command to collect all tags from vault
@@ -41,6 +43,48 @@ export function registerUtilityCommands(plugin: AITaggerPlugin) {
         icon: 'replace',
         callback: () => {
             new TagRenameModal(
+                plugin.app,
+                plugin.t,
+                plugin.settings.tagFormat
+            ).open();
+        }
+    });
+
+    // Command to export tags to CSV
+    plugin.addCommand({
+        id: 'export-tags-csv',
+        name: plugin.t.commands.exportTagsCSV,
+        icon: 'download',
+        callback: async () => {
+            const exporter = new TagImportExport(plugin.app);
+            const csv = await exporter.exportToCSV();
+            const filename = `tags-export-${new Date().toISOString().split('T')[0]}.csv`;
+            exporter.downloadFile(csv, filename, 'text/csv');
+            new Notice(plugin.t.tagImportExport.exportSuccess);
+        }
+    });
+
+    // Command to export tags to JSON
+    plugin.addCommand({
+        id: 'export-tags-json',
+        name: plugin.t.commands.exportTagsJSON,
+        icon: 'download',
+        callback: async () => {
+            const exporter = new TagImportExport(plugin.app);
+            const json = await exporter.exportToJSON();
+            const filename = `tags-export-${new Date().toISOString().split('T')[0]}.json`;
+            exporter.downloadFile(json, filename, 'application/json');
+            new Notice(plugin.t.tagImportExport.exportSuccess);
+        }
+    });
+
+    // Command to import tags
+    plugin.addCommand({
+        id: 'import-tags',
+        name: plugin.t.commands.importTags,
+        icon: 'upload',
+        callback: () => {
+            new TagImportModal(
                 plugin.app,
                 plugin.t,
                 plugin.settings.tagFormat
