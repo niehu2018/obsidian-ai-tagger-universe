@@ -27,6 +27,7 @@ export class ClaudeAdapter extends BaseAdapter {
             },
             responseFormat: {
                 path: ['content', '0', 'text'],
+                contentPath: ['content', '0', 'text'],
                 errorPath: ['error', 'message']
             }
         };
