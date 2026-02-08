@@ -12,13 +12,11 @@ export class MistralAdapter extends BaseAdapter {
         this.provider = {
             name: 'mistral',
             requestFormat: {
-                url: '/v1/chat/completions',
                 body: {
                     model: this.config.modelName,
                     messages: [],
                     temperature: 0.7,
-                    max_tokens: 1024,
-                    safe_mode: true
+                    max_tokens: 1024
                 }
             },
             responseFormat: {

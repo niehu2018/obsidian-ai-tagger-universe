@@ -17,8 +17,6 @@ export class CohereAdapter extends BaseAdapter {
         this.provider = {
             name: 'cohere',
             requestFormat: {
-                url: '/v1/chat',
-                headers: {},
                 body: {
                     model: config.modelName,
                     message: '',
