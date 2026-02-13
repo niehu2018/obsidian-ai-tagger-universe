@@ -15,10 +15,8 @@ export class LLMSettingsSection extends BaseSettingSection {
             this.displayLocalSettings() :
             this.displayCloudSettings();
 
-        // Check local service status when loading settings if local service is selected
-        if (this.plugin.settings.serviceType === 'local') {
-            this.checkLocalService(this.plugin.settings.localEndpoint);
-        }
+        // Note: checkLocalService is called only from commitChange in the
+        // endpoint input, not here, to avoid Notice popups stealing focus.
 
         // Debug mode toggle
         new Setting(this.containerEl)
@@ -183,6 +181,7 @@ export class LLMSettingsSection extends BaseSettingSection {
                         this.plugin.settings.localEndpoint = value;
                         await this.plugin.saveSettings();
                         this.settingTab.display();
+                        this.checkLocalService(value);
                     }
                 };
 
