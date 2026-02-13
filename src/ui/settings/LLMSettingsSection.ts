@@ -172,16 +172,28 @@ export class LLMSettingsSection extends BaseSettingSection {
         new Setting(this.containerEl)
             .setName(this.plugin.t.settings.llm.localEndpoint)
             .setDesc(this.plugin.t.settings.llm.localEndpointDesc)
-            .addText(text => text
-                .setPlaceholder('http://localhost:11434/v1/chat/completions')
-                .setValue(this.plugin.settings.localEndpoint)
-                .onChange(async (value) => {
-                    this.plugin.settings.localEndpoint = value;
-                    await this.plugin.saveSettings();
+            .addText(text => {
+                text.setPlaceholder('http://localhost:11434/v1/chat/completions')
+                    .setValue(this.plugin.settings.localEndpoint);
 
-                    // Refresh the settings to update the model dropdown
-                    this.settingTab.display();
-                }));
+                // Only save/validate when user finishes editing (blur or Enter)
+                const commitChange = async () => {
+                    const value = text.getValue();
+                    if (value !== this.plugin.settings.localEndpoint) {
+                        this.plugin.settings.localEndpoint = value;
+                        await this.plugin.saveSettings();
+                        this.settingTab.display();
+                    }
+                };
+
+                text.inputEl.addEventListener('blur', () => { commitChange(); });
+                text.inputEl.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        text.inputEl.blur();
+                    }
+                });
+            });
 
         new Setting(this.containerEl)
             .setName(this.plugin.t.settings.llm.modelName)
