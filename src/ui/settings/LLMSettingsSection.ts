@@ -176,6 +176,8 @@ export class LLMSettingsSection extends BaseSettingSection {
 
                 // Only save/validate when user finishes editing (blur or Enter)
                 const commitChange = async () => {
+                    // Guard against blur firing on detached inputs (e.g. containerEl.empty() during re-render)
+                    if (!text.inputEl.isConnected) return;
                     const value = text.getValue();
                     if (value !== this.plugin.settings.localEndpoint) {
                         this.plugin.settings.localEndpoint = value;
@@ -425,8 +427,10 @@ export class LLMSettingsSection extends BaseSettingSection {
     }
 
     private async checkLocalService(endpoint: string): Promise<void> {
-        const baseUrl = endpoint.trim().replace(/\/$/, '').replace(/\/v1\/chat\/completions$/, '');
-        let checkUrl = `${baseUrl}/v1/models`;  // Default check URL for most services
+        const trimmed = endpoint.trim();
+        if (!trimmed || !trimmed.startsWith('http')) return;
+        const baseUrl = trimmed.replace(/\/$/, '').replace(/\/v1\/chat\/completions$/, '');
+        let checkUrl = `${baseUrl}/v1/models`;
 
         try {
             const response = await fetch(checkUrl, {
