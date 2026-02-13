@@ -427,9 +427,7 @@ export class LLMSettingsSection extends BaseSettingSection {
     }
 
     private async checkLocalService(endpoint: string): Promise<void> {
-        const trimmed = endpoint.trim();
-        if (!trimmed || !trimmed.startsWith('http')) return;
-        const baseUrl = trimmed.replace(/\/$/, '').replace(/\/v1\/chat\/completions$/, '');
+        const baseUrl = endpoint.trim().replace(/\/$/, '').replace(/\/v1\/chat\/completions$/, '');
         let checkUrl = `${baseUrl}/v1/models`;
 
         try {
