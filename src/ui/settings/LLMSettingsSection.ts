@@ -15,10 +15,8 @@ export class LLMSettingsSection extends BaseSettingSection {
             this.displayLocalSettings() :
             this.displayCloudSettings();
 
-        // Check local service status when loading settings if local service is selected
-        if (this.plugin.settings.serviceType === 'local') {
-            this.checkLocalService(this.plugin.settings.localEndpoint);
-        }
+        // Note: checkLocalService is called only from commitChange in the
+        // endpoint input, not here, to avoid Notice popups stealing focus.
 
         // Debug mode toggle
         new Setting(this.containerEl)
@@ -172,16 +170,31 @@ export class LLMSettingsSection extends BaseSettingSection {
         new Setting(this.containerEl)
             .setName(this.plugin.t.settings.llm.localEndpoint)
             .setDesc(this.plugin.t.settings.llm.localEndpointDesc)
-            .addText(text => text
-                .setPlaceholder('http://localhost:11434/v1/chat/completions')
-                .setValue(this.plugin.settings.localEndpoint)
-                .onChange(async (value) => {
-                    this.plugin.settings.localEndpoint = value;
-                    await this.plugin.saveSettings();
+            .addText(text => {
+                text.setPlaceholder('http://localhost:11434/v1/chat/completions')
+                    .setValue(this.plugin.settings.localEndpoint);
 
-                    // Refresh the settings to update the model dropdown
-                    this.settingTab.display();
-                }));
+                // Only save/validate when user finishes editing (blur or Enter)
+                const commitChange = async () => {
+                    // Guard against blur firing on detached inputs (e.g. containerEl.empty() during re-render)
+                    if (!text.inputEl.isConnected) return;
+                    const value = text.getValue();
+                    if (value !== this.plugin.settings.localEndpoint) {
+                        this.plugin.settings.localEndpoint = value;
+                        await this.plugin.saveSettings();
+                        this.settingTab.display();
+                        this.checkLocalService(value);
+                    }
+                };
+
+                text.inputEl.addEventListener('blur', () => { commitChange(); });
+                text.inputEl.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        text.inputEl.blur();
+                    }
+                });
+            });
 
         new Setting(this.containerEl)
             .setName(this.plugin.t.settings.llm.modelName)
@@ -415,7 +428,7 @@ export class LLMSettingsSection extends BaseSettingSection {
 
     private async checkLocalService(endpoint: string): Promise<void> {
         const baseUrl = endpoint.trim().replace(/\/$/, '').replace(/\/v1\/chat\/completions$/, '');
-        let checkUrl = `${baseUrl}/v1/models`;  // Default check URL for most services
+        let checkUrl = `${baseUrl}/v1/models`;
 
         try {
             const response = await fetch(checkUrl, {
