@@ -79,6 +79,9 @@ export const en: Translations = {
             tagFormatPascal: "PascalCase (MyTagName)",
             tagFormatSnake: "snake_case (my_tag_name)",
             tagFormatOriginal: "Original (preserve as-is)",
+            tagBehaviorSettings: "Tag Behavior Settings",
+            preserveExistingTags: "Preserve Existing Tags",
+            preserveExistingTagsDesc: "When enabled, AI-generated tags will be merged with existing tags in the note. When disabled, existing tags will be completely replaced by AI-generated tags.",
         },
         support: {
             title: "Support",

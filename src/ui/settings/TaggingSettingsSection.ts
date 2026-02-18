@@ -419,6 +419,22 @@ export class TaggingSettingsSection extends BaseSettingSection {
             text.inputEl.cols = 50;
         });
 
+        // Tag Behavior Settings
+        this.containerEl.createEl('h3', { text: this.plugin.t.settings.tagging.tagBehaviorSettings });
+
+        // NOTE: UI presents this setting inverted for better UX
+        // UI "Preserve Existing Tags" ON = replaceTags FALSE (merge behavior)
+        // UI "Preserve Existing Tags" OFF = replaceTags TRUE (replace behavior)
+        new Setting(this.containerEl)
+            .setName(this.plugin.t.settings.tagging.preserveExistingTags)
+            .setDesc(this.plugin.t.settings.tagging.preserveExistingTagsDesc)
+            .addToggle(toggle => toggle
+                .setValue(!this.plugin.settings.replaceTags)
+                .onChange(async (value) => {
+                    this.plugin.settings.replaceTags = !value;
+                    await this.plugin.saveSettings();
+                }));
+
         // Nested Tags Settings
         this.containerEl.createEl('h3', { text: this.plugin.t.settings.tagging.nestedTagsSettings });
 
