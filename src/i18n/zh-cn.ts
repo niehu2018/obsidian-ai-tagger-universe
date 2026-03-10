@@ -82,6 +82,8 @@ export const zhCN: Translations = {
             tagBehaviorSettings: "标签行为设置",
             preserveExistingTags: "保留现有标签",
             preserveExistingTagsDesc: "启用时，AI 生成的标签将与笔记中的现有标签合并。禁用时，现有标签将被 AI 生成的标签完全替换。",
+            requestTimeout: "请求超时（秒）",
+            requestTimeoutDesc: "等待 LLM 响应的最大时间。对于较慢的模型或大型文档，可增加此值。",
         },
         support: {
             title: "支持",

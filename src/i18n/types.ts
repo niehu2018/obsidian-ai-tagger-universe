@@ -80,6 +80,8 @@ export interface Translations {
             tagBehaviorSettings: string;
             preserveExistingTags: string;
             preserveExistingTagsDesc: string;
+            requestTimeout: string;
+            requestTimeoutDesc: string;
         };
         support: {
             title: string;

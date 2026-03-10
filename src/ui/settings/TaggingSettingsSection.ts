@@ -435,6 +435,29 @@ export class TaggingSettingsSection extends BaseSettingSection {
                     await this.plugin.saveSettings();
                 }));
 
+        // Request Timeout slider
+        new Setting(this.containerEl)
+            .setName(this.plugin.t.settings.tagging.requestTimeout)
+            .setDesc(this.plugin.t.settings.tagging.requestTimeoutDesc)
+            .addSlider(slider => {
+                const container = slider.sliderEl.parentElement;
+                if (container) {
+                    const numberDisplay = container.createSpan({ cls: 'value-display' });
+                    numberDisplay.style.marginLeft = '10px';
+                    numberDisplay.setText(`${this.plugin.settings.requestTimeout}s`);
+
+                    slider.setLimits(15, 300, 15)
+                        .setValue(this.plugin.settings.requestTimeout)
+                        .setDynamicTooltip()
+                        .onChange(async (value) => {
+                            numberDisplay.setText(`${value}s`);
+                            this.plugin.settings.requestTimeout = value;
+                            await this.plugin.saveSettings();
+                        });
+                }
+                return slider;
+            });
+
         // Nested Tags Settings
         this.containerEl.createEl('h3', { text: this.plugin.t.settings.tagging.nestedTagsSettings });
 

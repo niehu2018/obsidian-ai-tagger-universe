@@ -38,7 +38,8 @@ export default class AITaggerPlugin extends Plugin {
             endpoint: DEFAULT_SETTINGS.localEndpoint,
             modelName: DEFAULT_SETTINGS.localModel,
             language: DEFAULT_SETTINGS.language,
-            llmTemperatureOverride: DEFAULT_SETTINGS.llmTemperatureOverride
+            llmTemperatureOverride: DEFAULT_SETTINGS.llmTemperatureOverride,
+            requestTimeout: DEFAULT_SETTINGS.requestTimeout
         }, app);
         this.eventHandlers = new EventHandlers(app);
         this.tagNetworkManager = new TagNetworkManager(app);
@@ -84,7 +85,8 @@ export default class AITaggerPlugin extends Plugin {
                 endpoint: this.settings.localEndpoint,
                 modelName: this.settings.localModel,
                 language: this.settings.language,
-                llmTemperatureOverride: this.settings.llmTemperatureOverride
+                llmTemperatureOverride: this.settings.llmTemperatureOverride,
+                requestTimeout: this.settings.requestTimeout
             }, this.app)
             : new CloudLLMService({
                 endpoint: this.settings.cloudEndpoint,
@@ -92,7 +94,8 @@ export default class AITaggerPlugin extends Plugin {
                 modelName: this.settings.cloudModel,
                 type: this.settings.cloudServiceType,
                 language: this.settings.language,
-                llmTemperatureOverride: this.settings.llmTemperatureOverride
+                llmTemperatureOverride: this.settings.llmTemperatureOverride,
+                requestTimeout: this.settings.requestTimeout
             }, this.app);
 
         // Set debug mode on the LLM service and globally

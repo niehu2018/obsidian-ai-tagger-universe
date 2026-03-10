@@ -179,9 +179,17 @@ export class LocalLLMService extends BaseLLMService {
                         message: "Network error, please check if the local service is accessible"
                     };
                 } else if (error.message.includes('HTTP error')) {
+                    const statusMatch = error.message.match(/HTTP error (\d+)/);
+                    const status = statusMatch ? parseInt(statusMatch[1]) : 0;
+                    let hint = '';
+                    if (status === 502 || status === 503) {
+                        hint = '. Please verify that your local LLM service is running and a model is loaded.';
+                    } else if (status === 404) {
+                        hint = '. Please check that your endpoint URL is correct.';
+                    }
                     testError = {
                         type: "network",
-                        message: `Service error: ${error.message}`
+                        message: `Service error: ${error.message}${hint}`
                     };
                 } else if (error.message.includes('Invalid response')) {
                     testError = {

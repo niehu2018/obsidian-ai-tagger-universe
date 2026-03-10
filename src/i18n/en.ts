@@ -82,6 +82,8 @@ export const en: Translations = {
             tagBehaviorSettings: "Tag Behavior Settings",
             preserveExistingTags: "Preserve Existing Tags",
             preserveExistingTagsDesc: "When enabled, AI-generated tags will be merged with existing tags in the note. When disabled, existing tags will be completely replaced by AI-generated tags.",
+            requestTimeout: "Request Timeout (seconds)",
+            requestTimeoutDesc: "Maximum time to wait for LLM response. Increase for slower models or large documents.",
         },
         support: {
             title: "Support",

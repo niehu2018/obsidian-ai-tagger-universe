@@ -45,5 +45,5 @@ export const LLM_SERVICE_CONFIG = {
     MAX_CONTENT_LENGTH: 4000,  // Maximum content length for API requests
     MAX_RETRIES: 3,            // Maximum retry attempts for failed requests
     RETRY_DELAY: 1000,         // Base delay between retries in ms
-    DEFAULT_TIMEOUT: 30000     // Default request timeout in ms
+    DEFAULT_TIMEOUT: 60000     // Default request timeout in ms
 }; 

@@ -42,6 +42,8 @@ export interface AITaggerSettings {
     tagFormat: TagFormat;                // Tag naming convention
     // Tag Templates
     tagTemplates: TagTemplate[];         // User-defined tag templates
+    // Request timeout in seconds
+    requestTimeout: number;
 }
 
 export const DEFAULT_SETTINGS: AITaggerSettings = {
@@ -77,4 +79,5 @@ Prefer technical terms and domain-specific vocabulary when appropriate.`,
     nestedTagsMaxDepth: 2,
     tagFormat: 'kebab-case',
     tagTemplates: [],
+    requestTimeout: 60,
 };
