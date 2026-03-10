@@ -79,6 +79,9 @@ export const zhCN: Translations = {
             tagFormatPascal: "PascalCase（大驼峰，如 MyTagName）",
             tagFormatSnake: "snake_case（下划线，如 my_tag_name）",
             tagFormatOriginal: "原样保留（不转换格式）",
+            tagBehaviorSettings: "标签行为设置",
+            preserveExistingTags: "保留现有标签",
+            preserveExistingTagsDesc: "启用时，AI 生成的标签将与笔记中的现有标签合并。禁用时，现有标签将被 AI 生成的标签完全替换。",
         },
         support: {
             title: "支持",

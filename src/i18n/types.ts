@@ -77,6 +77,9 @@ export interface Translations {
             tagFormatPascal: string;
             tagFormatSnake: string;
             tagFormatOriginal: string;
+            tagBehaviorSettings: string;
+            preserveExistingTags: string;
+            preserveExistingTagsDesc: string;
         };
         support: {
             title: string;
